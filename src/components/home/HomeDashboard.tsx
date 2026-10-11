@@ -37,7 +37,7 @@ function dueLabel(date: CalendarDate, today: CalendarDate): string {
 export function HomeDashboard() {
   return (
     <section className="section shell app-page home-page">
-      <SignedInGate>
+      <SignedInGate variant="home">
         <HomeDashboardContent />
       </SignedInGate>
     </section>

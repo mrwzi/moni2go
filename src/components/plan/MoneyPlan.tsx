@@ -169,7 +169,7 @@ function localToday() {
 export function MoneyPlan() {
   return (
     <section className="section shell app-page plan-page">
-      <SignedInGate>
+      <SignedInGate variant="plan">
         <MoneyPlanContent />
       </SignedInGate>
     </section>

@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Accounts" };
 export default function AccountsPage() {
   return (
     <section className="section shell app-page accounts-page">
-      <SignedInGate>
+      <SignedInGate variant="accounts">
         <div className="app-page-heading">
           <p className="eyebrow">Your money</p>
           <h1>Accounts</h1>
