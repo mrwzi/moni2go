@@ -20,6 +20,8 @@ import {
 } from "../../v2/domain/accounts";
 import { parseV2CadInput } from "../../v2/domain/money";
 import type { PlanningGroup } from "../../v2/domain/planning";
+import { parseCalendarDate } from "../../v2/domain/calendar";
+import { calculateCategorySpendingHistory } from "../../v2/domain/spending-history";
 import type { AllocationRuleId, V2Cents } from "../../v2/domain/types";
 import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
 import { SignedInGate } from "../auth/SignedInGate";
@@ -169,6 +171,13 @@ function monthlyCommitmentCents(
   return recurrence.kind === "monthly" ? amountCents : 0;
 }
 
+function localToday() {
+  const date = new Date();
+  return parseCalendarDate(
+    `${date.getFullYear().toString().padStart(4, "0")}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`,
+  );
+}
+
 export function MoneyPlan() {
   return (
     <section className="section shell app-page plan-page">
@@ -234,6 +243,22 @@ function MoneyPlanContent() {
   const debtPayments = deriveRequiredDebtPayments(
     workspace?.liabilityAccounts ?? [],
   );
+  const spendingHistory = useMemo(
+    () =>
+      calculateCategorySpendingHistory(
+        workspace?.expenseEvents ?? [],
+        localToday(),
+      ),
+    [workspace?.expenseEvents],
+  );
+  const savedBillTotals = useMemo(() => {
+    const totals: Partial<Record<BudgetCategoryKey, number>> = {};
+    for (const commitment of workspace?.expenseDefinitions ?? [])
+      totals[commitment.category] =
+        (totals[commitment.category] ?? 0) +
+        monthlyCommitmentCents(commitment.amountCents, commitment.recurrence);
+    return totals;
+  }, [workspace?.expenseDefinitions]);
   const hasMissingDebtPayments = debtPayments.missingAccountIds.length > 0;
   const missingDebtNames = (workspace?.liabilityAccounts ?? [])
     .filter((account) => debtPayments.missingAccountIds.includes(account.id))
@@ -630,9 +655,29 @@ function MoneyPlanContent() {
                   category === "debt-payments"
                     ? debtPayments.totalCents
                     : (parseAmount(amounts[category] ?? "0") ?? 0);
+                const history = spendingHistory[category];
+                const savedBills = savedBillTotals[category] ?? 0;
                 return (
                   <li key={category}>
-                    <span>{categoryLabel(category)}</span>
+                    <div className="plan-category-details">
+                      <span>{categoryLabel(category)}</span>
+                      {savedBills > 0 && (
+                        <small>Saved bills: {formatCad(savedBills)}</small>
+                      )}
+                      {history.spentThisMonthCents > 0 && (
+                        <small>
+                          Spent this month:{" "}
+                          {formatCad(history.spentThisMonthCents)}
+                        </small>
+                      )}
+                      <small>
+                        {history.historicalMonthlyAverageCents === null
+                          ? "No spending history yet"
+                          : history.completedMonthCount === 1
+                            ? `1 month of history: ${formatCad(history.historicalMonthlyAverageCents)}`
+                            : `Typical monthly spending: ${formatCad(history.historicalMonthlyAverageCents)}`}
+                      </small>
+                    </div>
                     <strong>{formatCad(displayedCents)}</strong>
                     <small>
                       {allocation?.shareOfAvailableBasisPoints === null ||

@@ -17,5 +17,6 @@ export * from "./public-data-types";
 export * from "./recurrence";
 export * from "./schemas";
 export * from "./sinking-funds";
+export * from "./spending-history";
 export * from "./types";
 export * from "./workspace";

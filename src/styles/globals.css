@@ -3487,6 +3487,85 @@ main {
   color: var(--muted);
 }
 
+.plan-category-details {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.plan-review .plan-category-details small {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.transaction-history {
+  margin-top: 1.25rem;
+}
+
+.transaction-history-note {
+  margin: 0.5rem 0 1rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.transaction-history-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.transaction-history-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.transaction-history-list p,
+.transaction-history-list small {
+  margin: 0;
+}
+
+.transaction-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  text-align: right;
+}
+
+.transaction-history-actions button {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--surface-raised);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.transaction-history-actions button:hover {
+  border-color: var(--accent);
+  background: var(--surface-soft);
+}
+
+.transaction-history-actions .danger-link {
+  color: var(--danger);
+}
+
+@media (max-width: 560px) {
+  .transaction-history-list > li {
+    align-items: flex-start;
+  }
+
+  .transaction-history-actions {
+    flex-wrap: wrap;
+  }
+}
+
 .plan-storage-note {
   margin: -0.35rem 0 0;
   font-size: 0.78rem;

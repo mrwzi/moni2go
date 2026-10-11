@@ -52,6 +52,8 @@ export type IncomeLabel = (typeof INCOME_LABELS)[number];
 export const SPENDING_CATEGORIES = [
   "housing",
   "utilities",
+  "phone-internet",
+  "insurance",
   "groceries",
   "restaurants",
   "transportation",
@@ -60,6 +62,6 @@ export const SPENDING_CATEGORIES = [
   "entertainment-recreation",
   "subscriptions",
   "health-personal-care",
-  "education",
-  "other",
+  "debt-payments",
+  "savings-goals",
 ] as const satisfies readonly BudgetCategoryKey[];

@@ -101,7 +101,9 @@ test("completes the custom-baseline workflow and clears local data with the keyb
   const settings = page.getByRole("link", { name: "Settings" });
   await settings.focus();
   await page.keyboard.press("Enter");
-  const methodology = page.getByRole("link", { name: "Methodology" });
+  const methodology = page.getByRole("link", {
+    name: /How calculations work/,
+  });
   await methodology.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/methodology/);

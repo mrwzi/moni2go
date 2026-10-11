@@ -46,6 +46,7 @@ import {
   type QuickActivityInput,
   type QuickActivityKind,
 } from "./QuickActivityDialog";
+import { TransactionHistory } from "./TransactionHistory";
 
 function parseMoney(value: string, allowNegative: boolean): number | null {
   const normalized = value.trim().replace(/^\$/, "").replaceAll(",", "");
@@ -420,25 +421,54 @@ export function AccountsManager() {
     if (amount === null || amount <= 0)
       return "Enter an amount greater than zero.";
     if (account?.status !== "active") return "Choose an active account.";
+    const destination = input.destinationAccountId
+      ? workspace.assetAccounts.find(
+          (candidate) => candidate.id === input.destinationAccountId,
+        )
+      : undefined;
+    if (
+      input.kind === "spending" &&
+      input.transactionType === "transfer" &&
+      (destination?.status !== "active" || destination.id === account.id)
+    )
+      return "Choose a different active destination account.";
 
     const now = new Date().toISOString();
     const today = localToday();
     const cents = asV2Cents(amount);
     try {
+      const sourceDirection =
+        input.kind === "income" || input.transactionType === "refund"
+          ? "inflow"
+          : "outflow";
       const updatedAccount = applyAssetAccountActivity(
         account,
-        input.kind === "income" ? "inflow" : "outflow",
+        sourceDirection,
         cents,
         today,
         now,
       );
+      const updatedDestination = destination
+        ? applyAssetAccountActivity(destination, "inflow", cents, today, now)
+        : undefined;
+      const spendingCategory =
+        input.transactionType === "credit-card-payment"
+          ? "debt-payments"
+          : input.transactionType === "savings-contribution"
+            ? "savings-goals"
+            : input.transactionType === "transfer"
+              ? "other"
+              : input.spendingCategory;
       const next = {
         ...workspace,
         updatedAt: now,
         asOfDate: today,
-        assetAccounts: workspace.assetAccounts.map((candidate) =>
-          candidate.id === account.id ? updatedAccount : candidate,
-        ),
+        assetAccounts: workspace.assetAccounts.map((candidate) => {
+          if (candidate.id === account.id) return updatedAccount;
+          if (candidate.id === updatedDestination?.id)
+            return updatedDestination;
+          return candidate;
+        }),
         ...(input.kind === "income"
           ? {
               historicalIncome: [
@@ -461,9 +491,18 @@ export function AccountsManager() {
                 {
                   id: crypto.randomUUID() as ExpenseEventId,
                   workspaceId: workspace.id,
-                  name: BUDGET_CATEGORIES[input.spendingCategory],
+                  accountId: account.id,
+                  transactionType: input.transactionType,
+                  name:
+                    input.transactionType === "transfer"
+                      ? "Transfer between accounts"
+                      : input.transactionType === "credit-card-payment"
+                        ? "Credit-card payment"
+                        : input.transactionType === "savings-contribution"
+                          ? "Savings or investment contribution"
+                          : `${input.transactionType === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[spendingCategory]}`,
                   amountCents: cents,
-                  category: input.spendingCategory,
+                  category: spendingCategory,
                   nature: "variable" as const,
                   obligation: "flexible" as const,
                   dueDate: today,
@@ -481,7 +520,13 @@ export function AccountsManager() {
       setMessage(
         input.kind === "income"
           ? `${formatCad(cents)} added to ${account.name}.`
-          : `${formatCad(cents)} spending recorded from ${account.name}.`,
+          : input.transactionType === "refund"
+            ? `${formatCad(cents)} refund added to ${account.name}.`
+            : input.transactionType === "transfer"
+              ? `${formatCad(cents)} moved from ${account.name} to ${destination?.name ?? "the destination account"}.`
+              : input.transactionType === "purchase"
+                ? `${formatCad(cents)} spending recorded from ${account.name}.`
+                : `${formatCad(cents)} contribution recorded from ${account.name}.`,
       );
       return null;
     } catch {
@@ -785,6 +830,8 @@ export function AccountsManager() {
           {message}
         </p>
       )}
+
+      {workspace && <TransactionHistory workspace={workspace} save={save} />}
 
       {activityKind && (
         <QuickActivityDialog

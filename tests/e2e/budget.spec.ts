@@ -97,3 +97,83 @@ test("allocates account money and models a purchase without changing the balance
     page.getByRole("link", { name: "Plan my next payment" }),
   ).toBeVisible();
 });
+
+test("shows current spending separately from completed-month averages", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("History bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("2000");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  const completedDate = (monthsAgo: number) => {
+    const date = new Date();
+    date.setDate(10);
+    date.setMonth(date.getMonth() - monthsAgo);
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      "10",
+    ].join("-");
+  };
+
+  for (const [amount, monthsAgo] of [
+    ["120", 3],
+    ["180", 2],
+    ["150", 1],
+  ] as const) {
+    await page.getByRole("button", { name: "Money out" }).click();
+    await page.getByLabel("What was it for?").selectOption("groceries");
+    await page.getByLabel("Amount").fill(amount);
+    await page.getByRole("button", { name: "Save spending" }).click();
+    const transaction = page
+      .getByRole("region", { name: "Recent transactions" })
+      .getByRole("listitem")
+      .filter({ hasText: `$${amount}.00` });
+    await transaction.getByRole("button", { name: "Edit" }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit transaction" });
+    await dialog
+      .getByLabel("Date", { exact: true })
+      .fill(completedDate(monthsAgo));
+    await dialog.getByRole("button", { name: "Save transaction" }).click();
+  }
+
+  await page.getByRole("button", { name: "Money out" }).click();
+  await page.getByLabel("What was it for?").selectOption("groceries");
+  await page.getByLabel("Amount").fill("75");
+  await page.getByRole("button", { name: "Save spending" }).click();
+
+  await page.goto("/plan");
+  await page
+    .getByRole("button", { name: "I do not pay housing costs" })
+    .click();
+  await page
+    .getByRole("button", { name: "Utilities are included or not applicable" })
+    .click();
+  await page.getByRole("button", { name: "No phone or internet cost" }).click();
+  await page.getByRole("button", { name: "No insurance amount" }).click();
+  await page.getByLabel("Groceries amount").fill("100");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "No eating-out amount" }).click();
+  await page
+    .getByRole("button", { name: "I do not have transportation costs" })
+    .click();
+  await page
+    .getByRole("button", { name: "No health or personal-care amount" })
+    .click();
+  await page.getByRole("button", { name: "Not right now" }).click();
+  await page.getByRole("button", { name: "No clothing amount" }).click();
+  await page.getByRole("button", { name: "No shopping amount" }).click();
+  await page
+    .getByRole("button", { name: "No subscriptions or memberships" })
+    .click();
+  await page.getByRole("button", { name: "No entertainment amount" }).click();
+
+  const groceries = page.getByRole("listitem").filter({ hasText: "Groceries" });
+  await expect(groceries).toContainText("$100.00");
+  await expect(groceries).toContainText("Spent this month: $75.00");
+  await expect(groceries).toContainText("Typical monthly spending: $150.00");
+});

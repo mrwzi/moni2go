@@ -142,6 +142,13 @@ describe("V2 entity schemas", () => {
       obligation: "required",
     });
     expect(
+      datedExpenseEventSchema.parse({
+        ...expenseEvent,
+        accountId: "account-1",
+        transactionType: "refund",
+      }),
+    ).toMatchObject({ accountId: "account-1", transactionType: "refund" });
+    expect(
       datedExpenseEventSchema.safeParse({
         ...expenseEvent,
         category: "food-ish",

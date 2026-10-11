@@ -11,6 +11,7 @@ import {
   deriveSpendableCashCents,
 } from "./accounts";
 import { ACCOUNT_GROUP_TYPES } from "./account-groups";
+import { EXPENSE_TRANSACTION_TYPES } from "./expenses";
 import { PLANNING_GROUPS, REMINDER_CADENCES } from "./planning";
 import { MAX_APR_BASIS_POINTS } from "./percentage";
 import { MAX_V2_CENTS } from "./money";
@@ -235,6 +236,8 @@ export const datedExpenseEventSchema = z
     dueDate: calendarDateSchema,
     status: eventStatusSchema,
     actualDate: calendarDateSchema.optional(),
+    accountId: entityIdSchema.optional(),
+    transactionType: z.enum(EXPENSE_TRANSACTION_TYPES).optional(),
   })
   .strict();
 export const debtInterestModelSchema = z.discriminatedUnion("kind", [
