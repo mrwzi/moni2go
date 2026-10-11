@@ -1,11 +1,11 @@
 import type { BudgetCategoryKey } from "./budget-categories";
 import type { Recurrence, RecurrenceBounds } from "./recurrence";
 import type {
-  AssetAccountId,
   CalendarDate,
   EntityMetadata,
   ExpenseDefinitionId,
   ExpenseEventId,
+  FinancialEntityId,
   FinancialEventStatus,
   ObligationClassification,
   PersonalProvenance,
@@ -47,7 +47,8 @@ export type DatedExpenseEvent = EntityMetadata &
     dueDate: CalendarDate;
     status: FinancialEventStatus;
     actualDate?: CalendarDate;
-    accountId?: AssetAccountId;
+    accountId?: FinancialEntityId;
+    relatedAccountId?: FinancialEntityId;
     transactionType?: ExpenseTransactionType;
     provenance: PersonalProvenance;
   }>;

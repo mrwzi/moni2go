@@ -75,6 +75,23 @@ describe("historical monthly spending", () => {
     expect(result.historicalMonthlyAverageCents).toBe(15_000);
   });
 
+  it("counts an unrecorded month between two observed months as zero", () => {
+    const result = calculateCategorySpendingHistory(
+      [
+        transaction("jan", "2026-01-02", 12_000),
+        transaction("mar", "2026-03-02", 15_000),
+      ],
+      asOf,
+    ).groceries;
+    expect(result.completedMonthTotals).toEqual({
+      "2026-01": 12_000,
+      "2026-02": 0,
+      "2026-03": 15_000,
+    });
+    expect(result.completedMonthCount).toBe(3);
+    expect(result.historicalMonthlyAverageCents).toBe(9_000);
+  });
+
   it("keeps the current partial month separate", () => {
     const result = calculateCategorySpendingHistory(
       [

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatCad } from "../../domain/money";
-import type { AssetAccount } from "../../v2/domain/accounts";
+import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
 import type { ExpenseTransactionType } from "../../v2/domain/expenses";
 import {
   BUDGET_CATEGORIES,
@@ -23,6 +23,7 @@ export type QuickActivityInput = Readonly<{
   spendingCategory: BudgetCategoryKey;
   transactionType: ExpenseTransactionType;
   destinationAccountId?: string;
+  debtAccountId?: string;
 }>;
 
 const TRANSACTION_TYPE_OPTIONS = [
@@ -42,17 +43,27 @@ const TRANSACTION_TYPE_OPTIONS = [
 export function QuickActivityDialog({
   kind,
   accounts,
+  liabilityAccounts,
   onClose,
   onSave,
 }: Readonly<{
   kind: QuickActivityKind;
   accounts: readonly AssetAccount[];
+  liabilityAccounts: readonly LiabilityAccount[];
   onClose: () => void;
   onSave: (input: QuickActivityInput) => Promise<string | null>;
 }>) {
   const [accountId, setAccountId] = useState(
     accounts.find((account) => account.spendability === "spendable")?.id ??
       accounts[0]?.id ??
+      (kind === "spending"
+        ? liabilityAccounts.find(
+            (account) =>
+              account.status === "active" &&
+              (account.type === "credit-card" ||
+                account.type === "line-of-credit"),
+          )?.id
+        : undefined) ??
       "",
   );
   const [amount, setAmount] = useState("");
@@ -62,7 +73,19 @@ export function QuickActivityDialog({
   const [transactionType, setTransactionType] =
     useState<ExpenseTransactionType>("purchase");
   const [destinationAccountId, setDestinationAccountId] = useState("");
+  const [debtAccountId, setDebtAccountId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const activeDebtAccounts = liabilityAccounts.filter(
+    (account) => account.status === "active" && account.currentBalanceCents > 0,
+  );
+  const creditAccounts = liabilityAccounts.filter(
+    (account) =>
+      account.status === "active" &&
+      (account.type === "credit-card" || account.type === "line-of-credit"),
+  );
+  const allowCreditSource =
+    kind === "spending" &&
+    (transactionType === "purchase" || transactionType === "refund");
 
   return (
     <div
@@ -106,6 +129,7 @@ export function QuickActivityDialog({
               spendingCategory,
               transactionType,
               ...(destinationAccountId ? { destinationAccountId } : {}),
+              ...(debtAccountId ? { debtAccountId } : {}),
             }).then(setError);
           }}
         >
@@ -122,6 +146,13 @@ export function QuickActivityDialog({
                   {account.name} · {formatCad(account.currentValueCents)}
                 </option>
               ))}
+              {allowCreditSource &&
+                creditAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} · owed{" "}
+                    {formatCad(account.currentBalanceCents)}
+                  </option>
+                ))}
             </select>
           </label>
           {kind === "income" ? (
@@ -150,6 +181,18 @@ export function QuickActivityDialog({
                     setTransactionType(
                       event.target.value as ExpenseTransactionType,
                     );
+                    setAccountId(
+                      accounts.find(
+                        (account) => account.spendability === "spendable",
+                      )?.id ??
+                        accounts[0]?.id ??
+                        (event.target.value === "purchase" ||
+                        event.target.value === "refund"
+                          ? creditAccounts[0]?.id
+                          : undefined) ??
+                        "",
+                    );
+                    setDebtAccountId("");
                     setError(null);
                   }}
                 >
@@ -202,9 +245,29 @@ export function QuickActivityDialog({
                 </label>
               )}
               {transactionType === "credit-card-payment" && (
-                <p className="cash-place-note">
-                  Recorded as a debt payment, not a second purchase.
-                </p>
+                <>
+                  <label>
+                    Credit card or debt paid
+                    <select
+                      value={debtAccountId}
+                      onChange={(event) => {
+                        setDebtAccountId(event.target.value);
+                      }}
+                    >
+                      <option value="">Choose debt account</option>
+                      {activeDebtAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.name} · owed{" "}
+                          {formatCad(account.currentBalanceCents)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="cash-place-note">
+                    Reduces the selected debt balance but is not counted as a
+                    second purchase.
+                  </p>
+                </>
               )}
               {transactionType === "savings-contribution" && (
                 <p className="cash-place-note">

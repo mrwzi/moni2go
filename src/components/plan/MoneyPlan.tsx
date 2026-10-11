@@ -12,13 +12,18 @@ import {
 } from "../../v2/domain/budget";
 import {
   BUDGET_CATEGORIES,
+  PLAN_CATEGORY_KEYS,
   type BudgetCategoryKey,
 } from "../../v2/domain/budget-categories";
+import {
+  createCategoryBudgetGuidance,
+  prioritizePlanAdjustments,
+} from "../../v2/domain/budget-guidance";
 import {
   deriveRequiredDebtPayments,
   deriveSpendableCashCents,
 } from "../../v2/domain/accounts";
-import { parseV2CadInput } from "../../v2/domain/money";
+import { asV2Cents, parseV2CadInput } from "../../v2/domain/money";
 import type { PlanningGroup } from "../../v2/domain/planning";
 import { parseCalendarDate } from "../../v2/domain/calendar";
 import { calculateCategorySpendingHistory } from "../../v2/domain/spending-history";
@@ -27,29 +32,12 @@ import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
 import { SignedInGate } from "../auth/SignedInGate";
 import { LoadingState } from "../shared/LoadingState";
 
-const PLAN_CATEGORIES = [
-  "housing",
-  "utilities",
-  "phone-internet",
-  "insurance",
-  "groceries",
-  "restaurants",
-  "transportation",
-  "health-personal-care",
-  "debt-payments",
-  "savings-goals",
-  "clothing",
-  "shopping",
-  "subscriptions",
-  "entertainment-recreation",
-] as const satisfies readonly BudgetCategoryKey[];
-
-const QUESTION_CATEGORIES = PLAN_CATEGORIES.filter(
+const QUESTION_CATEGORIES = PLAN_CATEGORY_KEYS.filter(
   (category) => category !== "debt-payments",
 );
 
 const GROUP_BY_CATEGORY: Record<
-  (typeof PLAN_CATEGORIES)[number],
+  (typeof PLAN_CATEGORY_KEYS)[number],
   PlanningGroup
 > = {
   housing: "required-obligations",
@@ -69,7 +57,7 @@ const GROUP_BY_CATEGORY: Record<
 };
 
 const CATEGORY_QUESTIONS: Record<
-  (typeof PLAN_CATEGORIES)[number],
+  (typeof PLAN_CATEGORY_KEYS)[number],
   Readonly<{ question: string; explanation: string; skip: string }>
 > = {
   housing: {
@@ -149,7 +137,7 @@ const CATEGORY_QUESTIONS: Record<
   },
 };
 
-function categoryLabel(category: (typeof PLAN_CATEGORIES)[number]): string {
+function categoryLabel(category: (typeof PLAN_CATEGORY_KEYS)[number]): string {
   return category === "savings-goals"
     ? "Savings, investing & goals"
     : BUDGET_CATEGORIES[category];
@@ -265,7 +253,7 @@ function MoneyPlanContent() {
     .map((account) => account.name);
   const allocations = useMemo(
     () =>
-      PLAN_CATEGORIES.flatMap((category): BudgetAllocation[] => {
+      PLAN_CATEGORY_KEYS.flatMap((category): BudgetAllocation[] => {
         if (category === "debt-payments")
           return [
             {
@@ -278,7 +266,7 @@ function MoneyPlanContent() {
       }),
     [amounts, debtPayments.totalCents],
   );
-  const invalidAllocation = PLAN_CATEGORIES.some(
+  const invalidAllocation = PLAN_CATEGORY_KEYS.some(
     (category) =>
       category !== "debt-payments" &&
       parseAmount(amounts[category] ?? "0") === null,
@@ -291,11 +279,31 @@ function MoneyPlanContent() {
             debtPayments.missingAccountIds.length > 0,
         })
       : null;
+  const categoryGuidance = useMemo(
+    () =>
+      PLAN_CATEGORY_KEYS.map((category) => {
+        const planCents =
+          category === "debt-payments"
+            ? debtPayments.totalCents
+            : (parseAmount(amounts[category] ?? "0") ?? asV2Cents(0));
+        const history = spendingHistory[category];
+        return createCategoryBudgetGuidance({
+          category,
+          planCents,
+          spentThisMonthCents: history.spentThisMonthCents,
+          historicalAverageCents: history.historicalMonthlyAverageCents,
+        });
+      }).filter((guidance) => guidance.level !== "under"),
+    [amounts, debtPayments.totalCents, spendingHistory],
+  );
   const purchaseCents = parseAmount(purchase);
   const impact =
     analysis && purchaseCents !== null && purchaseCents > 0
       ? modelPurchase(analysis, purchaseCategory, purchaseCents)
       : null;
+  const adjustmentOptions = analysis
+    ? prioritizePlanAdjustments(analysis.allocations)
+    : [];
 
   if (loading) return <LoadingState label="Loading your money plan…" />;
   if (error) return <p role="alert">{error}</p>;
@@ -647,7 +655,7 @@ function MoneyPlanContent() {
               </aside>
             )}
             <ul>
-              {PLAN_CATEGORIES.map((category) => {
+              {PLAN_CATEGORY_KEYS.map((category) => {
                 const allocation = analysis?.allocations.find(
                   (item) => item.category === category,
                 );
@@ -691,6 +699,32 @@ function MoneyPlanContent() {
             </ul>
           </section>
 
+          {categoryGuidance.length > 0 && (
+            <section
+              className="app-card budget-guidance"
+              aria-labelledby="budget-guidance-heading"
+            >
+              <div>
+                <p className="eyebrow">This month</p>
+                <h2 id="budget-guidance-heading">Budget guidance</h2>
+                <p>
+                  Informational only. NorthCents never changes your plan or
+                  moves money automatically.
+                </p>
+              </div>
+              <ul>
+                {categoryGuidance.map((guidance) => (
+                  <li key={guidance.category} data-level={guidance.level}>
+                    <strong>
+                      {guidance.level === "over" ? "Review" : "Near plan"}
+                    </strong>
+                    <span>{guidance.message}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {!hasMissingDebtPayments && (
             <>
               {analysis ? (
@@ -728,10 +762,18 @@ function MoneyPlanContent() {
                 <aside className="plan-over-warning" role="alert">
                   <strong>This plan needs a change before saving.</strong>
                   <span>
-                    Reduce planned amounts by{" "}
-                    {formatCad(Math.abs(analysis.unallocatedCents))}, or choose
-                    Next payment and enter a larger amount.
+                    The draft exceeds available money by{" "}
+                    {formatCad(Math.abs(analysis.unallocatedCents))}. Review
+                    flexible categories first, then reconsider an optional
+                    savings goal if needed. Keep essential costs and required
+                    debt payments protected.
                   </span>
+                  {adjustmentOptions.length > 0 && (
+                    <small>
+                      Review first:{" "}
+                      {adjustmentOptions.map(categoryLabel).join(", ")}.
+                    </small>
+                  )}
                   <button
                     className="button button-secondary"
                     type="button"
@@ -781,7 +823,7 @@ function MoneyPlanContent() {
                         );
                       }}
                     >
-                      {PLAN_CATEGORIES.map((category) => (
+                      {PLAN_CATEGORY_KEYS.map((category) => (
                         <option key={category} value={category}>
                           {categoryLabel(category)}
                         </option>

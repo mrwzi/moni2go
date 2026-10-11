@@ -237,6 +237,7 @@ export const datedExpenseEventSchema = z
     status: eventStatusSchema,
     actualDate: calendarDateSchema.optional(),
     accountId: entityIdSchema.optional(),
+    relatedAccountId: entityIdSchema.optional(),
     transactionType: z.enum(EXPENSE_TRANSACTION_TYPES).optional(),
   })
   .strict();

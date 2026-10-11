@@ -145,9 +145,14 @@ describe("V2 entity schemas", () => {
       datedExpenseEventSchema.parse({
         ...expenseEvent,
         accountId: "account-1",
+        relatedAccountId: "account-2",
         transactionType: "refund",
       }),
-    ).toMatchObject({ accountId: "account-1", transactionType: "refund" });
+    ).toMatchObject({
+      accountId: "account-1",
+      relatedAccountId: "account-2",
+      transactionType: "refund",
+    });
     expect(
       datedExpenseEventSchema.safeParse({
         ...expenseEvent,

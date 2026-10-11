@@ -281,6 +281,65 @@ test("records money in and money out against an existing account", async ({
   await expect(page.getByText("$130.00").first()).toBeVisible();
 });
 
+test("records credit-card purchases once and applies payments to both balances", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Card bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("1000");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "+ Account" }).click();
+  await page.getByRole("button", { name: "Money I owe" }).click();
+  await page
+    .getByLabel("Account type", { exact: true })
+    .selectOption("credit-card");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current amount owed").fill("420");
+  await page.getByLabel("Required monthly payment").fill("35");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Money out" }).click();
+  let spendingDialog = page.getByRole("dialog", { name: "Record spending" });
+  await spendingDialog
+    .getByRole("combobox", { name: "Account" })
+    .selectOption({ label: "Credit card · owed $420.00" });
+  await spendingDialog.getByLabel("What was it for?").selectOption("groceries");
+  await spendingDialog.getByLabel("Amount").fill("50");
+  await spendingDialog.getByRole("button", { name: "Save spending" }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+  ).toContainText("$470.00");
+
+  await page.getByRole("button", { name: "Money out" }).click();
+  spendingDialog = page.getByRole("dialog", { name: "Record spending" });
+  await spendingDialog
+    .getByLabel("Transaction type")
+    .selectOption("credit-card-payment");
+  await spendingDialog
+    .getByLabel("Credit card or debt paid")
+    .selectOption({ label: "Credit card · owed $470.00" });
+  await spendingDialog.getByLabel("Amount").fill("100");
+  await spendingDialog.getByRole("button", { name: "Save spending" }).click();
+
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Chequing" }),
+  ).toContainText("$900.00");
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+  ).toContainText("$370.00");
+  const transactions = page.getByRole("region", {
+    name: "Recent transactions",
+  });
+  await expect(transactions.getByText("Groceries")).toBeVisible();
+  await expect(
+    transactions.getByText("Credit-card payment", { exact: true }),
+  ).toBeVisible();
+});
+
 test("adds and prioritizes a recurring household bill", async ({ page }) => {
   await page.goto("/accounts");
   await page.getByRole("button", { name: "+ Add bill" }).click();
@@ -311,7 +370,7 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByRole("listitem").filter({ hasText: "Transportation" }),
-  ).toContainText("$425.00");
+  ).toContainText("Saved bills: $425.00");
   await expect(
     page.getByText("This plan needs a change before saving."),
   ).toBeVisible();

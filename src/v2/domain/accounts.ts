@@ -121,6 +121,29 @@ export function applyAssetAccountActivity(
   };
 }
 
+/** Applies a purchase, refund, or payment to a manually tracked debt balance. */
+export function applyLiabilityAccountActivity(
+  account: LiabilityAccount,
+  direction: "increase" | "decrease",
+  amountCents: V2Cents,
+  balanceAsOfDate: CalendarDate,
+  updatedAt: string,
+): LiabilityAccount {
+  if (amountCents < 0)
+    throw new RangeError("Debt activity amount must be non-negative.");
+  if (direction === "decrease" && amountCents > account.currentBalanceCents)
+    throw new RangeError("Debt activity cannot create a negative balance.");
+  return {
+    ...account,
+    currentBalanceCents:
+      direction === "increase"
+        ? addCents(account.currentBalanceCents, amountCents)
+        : subtractCents(account.currentBalanceCents, amountCents),
+    balanceAsOfDate,
+    updatedAt,
+  };
+}
+
 export function deriveTotalAssetsCents(
   accounts: readonly AssetAccount[],
 ): V2Cents {

@@ -10,6 +10,7 @@ import {
   ASSET_ACCOUNT_TYPES,
   LIABILITY_ACCOUNT_TYPES,
   applyAssetAccountActivity,
+  applyLiabilityAccountActivity,
   deriveNetWorthCents,
   deriveSpendableCashCents,
   deriveTotalAssetsCents,
@@ -154,7 +155,15 @@ export function AccountsManager() {
   const isEducationPlace = selectedGroupType === "education-provider";
 
   function openActivity(kind: QuickActivityKind) {
-    if (activeAssets.length === 0) {
+    const hasCreditAccount = liabilities.some(
+      (account) =>
+        account.status === "active" &&
+        (account.type === "credit-card" || account.type === "line-of-credit"),
+    );
+    if (
+      (kind === "income" && activeAssets.length === 0) ||
+      (kind === "spending" && activeAssets.length === 0 && !hasCreditAccount)
+    ) {
       setMessage("Add an account before recording money in or money out.");
       return;
     }
@@ -415,12 +424,23 @@ export function AccountsManager() {
   ): Promise<string | null> {
     if (!workspace) return "Your workspace is not ready yet.";
     const amount = parseMoney(input.amount, false);
-    const account = workspace.assetAccounts.find(
+    const assetAccount = workspace.assetAccounts.find(
+      (candidate) => candidate.id === input.accountId,
+    );
+    const liabilityAccount = workspace.liabilityAccounts.find(
       (candidate) => candidate.id === input.accountId,
     );
     if (amount === null || amount <= 0)
       return "Enter an amount greater than zero.";
-    if (account?.status !== "active") return "Choose an active account.";
+    const canUseLiability =
+      input.kind === "spending" &&
+      (input.transactionType === "purchase" ||
+        input.transactionType === "refund") &&
+      liabilityAccount?.status === "active" &&
+      (liabilityAccount.type === "credit-card" ||
+        liabilityAccount.type === "line-of-credit");
+    if (assetAccount?.status !== "active" && !canUseLiability)
+      return "Choose an active account.";
     const destination = input.destinationAccountId
       ? workspace.assetAccounts.find(
           (candidate) => candidate.id === input.destinationAccountId,
@@ -429,9 +449,33 @@ export function AccountsManager() {
     if (
       input.kind === "spending" &&
       input.transactionType === "transfer" &&
-      (destination?.status !== "active" || destination.id === account.id)
+      (destination?.status !== "active" || destination.id === assetAccount?.id)
     )
       return "Choose a different active destination account.";
+    const debtAccount = input.debtAccountId
+      ? workspace.liabilityAccounts.find(
+          (candidate) => candidate.id === input.debtAccountId,
+        )
+      : undefined;
+    if (
+      input.kind === "spending" &&
+      input.transactionType === "credit-card-payment" &&
+      debtAccount?.status !== "active"
+    )
+      return "Choose the credit card or debt being paid.";
+    if (
+      input.kind === "spending" &&
+      input.transactionType === "credit-card-payment" &&
+      debtAccount &&
+      amount > debtAccount.currentBalanceCents
+    )
+      return "Payment cannot be more than the current amount owed.";
+    if (
+      input.transactionType === "refund" &&
+      liabilityAccount &&
+      amount > liabilityAccount.currentBalanceCents
+    )
+      return "Refund cannot be more than the current amount owed.";
 
     const now = new Date().toISOString();
     const today = localToday();
@@ -441,13 +485,35 @@ export function AccountsManager() {
         input.kind === "income" || input.transactionType === "refund"
           ? "inflow"
           : "outflow";
-      const updatedAccount = applyAssetAccountActivity(
-        account,
-        sourceDirection,
-        cents,
-        today,
-        now,
-      );
+      const updatedAssetAccount = assetAccount
+        ? applyAssetAccountActivity(
+            assetAccount,
+            sourceDirection,
+            cents,
+            today,
+            now,
+          )
+        : undefined;
+      const updatedLiabilityAccount = liabilityAccount
+        ? applyLiabilityAccountActivity(
+            liabilityAccount,
+            input.transactionType === "refund" ? "decrease" : "increase",
+            cents,
+            today,
+            now,
+          )
+        : undefined;
+      const updatedDebtAccount = debtAccount
+        ? applyLiabilityAccountActivity(
+            debtAccount,
+            "decrease",
+            cents,
+            today,
+            now,
+          )
+        : undefined;
+      const activityAccount = assetAccount ?? liabilityAccount;
+      const relatedAccount = destination ?? debtAccount;
       const updatedDestination = destination
         ? applyAssetAccountActivity(destination, "inflow", cents, today, now)
         : undefined;
@@ -464,9 +530,17 @@ export function AccountsManager() {
         updatedAt: now,
         asOfDate: today,
         assetAccounts: workspace.assetAccounts.map((candidate) => {
-          if (candidate.id === account.id) return updatedAccount;
+          if (candidate.id === updatedAssetAccount?.id)
+            return updatedAssetAccount;
           if (candidate.id === updatedDestination?.id)
             return updatedDestination;
+          return candidate;
+        }),
+        liabilityAccounts: workspace.liabilityAccounts.map((candidate) => {
+          if (candidate.id === updatedLiabilityAccount?.id)
+            return updatedLiabilityAccount;
+          if (candidate.id === updatedDebtAccount?.id)
+            return updatedDebtAccount;
           return candidate;
         }),
         ...(input.kind === "income"
@@ -491,7 +565,10 @@ export function AccountsManager() {
                 {
                   id: crypto.randomUUID() as ExpenseEventId,
                   workspaceId: workspace.id,
-                  accountId: account.id,
+                  ...(activityAccount ? { accountId: activityAccount.id } : {}),
+                  ...(relatedAccount
+                    ? { relatedAccountId: relatedAccount.id }
+                    : {}),
                   transactionType: input.transactionType,
                   name:
                     input.transactionType === "transfer"
@@ -517,16 +594,19 @@ export function AccountsManager() {
       };
       await save(next);
       setActivityKind(null);
+      const accountName = activityAccount?.name ?? "account";
       setMessage(
         input.kind === "income"
-          ? `${formatCad(cents)} added to ${account.name}.`
+          ? `${formatCad(cents)} added to ${accountName}.`
           : input.transactionType === "refund"
-            ? `${formatCad(cents)} refund added to ${account.name}.`
+            ? `${formatCad(cents)} refund recorded for ${accountName}.`
             : input.transactionType === "transfer"
-              ? `${formatCad(cents)} moved from ${account.name} to ${destination?.name ?? "the destination account"}.`
-              : input.transactionType === "purchase"
-                ? `${formatCad(cents)} spending recorded from ${account.name}.`
-                : `${formatCad(cents)} contribution recorded from ${account.name}.`,
+              ? `${formatCad(cents)} moved from ${accountName} to ${destination?.name ?? "the destination account"}.`
+              : input.transactionType === "credit-card-payment"
+                ? `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount?.name ?? "the debt account"}.`
+                : input.transactionType === "purchase"
+                  ? `${formatCad(cents)} spending recorded from ${accountName}.`
+                  : `${formatCad(cents)} contribution recorded from ${accountName}.`,
       );
       return null;
     } catch {
@@ -837,6 +917,7 @@ export function AccountsManager() {
         <QuickActivityDialog
           kind={activityKind}
           accounts={activeAssets}
+          liabilityAccounts={liabilities}
           onClose={() => {
             setActivityKind(null);
           }}

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { formatCad } from "../../domain/money";
-import type { AssetAccount } from "../../v2/domain/accounts";
 import {
   BUDGET_CATEGORIES,
   type BudgetCategoryKey,
@@ -14,6 +13,7 @@ import type {
 } from "../../v2/domain/expenses";
 import { parseV2CadInput } from "../../v2/domain/money";
 import type { FinancialWorkspace } from "../../v2/domain/workspace";
+import type { FinancialEntityId } from "../../v2/domain/types";
 import { SPENDING_CATEGORIES } from "./account-options";
 
 const TYPE_LABELS: Record<ExpenseTransactionType, string> = {
@@ -65,7 +65,12 @@ export function TransactionHistory({
     setDate(event.actualDate ?? event.dueDate);
     setCategory(event.category);
     setTransactionType(eventType(event));
-    setAccountId(event.accountId ?? workspace.assetAccounts[0]?.id ?? "");
+    setAccountId(
+      event.accountId ??
+        workspace.assetAccounts[0]?.id ??
+        workspace.liabilityAccounts[0]?.id ??
+        "",
+    );
     setError(null);
   }
 
@@ -91,7 +96,7 @@ export function TransactionHistory({
         event.id === editing.id
           ? {
               ...event,
-              accountId: accountId as AssetAccount["id"],
+              accountId: accountId as FinancialEntityId,
               amountCents: parsed.cents,
               category,
               transactionType,
@@ -219,6 +224,11 @@ export function TransactionHistory({
                   }}
                 >
                   {workspace.assetAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                  {workspace.liabilityAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
                       {account.name}
                     </option>

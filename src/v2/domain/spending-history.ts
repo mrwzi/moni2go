@@ -30,9 +30,24 @@ function signedAmount(event: DatedExpenseEvent): number {
   return type === "refund" ? -amount : amount;
 }
 
+function monthRange(first: string, last: string): string[] {
+  const [firstYear = 0, firstMonth = 1] = first.split("-").map(Number);
+  const [lastYear = 0, lastMonth = 1] = last.split("-").map(Number);
+  const firstIndex = firstYear * 12 + firstMonth - 1;
+  const lastIndex = lastYear * 12 + lastMonth - 1;
+  return Array.from({ length: lastIndex - firstIndex + 1 }, (_, offset) => {
+    const index = firstIndex + offset;
+    const year = Math.floor(index / 12);
+    const month = (index % 12) + 1;
+    return `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}`;
+  });
+}
+
 /**
  * Aggregates actual transactions into calendar-month totals before averaging.
- * Only completed months that contain qualifying history for the category count.
+ * Missing months between a category's first and last recorded completed month
+ * count as zero. Months before the first record or after the last are not
+ * assumed to be tracked, which avoids treating an unused app as zero spending.
  */
 export function calculateCategorySpendingHistory(
   events: readonly DatedExpenseEvent[],
@@ -65,9 +80,20 @@ export function calculateCategorySpendingHistory(
   return Object.fromEntries(
     BUDGET_CATEGORY_KEYS.map((category) => {
       const completed = monthTotals.get(category) ?? new Map<string, number>();
-      const normalized = [...completed.entries()].map(
-        ([month, cents]) => [month, asV2Cents(Math.max(0, cents))] as const,
-      );
+      const observedMonths = [...completed.keys()].sort();
+      const normalized =
+        observedMonths.length === 0
+          ? []
+          : monthRange(
+              observedMonths[0] ?? currentMonth,
+              observedMonths.at(-1) ?? currentMonth,
+            ).map(
+              (month) =>
+                [
+                  month,
+                  asV2Cents(Math.max(0, completed.get(month) ?? 0)),
+                ] as const,
+            );
       const total = normalized.reduce((sum, [, cents]) => sum + cents, 0);
       const count = normalized.length;
       return [

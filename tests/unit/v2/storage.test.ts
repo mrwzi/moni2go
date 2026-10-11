@@ -556,7 +556,30 @@ describe("non-destructive V1 migration", () => {
 
 describe("local export and import", () => {
   it("exports and validates an exact versioned workspace envelope", async () => {
-    const original = workspace();
+    const base = workspace();
+    const original = financialWorkspaceSchema.parse({
+      ...base,
+      expenseEvents: [
+        {
+          id: "expense-transaction-1",
+          workspaceId: base.id,
+          accountId: base.assetAccounts[0]?.id,
+          relatedAccountId: base.assetAccounts[1]?.id,
+          transactionType: "transfer",
+          name: "Transfer between accounts",
+          amountCents: 5_000,
+          category: "other",
+          nature: "variable",
+          obligation: "flexible",
+          dueDate: "2026-09-20",
+          actualDate: "2026-09-20",
+          status: "actual",
+          provenance: "user-entered",
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    }) as unknown as FinancialWorkspace;
     const serialized = await exportWorkspace(original, {
       exportedAt: now,
       applicationVersion: "0.1.0",
@@ -569,6 +592,11 @@ describe("local export and import", () => {
     );
     expect(envelope.workspace.debts[0]?.interestModel).toMatchObject({
       aprBasisPoints: 2099,
+    });
+    expect(envelope.workspace.expenseEvents[0]).toMatchObject({
+      transactionType: "transfer",
+      accountId: "workspace-1-chequing",
+      relatedAccountId: "workspace-1-savings",
     });
     expect(envelope).not.toHaveProperty("activeWorkspaceId");
     expect(envelope).not.toHaveProperty("migrationState");
