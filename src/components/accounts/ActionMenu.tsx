@@ -3,6 +3,23 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+function MoreActionsIcon() {
+  return (
+    <svg
+      className="action-menu-icon"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="5" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function ActionMenu({
   label,
   title,
@@ -45,11 +62,7 @@ export function ActionMenu({
           setOpen(true);
         }}
       >
-        <span className="action-menu-dots" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
+        <MoreActionsIcon />
       </button>
       {open &&
         createPortal(
@@ -68,11 +81,7 @@ export function ActionMenu({
             >
               <div className="action-sheet-heading">
                 <span className="action-sheet-icon" aria-hidden="true">
-                  <span className="action-menu-dots">
-                    <i />
-                    <i />
-                    <i />
-                  </span>
+                  <MoreActionsIcon />
                 </span>
                 <div>
                   <p>Options</p>
