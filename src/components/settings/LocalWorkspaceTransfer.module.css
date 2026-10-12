@@ -1,0 +1,151 @@
+.transfer {
+  display: grid;
+  gap: 1rem;
+}
+
+.intro {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.steps {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 0.75rem;
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  padding: 1rem;
+  gap: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.95rem;
+  background: color-mix(in srgb, var(--surface-raised) 82%, var(--brand-soft));
+}
+
+.stepNumber {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.stepContent {
+  display: grid;
+  min-width: 0;
+  gap: 0.3rem;
+}
+
+.stepContent strong {
+  line-height: 1.35;
+}
+
+.stepContent > span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.action {
+  width: fit-content;
+  min-width: 10.75rem;
+  margin-top: 0.55rem;
+}
+
+.privacyNote {
+  display: flex;
+  margin: 0;
+  gap: 0.55rem;
+  align-items: flex-start;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.privacyNote span {
+  color: var(--brand);
+  font-size: 0.65rem;
+  line-height: 1.9;
+}
+
+.status {
+  display: grid;
+  grid-template-columns: 1.65rem minmax(0, 1fr);
+  padding: 0.85rem 0.95rem;
+  gap: 0.65rem;
+  align-items: center;
+  border: 1px solid;
+  border-radius: 0.85rem;
+  font-size: 0.88rem;
+}
+
+.status > span {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 900;
+}
+
+.status p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.success {
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, var(--brand-soft) 70%, transparent);
+}
+
+.success > span {
+  color: #fff;
+  background: var(--brand);
+}
+
+.error {
+  border-color: color-mix(in srgb, #d45b5b 48%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, #d45b5b 11%, var(--surface-raised));
+}
+
+.error > span {
+  color: #fff;
+  background: #b64545;
+}
+
+@media (min-width: 620px) {
+  .steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stepContent {
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .action {
+    width: 100%;
+    align-self: end;
+  }
+}
+
+@media (max-width: 420px) {
+  .step {
+    padding: 0.9rem;
+  }
+
+  .action {
+    width: 100%;
+    min-width: 0;
+  }
+}
