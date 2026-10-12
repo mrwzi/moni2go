@@ -8,6 +8,7 @@ import {
 } from "../../v2/domain/account-groups";
 import {
   ASSET_ACCOUNT_TYPES,
+  DEBT_PAYMENT_FREQUENCIES,
   LIABILITY_ACCOUNT_TYPES,
   applyAssetAccountActivity,
   applyLiabilityAccountActivity,
@@ -15,9 +16,11 @@ import {
   deriveSpendableCashCents,
   deriveTotalAssetsCents,
   deriveTotalLiabilitiesCents,
+  monthlyEquivalentDebtPayment,
   type AssetAccount,
   type AssetAccountType,
   type DebtPaymentRequirement,
+  type DebtPaymentFrequency,
   type LiabilityAccount,
   type LiabilityAccountType,
   type Spendability,
@@ -71,6 +74,13 @@ const PROVIDER_TYPE_OPTIONS = [
   "other",
 ] as const satisfies readonly AccountGroupType[];
 
+const paymentFrequencyLabels: Record<DebtPaymentFrequency, string> = {
+  weekly: "Every week",
+  biweekly: "Every 2 weeks",
+  semimonthly: "Twice a month",
+  monthly: "Every month",
+};
+
 function providerNameLabel(type: AccountGroupType): string {
   if (type === "bank") return "Bank name";
   if (type === "investment-platform") return "Investment platform name";
@@ -123,7 +133,10 @@ export function AccountsManager() {
     useState<LiabilityAccountType>("credit-card");
   const [valueInput, setValueInput] = useState("");
   const [monthlyPaymentInput, setMonthlyPaymentInput] = useState("");
-  const [paymentDueDayInput, setPaymentDueDayInput] = useState("");
+  const [paymentFrequency, setPaymentFrequency] =
+    useState<DebtPaymentFrequency>("monthly");
+  const [nextPaymentDateInput, setNextPaymentDateInput] = useState("");
+  const [targetPayoffDateInput, setTargetPayoffDateInput] = useState("");
   const [paymentRequirement, setPaymentRequirement] =
     useState<DebtPaymentRequirement>("required");
   const [editingLiabilityId, setEditingLiabilityId] = useState<string | null>(
@@ -198,7 +211,9 @@ export function AccountsManager() {
     setLiabilityType("credit-card");
     setValueInput("");
     setMonthlyPaymentInput("");
-    setPaymentDueDayInput("");
+    setPaymentFrequency("monthly");
+    setNextPaymentDateInput("");
+    setTargetPayoffDateInput("");
     setPaymentRequirement("required");
     setEditingLiabilityId(null);
     setSpendability("spendable");
@@ -213,11 +228,18 @@ export function AccountsManager() {
     setLiabilityType(account.type);
     setValueInput((account.currentBalanceCents / 100).toFixed(2));
     setMonthlyPaymentInput(
-      account.requiredMonthlyPaymentCents === undefined
+      account.requiredPaymentCents === undefined &&
+        account.requiredMonthlyPaymentCents === undefined
         ? ""
-        : (account.requiredMonthlyPaymentCents / 100).toFixed(2),
+        : (
+            (account.requiredPaymentCents ??
+              account.requiredMonthlyPaymentCents ??
+              0) / 100
+          ).toFixed(2),
     );
-    setPaymentDueDayInput(account.paymentDueDay?.toString() ?? "");
+    setPaymentFrequency(account.paymentFrequency ?? "monthly");
+    setNextPaymentDateInput(account.nextPaymentDate ?? "");
+    setTargetPayoffDateInput(account.targetPayoffDate ?? "");
     setPaymentRequirement(account.paymentRequirement ?? "required");
     setEditingLiabilityId(account.id);
     setMessage(null);
@@ -270,9 +292,19 @@ export function AccountsManager() {
     const monthlyPayment = needsMonthlyPayment
       ? parseMoney(monthlyPaymentInput, false)
       : 0;
-    const paymentDueDay = paymentDueDayInput
-      ? Number(paymentDueDayInput)
-      : undefined;
+    let nextPaymentDate;
+    let targetPayoffDate;
+    try {
+      nextPaymentDate = nextPaymentDateInput
+        ? parseCalendarDate(nextPaymentDateInput)
+        : undefined;
+      targetPayoffDate = targetPayoffDateInput
+        ? parseCalendarDate(targetPayoffDateInput)
+        : undefined;
+    } catch {
+      setMessage("Choose a valid payment or target date.");
+      return;
+    }
     const selectedGroupId = dialogGroupId ?? "new";
     const placeName =
       selectedGroupId === "new" && newGroupType === "cash"
@@ -281,15 +313,11 @@ export function AccountsManager() {
     if (
       value === null ||
       (needsMonthlyPayment && monthlyPayment === null) ||
-      (paymentDueDay !== undefined &&
-        (!Number.isInteger(paymentDueDay) ||
-          paymentDueDay < 1 ||
-          paymentDueDay > 31)) ||
       (selectedGroupId === "new" && !placeName)
     ) {
       setMessage(
         needsMonthlyPayment
-          ? "Enter the current balance and required monthly payment."
+          ? "Enter the current balance and required payment amount."
           : kind === "liability"
             ? "Enter the current amount owed."
             : "Complete the place and enter the CAD value.",
@@ -308,6 +336,11 @@ export function AccountsManager() {
           if (account.id !== editingLiabilityId) return account;
           const withoutPayment = { ...account };
           delete withoutPayment.requiredMonthlyPaymentCents;
+          delete withoutPayment.requiredPaymentCents;
+          delete withoutPayment.paymentFrequency;
+          delete withoutPayment.nextPaymentDate;
+          delete withoutPayment.targetPayoffDate;
+          delete withoutPayment.paymentDueDay;
           return {
             ...withoutPayment,
             name,
@@ -316,10 +349,17 @@ export function AccountsManager() {
             paymentRequirement,
             ...(needsMonthlyPayment
               ? {
-                  requiredMonthlyPaymentCents: asV2Cents(monthlyPayment ?? 0),
-                  ...(paymentDueDay !== undefined ? { paymentDueDay } : {}),
+                  requiredPaymentCents: asV2Cents(monthlyPayment ?? 0),
+                  requiredMonthlyPaymentCents: monthlyEquivalentDebtPayment(
+                    asV2Cents(monthlyPayment ?? 0),
+                    paymentFrequency,
+                  ),
+                  paymentFrequency,
+                  ...(nextPaymentDate ? { nextPaymentDate } : {}),
                 }
-              : {}),
+              : targetPayoffDate
+                ? { targetPayoffDate }
+                : {}),
             balanceAsOfDate: localToday(),
             updatedAt: now,
           } satisfies LiabilityAccount;
@@ -397,12 +437,19 @@ export function AccountsManager() {
                 paymentRequirement,
                 ...(needsMonthlyPayment
                   ? {
-                      requiredMonthlyPaymentCents: asV2Cents(
-                        monthlyPayment ?? 0,
+                      requiredPaymentCents: asV2Cents(monthlyPayment ?? 0),
+                      requiredMonthlyPaymentCents: monthlyEquivalentDebtPayment(
+                        asV2Cents(monthlyPayment ?? 0),
+                        paymentFrequency,
                       ),
-                      ...(paymentDueDay !== undefined ? { paymentDueDay } : {}),
+                      paymentFrequency,
+                      ...(nextPaymentDate ? { nextPaymentDate } : {}),
                     }
-                  : {}),
+                  : targetPayoffDate
+                    ? {
+                        targetPayoffDate,
+                      }
+                    : {}),
                 balanceAsOfDate: localToday(),
               } satisfies LiabilityAccount,
             ],
@@ -1170,61 +1217,95 @@ export function AccountsManager() {
                               event.target.value as DebtPaymentRequirement,
                             );
                             setMonthlyPaymentInput("");
+                            setNextPaymentDateInput("");
+                            setTargetPayoffDateInput("");
                           }}
                         >
-                          <option value="required">
-                            Required payment every month
-                          </option>
-                          <option value="flexible">
-                            No fixed monthly payment
-                          </option>
+                          <option value="required">Required payment</option>
+                          <option value="flexible">No fixed payment</option>
                         </select>
                       </label>
                       {paymentRequirement === "required" &&
                       !hasZeroLiabilityBalance ? (
-                        <label>
-                          Required monthly payment
-                          <span className="money-input">
-                            <span>$</span>
-                            <input
-                              value={monthlyPaymentInput}
+                        <div className="debt-payment-fields">
+                          <label>
+                            Required payment amount
+                            <span className="money-input">
+                              <span>$</span>
+                              <input
+                                value={monthlyPaymentInput}
+                                onChange={(event) => {
+                                  setMonthlyPaymentInput(event.target.value);
+                                }}
+                                inputMode="decimal"
+                                aria-describedby="required-payment-help"
+                              />
+                            </span>
+                            <small id="required-payment-help">
+                              Enter the amount required for each payment—not the
+                              full balance.
+                            </small>
+                          </label>
+                          <label>
+                            How often?
+                            <select
+                              value={paymentFrequency}
                               onChange={(event) => {
-                                setMonthlyPaymentInput(event.target.value);
+                                setPaymentFrequency(
+                                  event.target.value as DebtPaymentFrequency,
+                                );
                               }}
-                              inputMode="decimal"
-                              aria-describedby="monthly-payment-help"
+                            >
+                              {DEBT_PAYMENT_FREQUENCIES.map((frequency) => (
+                                <option key={frequency} value={frequency}>
+                                  {paymentFrequencyLabels[frequency]}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Next payment date (optional)
+                            <input
+                              type="date"
+                              min={localToday()}
+                              value={nextPaymentDateInput}
+                              onChange={(event) => {
+                                setNextPaymentDateInput(event.target.value);
+                              }}
                             />
-                          </span>
-                          <small id="monthly-payment-help">
-                            Use the required payment shown by your lender—not
-                            the full balance.
-                          </small>
-                          <span className="field-label">
-                            Payment due day (optional)
-                          </span>
-                          <input
-                            value={paymentDueDayInput}
-                            onChange={(event) => {
-                              setPaymentDueDayInput(event.target.value);
-                            }}
-                            inputMode="numeric"
-                            placeholder="For example, 15"
-                            aria-label="Payment due day"
-                          />
-                          <small>
-                            Use the day shown on your statement, from 1 to 31.
-                          </small>
-                        </label>
+                            <small>
+                              Choose the full date so the month and year are
+                              clear.
+                            </small>
+                          </label>
+                        </div>
                       ) : paymentRequirement === "flexible" ? (
-                        <p className="cash-place-note">
-                          You choose when and how much to pay. NorthCents will
-                          not add a required payment to your plan.
-                        </p>
+                        <div className="debt-payment-fields">
+                          <p className="cash-place-note">
+                            You choose when and how much to pay. NorthCents will
+                            not add a required payment to your plan.
+                          </p>
+                          <label>
+                            Target payoff date (optional)
+                            <input
+                              type="date"
+                              min={localToday()}
+                              value={targetPayoffDateInput}
+                              onChange={(event) => {
+                                setTargetPayoffDateInput(event.target.value);
+                              }}
+                            />
+                            <small>
+                              This is your planning target, not a required
+                              lender payment or automatic reminder.
+                            </small>
+                          </label>
+                        </div>
                       ) : (
                         <p className="cash-place-note">
                           Nothing is due while the current balance is $0. If you
                           add an amount owed later, NorthCents will ask for the
-                          required monthly payment.
+                          required payment details.
                         </p>
                       )}
                     </>

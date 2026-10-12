@@ -8,6 +8,7 @@ import {
   deriveTotalAssetsCents,
   deriveTotalLiabilitiesCents,
   isAccountValueStale,
+  monthlyEquivalentDebtPayment,
   type AssetAccount,
   type LiabilityAccount,
 } from "../../../src/v2/domain/accounts";
@@ -137,6 +138,49 @@ describe("manual financial accounts", () => {
         ...liability,
         paymentRequirement: "flexible",
         requiredMonthlyPaymentCents: 10,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("normalizes scheduled debt installments to a monthly plan amount", () => {
+    expect(monthlyEquivalentDebtPayment(10_000 as never, "monthly")).toBe(
+      10_000,
+    );
+    expect(monthlyEquivalentDebtPayment(10_000 as never, "semimonthly")).toBe(
+      20_000,
+    );
+    expect(monthlyEquivalentDebtPayment(10_000 as never, "biweekly")).toBe(
+      21_667,
+    );
+    expect(monthlyEquivalentDebtPayment(10_000 as never, "weekly")).toBe(
+      43_333,
+    );
+  });
+
+  it("validates modern debt schedules and flexible payoff targets", () => {
+    expect(
+      liabilityAccountSchema.safeParse({
+        ...liability,
+        paymentRequirement: "required",
+        requiredPaymentCents: 10_000,
+        requiredMonthlyPaymentCents: 21_667,
+        paymentFrequency: "biweekly",
+        nextPaymentDate: "2026-10-30",
+      }).success,
+    ).toBe(true);
+    expect(
+      liabilityAccountSchema.safeParse({
+        ...liability,
+        paymentRequirement: "flexible",
+        targetPayoffDate: "2027-10-31",
+      }).success,
+    ).toBe(true);
+    expect(
+      liabilityAccountSchema.safeParse({
+        ...liability,
+        paymentRequirement: "required",
+        requiredPaymentCents: 10_000,
+        requiredMonthlyPaymentCents: 10_000,
       }).success,
     ).toBe(false);
   });

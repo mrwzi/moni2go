@@ -15,7 +15,7 @@ test("allocates account money and models a purchase without changing the balance
   await page.getByRole("button", { name: "Money I owe" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Current amount owed").fill("420");
-  await page.getByLabel("Required monthly payment").fill("35");
+  await page.getByLabel("Required payment amount").fill("35");
   await page.getByRole("button", { name: "Save account" }).click();
 
   await page.goto("/plan");

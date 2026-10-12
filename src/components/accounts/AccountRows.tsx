@@ -1,5 +1,11 @@
 import { formatCad } from "../../domain/money";
-import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
+import type {
+  AssetAccount,
+  DebtPaymentFrequency,
+  LiabilityAccount,
+} from "../../v2/domain/accounts";
+import { calendarDateParts } from "../../v2/domain/calendar";
+import type { CalendarDate } from "../../v2/domain/types";
 import { accountLabels } from "./account-options";
 import { ActionMenu } from "./ActionMenu";
 
@@ -70,9 +76,37 @@ export function AccountRows({
 
 function debtPaymentLabel(account: LiabilityAccount): string {
   if (account.currentBalanceCents === 0) return "No balance owed";
+  if (
+    account.requiredPaymentCents !== undefined &&
+    account.paymentFrequency !== undefined
+  ) {
+    const nextDate = account.nextPaymentDate
+      ? ` · next ${formatShortDate(account.nextPaymentDate)}`
+      : "";
+    return `${formatCad(account.requiredPaymentCents)} ${frequencyLabel(account.paymentFrequency)}${nextDate}`;
+  }
   if (account.requiredMonthlyPaymentCents !== undefined)
-    return `${formatCad(account.requiredMonthlyPaymentCents)} / month${account.paymentDueDay ? ` · due day ${account.paymentDueDay.toString()}` : ""}`;
+    return `${formatCad(account.requiredMonthlyPaymentCents)} every month${account.paymentDueDay ? ` · day ${account.paymentDueDay.toString()}` : ""}`;
+  if (account.targetPayoffDate)
+    return `Target ${formatShortDate(account.targetPayoffDate)}`;
   return account.paymentRequirement === "flexible"
-    ? "No fixed monthly payment"
+    ? "No fixed payment"
     : "Monthly payment missing";
+}
+
+function frequencyLabel(frequency: DebtPaymentFrequency): string {
+  if (frequency === "weekly") return "every week";
+  if (frequency === "biweekly") return "every 2 weeks";
+  if (frequency === "semimonthly") return "twice a month";
+  return "every month";
+}
+
+function formatShortDate(date: CalendarDate): string {
+  const { year, month, day } = calendarDateParts(date);
+  return new Intl.DateTimeFormat("en-CA", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 }

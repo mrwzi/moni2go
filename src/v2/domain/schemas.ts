@@ -4,6 +4,7 @@ import { parseCalendarDate } from "./calendar";
 import { BUDGET_CATEGORY_KEYS } from "./budget-categories";
 import {
   ASSET_ACCOUNT_TYPES,
+  DEBT_PAYMENT_FREQUENCIES,
   DEBT_PAYMENT_REQUIREMENTS,
   LIABILITY_ACCOUNT_TYPES,
   SPENDABILITY_TYPES,
@@ -128,7 +129,11 @@ export const liabilityAccountSchema = z
     type: z.enum(LIABILITY_ACCOUNT_TYPES),
     currentBalanceCents: nonNegativeV2CentsSchema,
     paymentRequirement: z.enum(DEBT_PAYMENT_REQUIREMENTS).optional(),
+    paymentFrequency: z.enum(DEBT_PAYMENT_FREQUENCIES).optional(),
+    requiredPaymentCents: nonNegativeV2CentsSchema.optional(),
     requiredMonthlyPaymentCents: nonNegativeV2CentsSchema.optional(),
+    nextPaymentDate: calendarDateSchema.optional(),
+    targetPayoffDate: calendarDateSchema.optional(),
     paymentDueDay: z.number().int().min(1).max(31).optional(),
     balanceAsOfDate: calendarDateSchema,
     includeInNetWorth: z.boolean(),
@@ -150,12 +155,23 @@ export const liabilityAccountSchema = z
       });
     if (
       account.paymentRequirement === "flexible" &&
-      account.requiredMonthlyPaymentCents !== undefined
+      (account.requiredMonthlyPaymentCents !== undefined ||
+        account.requiredPaymentCents !== undefined)
     )
       context.addIssue({
         code: "custom",
         path: ["requiredMonthlyPaymentCents"],
         message: "A flexible debt must not store a required payment.",
+      });
+    if (
+      account.paymentRequirement === "required" &&
+      account.requiredPaymentCents !== undefined &&
+      account.paymentFrequency === undefined
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["paymentFrequency"],
+        message: "A scheduled payment needs a frequency.",
       });
   });
 export const allocationRuleSchema = z

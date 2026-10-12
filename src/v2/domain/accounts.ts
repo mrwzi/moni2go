@@ -63,6 +63,13 @@ export const LIABILITY_ACCOUNT_TYPES = [
 export type LiabilityAccountType = (typeof LIABILITY_ACCOUNT_TYPES)[number];
 export const DEBT_PAYMENT_REQUIREMENTS = ["required", "flexible"] as const;
 export type DebtPaymentRequirement = (typeof DEBT_PAYMENT_REQUIREMENTS)[number];
+export const DEBT_PAYMENT_FREQUENCIES = [
+  "weekly",
+  "biweekly",
+  "semimonthly",
+  "monthly",
+] as const;
+export type DebtPaymentFrequency = (typeof DEBT_PAYMENT_FREQUENCIES)[number];
 
 /** A manually maintained amount owed; available credit is intentionally absent. */
 export type LiabilityAccount = EntityMetadata &
@@ -74,7 +81,12 @@ export type LiabilityAccount = EntityMetadata &
     type: LiabilityAccountType;
     currentBalanceCents: V2Cents;
     paymentRequirement?: DebtPaymentRequirement;
+    paymentFrequency?: DebtPaymentFrequency;
+    requiredPaymentCents?: V2Cents;
     requiredMonthlyPaymentCents?: V2Cents;
+    nextPaymentDate?: CalendarDate;
+    targetPayoffDate?: CalendarDate;
+    /** Retained only for older local backups. New records use full dates. */
     paymentDueDay?: number;
     balanceAsOfDate: CalendarDate;
     includeInNetWorth: boolean;
@@ -83,6 +95,18 @@ export type LiabilityAccount = EntityMetadata &
     institutionLabel?: string;
     note?: string;
   }>;
+
+export function monthlyEquivalentDebtPayment(
+  paymentCents: V2Cents,
+  frequency: DebtPaymentFrequency,
+): V2Cents {
+  if (frequency === "weekly")
+    return asV2Cents(Math.round((paymentCents * 52) / 12));
+  if (frequency === "biweekly")
+    return asV2Cents(Math.round((paymentCents * 26) / 12));
+  if (frequency === "semimonthly") return asV2Cents(paymentCents * 2);
+  return paymentCents;
+}
 
 const sum = (values: readonly V2Cents[]): V2Cents =>
   values.reduce((total, value) => addCents(total, value), asV2Cents(0));

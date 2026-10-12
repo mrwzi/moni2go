@@ -32,13 +32,15 @@ test("adds manual assets and liabilities and derives the home totals", async ({
     .selectOption("credit-card");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Current amount owed").fill("420.25");
-  await page.getByLabel("Required monthly payment").fill("35.00");
-  await page.getByLabel("Payment due day", { exact: true }).fill("18");
+  await page.getByLabel("Required payment amount").fill("35.00");
+  await page.getByLabel("How often?").selectOption("biweekly");
+  await page.getByLabel("Next payment date (optional)").fill("2099-10-18");
   await page.getByRole("button", { name: "Save account" }).click();
   await expect(page.getByText("−$420.25")).toHaveCount(0);
   await expect(page.getByText("$420.25").first()).toBeVisible();
-  await expect(page.getByText("$35.00 / month")).toBeVisible();
-  await expect(page.getByText("due day 18")).toBeVisible();
+  await expect(
+    page.getByText("$35.00 every 2 weeks · next Oct 18, 2099"),
+  ).toBeVisible();
 
   await page.goto("/");
   await expect(page.getByText("Your financial picture")).toBeVisible();
@@ -143,13 +145,14 @@ test("adds a flexible debt without inventing a monthly payment", async ({
   await page.getByLabel("Current amount owed").fill("3000");
   await page.getByLabel("Payment schedule").selectOption("flexible");
 
-  await expect(page.getByLabel("Required monthly payment")).toHaveCount(0);
+  await expect(page.getByLabel("Required payment amount")).toHaveCount(0);
   await expect(
     page.getByText("You choose when and how much to pay."),
   ).toBeVisible();
 
+  await page.getByLabel("Target payoff date (optional)").fill("2099-10-31");
   await page.getByRole("button", { name: "Save account" }).click();
-  await expect(page.getByText("No fixed monthly payment")).toBeVisible();
+  await expect(page.getByText("Target Oct 31, 2099")).toBeVisible();
   await expect(page.getByText("Monthly payment missing")).toHaveCount(0);
 
   await page.goto("/plan");
@@ -173,7 +176,7 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Current amount owed").fill("0");
 
-  await expect(page.getByLabel("Required monthly payment")).toHaveCount(0);
+  await expect(page.getByLabel("Required payment amount")).toHaveCount(0);
   await expect(page.getByText("Nothing is due while")).toBeVisible();
   await expect(page.getByText("Your credit limit is not money")).toBeVisible();
 
@@ -317,7 +320,7 @@ test("records credit-card purchases once and applies payments to both balances",
     .selectOption("credit-card");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Current amount owed").fill("420");
-  await page.getByLabel("Required monthly payment").fill("35");
+  await page.getByLabel("Required payment amount").fill("35");
   await page.getByRole("button", { name: "Save account" }).click();
 
   await page.getByRole("button", { name: "Money out" }).click();
