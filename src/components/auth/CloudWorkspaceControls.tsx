@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "../../lib/supabase/client";
 import {
+  CloudWorkspaceError,
   deleteCloudWorkspaces,
   loadNewestCloudWorkspace,
   saveWorkspaceToCloud,
@@ -39,7 +40,7 @@ export function CloudWorkspaceControls() {
       try {
         const workspace = await new WorkspaceRepository(
           database,
-        ).getActiveWorkspace();
+        ).getActiveWorkspace(user.id);
         if (!workspace) {
           setMessage("Add an account before saving a cloud workspace.");
           return;
@@ -49,8 +50,12 @@ export function CloudWorkspaceControls() {
       } finally {
         database.close();
       }
-    } catch {
-      setMessage("Cloud save failed. Your local information was not changed.");
+    } catch (error) {
+      setMessage(
+        error instanceof CloudWorkspaceError
+          ? error.message
+          : "Cloud save failed. Your local information was not changed.",
+      );
     } finally {
       setPending(false);
     }
@@ -76,9 +81,11 @@ export function CloudWorkspaceControls() {
         database.close();
       }
       setMessage("Cloud workspace restored. Reload Home to view it.");
-    } catch {
+    } catch (error) {
       setMessage(
-        "Cloud restore failed. Your local information was not changed.",
+        error instanceof CloudWorkspaceError
+          ? error.message
+          : "Cloud restore failed. Your local information was not changed.",
       );
     } finally {
       setPending(false);
@@ -100,8 +107,12 @@ export function CloudWorkspaceControls() {
       setMessage(
         "Cloud financial workspaces deleted. Local data remains on this device.",
       );
-    } catch {
-      setMessage("Cloud deletion failed. No local information was changed.");
+    } catch (error) {
+      setMessage(
+        error instanceof CloudWorkspaceError
+          ? error.message
+          : "Cloud deletion failed. No local information was changed.",
+      );
     } finally {
       setPending(false);
     }
