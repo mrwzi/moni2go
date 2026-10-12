@@ -100,9 +100,9 @@ test("allocates account money and models a purchase without changing the balance
   await expect(nextSteps).toContainText(
     "Your recorded required monthly payments total $35.00",
   );
-  await expect(nextSteps).toContainText("$565.00 is not planned yet");
+  await expect(nextSteps).toContainText("$565.00 left after your plan");
   await expect(nextSteps).toContainText(
-    "You can plan the remaining $565.00 or leave it available.",
+    "$435.00 planned · $1,000.00 available",
   );
   await expect(
     page.getByRole("link", { name: "Plan my next payment" }),

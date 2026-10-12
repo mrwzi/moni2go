@@ -202,7 +202,7 @@ function HomeDashboardContent() {
               <h2 id="home-next-step-heading">
                 {savedPlan.length > 0
                   ? moneyLeftAfterPlan >= 0
-                    ? `${formatCad(moneyLeftAfterPlan)} is not planned yet`
+                    ? `${formatCad(moneyLeftAfterPlan)} left after your plan`
                     : `Your plan is ${formatCad(Math.abs(moneyLeftAfterPlan))} too high`
                   : "Start a simple plan"}
               </h2>
@@ -212,7 +212,7 @@ function HomeDashboardContent() {
           <p className="home-next-step-summary">
             {savedPlan.length > 0
               ? moneyLeftAfterPlan >= 0
-                ? `You have ${formatCad(spendableCashCents)} available and planned ${formatCad(savedPlanTotal)}. You can plan the remaining ${formatCad(moneyLeftAfterPlan)} or leave it available.`
+                ? `${formatCad(savedPlanTotal)} planned · ${formatCad(spendableCashCents)} available`
                 : `You have ${formatCad(spendableCashCents)} available, but your plan totals ${formatCad(savedPlanTotal)}. Reduce the plan by ${formatCad(Math.abs(moneyLeftAfterPlan))} before saving.`
               : "Add your real bills and priorities. moni2go will show what remains without moving any money."}
           </p>
@@ -269,14 +269,11 @@ function HomeDashboardContent() {
           )}
           {flexibleDebtBalance > 0 && (
             <div className="home-next-step-note">
-              <strong>No debt payment is recorded as due.</strong>
-              <p>
-                Your {formatCad(flexibleDebtBalance)} debt has no required
-                payment saved. moni2go is not telling you to pay it now. If your
-                lender gave you an amount or due date, add those details in
-                Accounts.
-              </p>
-              <Link href="/accounts">Review debt details</Link>
+              <span>
+                <strong>Debt payment</strong>
+                <small>Not set</small>
+              </span>
+              <Link href="/accounts">Add details</Link>
             </div>
           )}
         </section>
