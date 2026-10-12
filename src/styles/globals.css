@@ -372,6 +372,12 @@ select {
   margin-top: 0.2rem;
 }
 
+.home-next-step-summary {
+  margin: 1rem 0 0;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
 .home-next-step-list {
   display: grid;
   margin: 1rem 0 0;
@@ -399,8 +405,7 @@ select {
   font-weight: 800;
 }
 
-.home-next-step-list p,
-.home-next-step-note {
+.home-next-step-list p {
   margin: 0;
   color: var(--muted);
   font-size: 0.86rem;
@@ -413,9 +418,30 @@ select {
 }
 
 .home-next-step-note {
+  display: grid;
   margin-top: 1rem;
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--line);
+  padding: 0.9rem 1rem;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: var(--surface-soft);
+  font-size: 0.86rem;
+}
+
+.home-next-step-note strong {
+  color: var(--ink);
+}
+
+.home-next-step-note p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.home-next-step-note a {
+  width: fit-content;
+  margin-top: 0.25rem;
+  font-weight: 800;
 }
 
 .home-due-list {

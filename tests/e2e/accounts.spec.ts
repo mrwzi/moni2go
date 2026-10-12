@@ -292,7 +292,7 @@ test("records money in and money out against an existing account", async ({
   await expect(page.getByText("$130.00").first()).toBeVisible();
 
   await page.goto("/");
-  const nextSteps = page.getByRole("region", { name: "What to do next" });
+  const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toBeVisible();
   await expect(nextSteps).toContainText(
     "Create a plan before assigning the rest.",

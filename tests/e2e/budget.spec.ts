@@ -96,12 +96,13 @@ test("allocates account money and models a purchase without changing the balance
 
   await page.goto("/");
   await expect(page.getByText("Where your money goes")).toBeVisible();
-  const nextSteps = page.getByRole("region", { name: "What to do next" });
+  const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toContainText(
     "Your recorded required monthly payments total $35.00",
   );
+  await expect(nextSteps).toContainText("$565.00 is not planned yet");
   await expect(nextSteps).toContainText(
-    "Your saved plan assigns $435.00, leaving $565.00 unassigned.",
+    "You can plan the remaining $565.00 or leave it available.",
   );
   await expect(
     page.getByRole("link", { name: "Plan my next payment" }),

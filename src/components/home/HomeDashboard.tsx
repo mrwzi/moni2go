@@ -194,70 +194,90 @@ function HomeDashboardContent() {
       {spendableCashCents > 0 && (
         <section
           className="app-card home-next-step"
-          aria-labelledby="home-next-step-heading"
+          aria-label="Money guidance"
         >
           <div className="home-section-heading">
             <div>
-              <p className="eyebrow">Money available</p>
-              <h2 id="home-next-step-heading">What to do next</h2>
-            </div>
-            <Link href="/plan">Review plan</Link>
-          </div>
-          <ul className="home-next-step-list">
-            {requiredUpcomingCommitmentTotal > 0 && (
-              <li>
-                <span aria-hidden="true">1</span>
-                <p>
-                  <strong>Protect required bills first.</strong>
-                  Keep {formatCad(requiredUpcomingCommitmentTotal)} available
-                  for required commitments due in the next 30 days.
-                </p>
-              </li>
-            )}
-            {requiredDebtPaymentTotal > 0 && (
-              <li>
-                <span aria-hidden="true">
-                  {requiredUpcomingCommitmentTotal > 0 ? "2" : "1"}
-                </span>
-                <p>
-                  <strong>Keep required debt payments covered.</strong>
-                  Your recorded required monthly payments total{" "}
-                  {formatCad(requiredDebtPaymentTotal)}. moni2go will not
-                  suggest skipping them.
-                </p>
-              </li>
-            )}
-            <li>
-              <span aria-hidden="true">
-                {requiredUpcomingCommitmentTotal > 0 &&
-                requiredDebtPaymentTotal > 0
-                  ? "3"
-                  : requiredUpcomingCommitmentTotal > 0 ||
-                      requiredDebtPaymentTotal > 0
-                    ? "2"
-                    : "1"}
-              </span>
-              <p>
-                <strong>
-                  {savedPlan.length > 0
-                    ? "Check the rest against your plan."
-                    : "Create a plan before assigning the rest."}
-                </strong>
+              <p className="eyebrow">Next step</p>
+              <h2 id="home-next-step-heading">
                 {savedPlan.length > 0
                   ? moneyLeftAfterPlan >= 0
-                    ? ` Your saved plan assigns ${formatCad(savedPlanTotal)}, leaving ${formatCad(moneyLeftAfterPlan)} unassigned.`
-                    : ` Your saved plan is ${formatCad(Math.abs(moneyLeftAfterPlan))} above the money currently available.`
-                  : " moni2go needs your real bills and priorities before it can show how much remains."}
-              </p>
-            </li>
-          </ul>
+                    ? `${formatCad(moneyLeftAfterPlan)} is not planned yet`
+                    : `Your plan is ${formatCad(Math.abs(moneyLeftAfterPlan))} too high`
+                  : "Start a simple plan"}
+              </h2>
+            </div>
+            <Link href="/plan">Open plan</Link>
+          </div>
+          <p className="home-next-step-summary">
+            {savedPlan.length > 0
+              ? moneyLeftAfterPlan >= 0
+                ? `You have ${formatCad(spendableCashCents)} available and planned ${formatCad(savedPlanTotal)}. You can plan the remaining ${formatCad(moneyLeftAfterPlan)} or leave it available.`
+                : `You have ${formatCad(spendableCashCents)} available, but your plan totals ${formatCad(savedPlanTotal)}. Reduce the plan by ${formatCad(Math.abs(moneyLeftAfterPlan))} before saving.`
+              : "Add your real bills and priorities. moni2go will show what remains without moving any money."}
+          </p>
+          {(requiredUpcomingCommitmentTotal > 0 ||
+            requiredDebtPaymentTotal > 0) && (
+            <ul className="home-next-step-list">
+              {requiredUpcomingCommitmentTotal > 0 && (
+                <li>
+                  <span aria-hidden="true">1</span>
+                  <p>
+                    <strong>Protect required bills first.</strong>
+                    Keep {formatCad(requiredUpcomingCommitmentTotal)} available
+                    for required commitments due in the next 30 days.
+                  </p>
+                </li>
+              )}
+              {requiredDebtPaymentTotal > 0 && (
+                <li>
+                  <span aria-hidden="true">
+                    {requiredUpcomingCommitmentTotal > 0 ? "2" : "1"}
+                  </span>
+                  <p>
+                    <strong>Keep required debt payments covered.</strong>
+                    Your recorded required monthly payments total{" "}
+                    {formatCad(requiredDebtPaymentTotal)}. moni2go will not
+                    suggest skipping them.
+                  </p>
+                </li>
+              )}
+              <li>
+                <span aria-hidden="true">
+                  {requiredUpcomingCommitmentTotal > 0 &&
+                  requiredDebtPaymentTotal > 0
+                    ? "3"
+                    : requiredUpcomingCommitmentTotal > 0 ||
+                        requiredDebtPaymentTotal > 0
+                      ? "2"
+                      : "1"}
+                </span>
+                <p>
+                  <strong>
+                    {savedPlan.length > 0
+                      ? "Review your choices."
+                      : "Create your plan."}
+                  </strong>
+                  {savedPlan.length > 0
+                    ? moneyLeftAfterPlan >= 0
+                      ? " Nothing happens to unplanned money—it stays available in your account."
+                      : " The plan cannot be saved while it is higher than your available money."
+                    : " You decide where the money goes."}
+                </p>
+              </li>
+            </ul>
+          )}
           {flexibleDebtBalance > 0 && (
-            <p className="home-next-step-note">
-              You have {formatCad(flexibleDebtBalance)} of debt with no fixed
-              monthly payment recorded. After essentials, you can keep
-              unassigned money available, save it, or choose an extra debt
-              payment. moni2go will not choose an amount for you.
-            </p>
+            <div className="home-next-step-note">
+              <strong>No debt payment is recorded as due.</strong>
+              <p>
+                Your {formatCad(flexibleDebtBalance)} debt has no required
+                payment saved. moni2go is not telling you to pay it now. If your
+                lender gave you an amount or due date, add those details in
+                Accounts.
+              </p>
+              <Link href="/accounts">Review debt details</Link>
+            </div>
           )}
         </section>
       )}
