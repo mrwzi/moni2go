@@ -8,12 +8,16 @@ export function ActionMenu({
   title,
   actionLabel,
   onAction,
+  primaryActionLabel,
+  onPrimaryAction,
   provider = false,
 }: Readonly<{
   label: string;
   title: string;
   actionLabel: string;
   onAction: () => void;
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
   provider?: boolean;
 }>) {
   const [open, setOpen] = useState(false);
@@ -68,9 +72,23 @@ export function ActionMenu({
                 </div>
               </div>
               <p className="action-sheet-copy">
-                Removing this does not contact your bank or provider.
+                {onPrimaryAction
+                  ? "Update this account or remove it from NorthCents."
+                  : "Removing this does not contact your bank or provider."}
               </p>
               <div className="action-sheet-actions">
+                {onPrimaryAction && primaryActionLabel && (
+                  <button
+                    className="button button-primary action-sheet-primary"
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      onPrimaryAction();
+                    }}
+                  >
+                    {primaryActionLabel}
+                  </button>
+                )}
                 <button
                   className="button button-secondary"
                   type="button"

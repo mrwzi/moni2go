@@ -30,19 +30,13 @@ export function AccountRows({
           <div>
             <strong>{formatCad(account.currentValueCents)}</strong>
             <div className="account-row-actions">
-              <button
-                className="account-update-button"
-                type="button"
-                aria-label={`Update ${account.name} balance`}
-                onClick={() => {
-                  onUpdateAsset(account);
-                }}
-              >
-                Update
-              </button>
               <ActionMenu
                 label={`More actions for ${account.name}`}
                 title={`${account.name} account`}
+                primaryActionLabel="Update balance"
+                onPrimaryAction={() => {
+                  onUpdateAsset(account);
+                }}
                 actionLabel="Remove account"
                 onAction={() => void onRemove(account.id, "asset")}
               />
@@ -60,19 +54,13 @@ export function AccountRows({
             <strong>{formatCad(account.currentBalanceCents)}</strong>
             <span>{debtPaymentLabel(account)}</span>
             <div className="account-row-actions">
-              <button
-                className="account-update-button"
-                type="button"
-                aria-label={`Edit ${account.name}`}
-                onClick={() => {
-                  onEditLiability(account);
-                }}
-              >
-                Update
-              </button>
               <ActionMenu
                 label={`More actions for ${account.name}`}
                 title={`${account.name} account`}
+                primaryActionLabel="Update debt details"
+                onPrimaryAction={() => {
+                  onEditLiability(account);
+                }}
                 actionLabel="Remove account"
                 onAction={() => void onRemove(account.id, "liability")}
               />

@@ -699,6 +699,10 @@ select {
   gap: 0.65rem;
 }
 
+.action-sheet-primary {
+  grid-column: 1 / -1;
+}
+
 .action-sheet-danger {
   border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
   color: var(--danger);
@@ -1001,11 +1005,6 @@ select {
 .account-list .account-remove-button {
   color: var(--danger);
   opacity: 0.78;
-}
-
-.account-list .account-update-button {
-  color: var(--brand-dark);
-  font-weight: 750;
 }
 
 .balance-current-value {
