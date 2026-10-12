@@ -89,6 +89,8 @@ function debtPaymentLabel(account: LiabilityAccount): string {
     return `${formatCad(account.requiredMonthlyPaymentCents)} every month${account.paymentDueDay ? ` · day ${account.paymentDueDay.toString()}` : ""}`;
   if (account.targetPayoffDate)
     return `Target ${formatShortDate(account.targetPayoffDate)}`;
+  if (account.type === "credit-card" || account.type === "line-of-credit")
+    return "No payment due recorded";
   return account.paymentRequirement === "flexible"
     ? "No fixed payment"
     : "Monthly payment missing";

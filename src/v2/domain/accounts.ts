@@ -214,7 +214,9 @@ export function deriveRequiredDebtPayments(
       .filter(
         (account) =>
           account.paymentRequirement === undefined &&
-          account.requiredMonthlyPaymentCents === undefined,
+          account.requiredMonthlyPaymentCents === undefined &&
+          account.type !== "credit-card" &&
+          account.type !== "line-of-credit",
       )
       .map((account) => account.id),
   };

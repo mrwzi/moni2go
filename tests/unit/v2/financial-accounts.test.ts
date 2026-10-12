@@ -93,7 +93,10 @@ describe("manual financial accounts", () => {
       paymentRequirement: "required",
       requiredMonthlyPaymentCents: 12_345,
     });
-    const missing = typedLiability({ id: "liability-missing" });
+    const missing = typedLiability({
+      id: "liability-missing",
+      type: "personal-loan",
+    });
     expect(deriveRequiredDebtPayments([known, missing])).toEqual({
       totalCents: 12_345,
       missingAccountIds: ["liability-missing"],
@@ -108,6 +111,15 @@ describe("manual financial accounts", () => {
         typedLiability({
           id: "flexible-debt",
           paymentRequirement: "flexible",
+        }),
+      ]),
+    ).toEqual({ totalCents: 0, missingAccountIds: [] });
+    expect(
+      deriveRequiredDebtPayments([
+        typedLiability({
+          id: "card-without-statement",
+          type: "credit-card",
+          paymentRequirement: undefined,
         }),
       ]),
     ).toEqual({ totalCents: 0, missingAccountIds: [] });

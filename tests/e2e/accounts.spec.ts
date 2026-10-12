@@ -201,6 +201,12 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
   await expect(
     page.getByRole("listitem").filter({ hasText: "Credit card" }),
   ).toContainText("$10.00");
+  await expect(page.getByText("No payment due recorded")).toBeVisible();
+
+  await page.goto("/plan");
+  await expect(
+    page.getByRole("heading", { name: "Finish your debt setup" }),
+  ).toHaveCount(0);
 });
 
 test("offers a clear university or college debt path", async ({ page }) => {
