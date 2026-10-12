@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CloudWorkspaceControls } from "../../components/auth/CloudWorkspaceControls";
+import { LocalWorkspaceTransfer } from "../../components/settings/LocalWorkspaceTransfer";
 import { hasSupabaseConfig } from "../../lib/supabase/config";
 
 export default function SettingsPage() {
@@ -33,6 +34,14 @@ export default function SettingsPage() {
           <span aria-hidden="true">›</span>
         </Link>
       </nav>
+      <section
+        className="app-card cloud-settings"
+        aria-labelledby="local-transfer-heading"
+      >
+        <p className="eyebrow">Move your data</p>
+        <h2 id="local-transfer-heading">Local backup transfer</h2>
+        <LocalWorkspaceTransfer />
+      </section>
       <section
         className="app-card cloud-settings"
         aria-labelledby="cloud-heading"
