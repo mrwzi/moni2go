@@ -145,21 +145,22 @@ export function TransactionHistory({
       <ul className="transaction-history-list">
         {transactions.slice(0, 10).map((event) => (
           <li key={event.id}>
-            <div className="transaction-history-actions">
+            <div className="transaction-history-details">
               <strong>{event.name}</strong>
               <small>
                 {event.actualDate ?? event.dueDate} ·{" "}
                 {TYPE_LABELS[eventType(event)]}
               </small>
             </div>
-            <div>
-              <strong>
+            <div className="transaction-history-summary">
+              <strong className="transaction-history-amount">
                 {eventType(event) === "refund" ? "−" : ""}
                 {formatCad(event.amountCents)}
               </strong>
-              <span>
+              <div className="transaction-history-actions">
                 <button
                   type="button"
+                  aria-label={`Edit ${event.name} transaction`}
                   onClick={() => {
                     startEdit(event);
                   }}
@@ -169,11 +170,12 @@ export function TransactionHistory({
                 <button
                   type="button"
                   className="danger-link"
+                  aria-label={`Delete ${event.name} transaction`}
                   onClick={() => void removeTransaction(event)}
                 >
                   Delete
                 </button>
-              </span>
+              </div>
             </div>
           </li>
         ))}
