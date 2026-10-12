@@ -119,6 +119,32 @@ function localToday() {
   );
 }
 
+function applyCreditActivity(
+  account: LiabilityAccount,
+  direction: "increase" | "decrease",
+  amountCents: ReturnType<typeof asV2Cents>,
+  balanceAsOfDate: ReturnType<typeof localToday>,
+  updatedAt: string,
+): LiabilityAccount {
+  const updated = applyLiabilityAccountActivity(
+    account,
+    direction,
+    amountCents,
+    balanceAsOfDate,
+    updatedAt,
+  );
+  if (
+    updated.currentBalanceCents > 0 &&
+    updated.paymentRequirement === "required" &&
+    updated.requiredMonthlyPaymentCents === undefined
+  ) {
+    const normalized = { ...updated };
+    delete normalized.paymentRequirement;
+    return normalized;
+  }
+  return updated;
+}
+
 export function AccountsManager() {
   const { workspace, loading, error, save, ensureWorkspace } =
     useFinancialWorkspace();
@@ -437,7 +463,7 @@ export function AccountsManager() {
                 id: crypto.randomUUID() as LiabilityAccountId,
                 type: liabilityType,
                 currentBalanceCents: asV2Cents(value),
-                paymentRequirement,
+                ...(value > 0 ? { paymentRequirement } : {}),
                 ...(needsMonthlyPayment
                   ? {
                       requiredPaymentCents: asV2Cents(monthlyPayment ?? 0),
@@ -545,7 +571,7 @@ export function AccountsManager() {
           )
         : undefined;
       const updatedLiabilityAccount = liabilityAccount
-        ? applyLiabilityAccountActivity(
+        ? applyCreditActivity(
             liabilityAccount,
             input.transactionType === "refund" ? "decrease" : "increase",
             cents,

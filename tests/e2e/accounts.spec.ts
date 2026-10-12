@@ -183,6 +183,24 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
   await page.getByRole("button", { name: "Save account" }).click();
   await expect(page.getByText("Account saved locally.")).toBeVisible();
   await expect(page.getByText("No balance owed")).toBeVisible();
+
+  await page.getByRole("button", { name: "Money out" }).click();
+  const spendingDialog = page.getByRole("dialog", { name: "Record spending" });
+  await spendingDialog
+    .getByRole("combobox", { name: "Account or card" })
+    .selectOption({ label: "Credit card · owed $0.00" });
+  await spendingDialog
+    .getByLabel("What was it for?")
+    .selectOption("subscriptions");
+  await spendingDialog.getByLabel("Amount").fill("10");
+  await spendingDialog.getByRole("button", { name: "Save purchase" }).click();
+
+  await expect(
+    page.getByText("$10.00 spending recorded from Credit card."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+  ).toContainText("$10.00");
 });
 
 test("offers a clear university or college debt path", async ({ page }) => {
