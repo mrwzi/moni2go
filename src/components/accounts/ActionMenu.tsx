@@ -45,7 +45,11 @@ export function ActionMenu({
           setOpen(true);
         }}
       >
-        <span aria-hidden="true">•••</span>
+        <span className="action-menu-dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
       </button>
       {open &&
         createPortal(
@@ -64,7 +68,11 @@ export function ActionMenu({
             >
               <div className="action-sheet-heading">
                 <span className="action-sheet-icon" aria-hidden="true">
-                  •••
+                  <span className="action-menu-dots">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
                 </span>
                 <div>
                   <p>Options</p>

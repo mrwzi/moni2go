@@ -548,11 +548,12 @@ select {
 }
 
 .account-list li {
-  display: flex;
+  display: grid;
   min-height: 4.75rem;
+  padding-block: 0.75rem;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto) 40px;
+  gap: 0.75rem;
   border-top: 1px solid var(--line);
 }
 
@@ -631,6 +632,20 @@ select {
   border-color: var(--line);
   background: var(--surface-soft);
   transform: translateY(-1px);
+}
+
+.action-menu-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.action-menu-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .action-sheet-backdrop {
@@ -973,18 +988,19 @@ select {
   display: block;
 }
 
-.account-list li > div:last-child {
+.account-list .account-row-copy,
+.account-list .account-row-value {
+  min-width: 0;
+}
+
+.account-list .account-row-value {
   text-align: right;
 }
 
-.account-list .account-row-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.35rem;
-}
-
 .account-list .action-menu {
-  display: block;
+  display: grid;
+  align-self: center;
+  justify-self: end;
 }
 
 .account-list span {
@@ -1000,6 +1016,24 @@ select {
   color: var(--muted);
   background: transparent;
   cursor: pointer;
+}
+
+.account-list .action-menu-trigger {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--surface-soft);
+}
+
+.account-list .action-menu-trigger:hover,
+.account-list .action-menu-trigger:focus-visible,
+.account-list .action-menu-trigger[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
+  color: var(--brand-dark);
+  background: var(--brand-soft);
 }
 
 .account-list .account-remove-button {

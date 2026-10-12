@@ -23,49 +23,45 @@ export function AccountRows({
     <ul className="account-list">
       {assets.map((account) => (
         <li key={account.id}>
-          <div>
+          <div className="account-row-copy">
             <strong>{account.name}</strong>
             <span>{accountLabels[account.type]}</span>
           </div>
-          <div>
+          <div className="account-row-value">
             <strong>{formatCad(account.currentValueCents)}</strong>
-            <div className="account-row-actions">
-              <ActionMenu
-                label={`More actions for ${account.name}`}
-                title={`${account.name} account`}
-                primaryActionLabel="Update balance"
-                onPrimaryAction={() => {
-                  onUpdateAsset(account);
-                }}
-                actionLabel="Remove account"
-                onAction={() => void onRemove(account.id, "asset")}
-              />
-            </div>
           </div>
+          <ActionMenu
+            label={`More actions for ${account.name}`}
+            title={`${account.name} account`}
+            primaryActionLabel="Update balance"
+            onPrimaryAction={() => {
+              onUpdateAsset(account);
+            }}
+            actionLabel="Remove account"
+            onAction={() => void onRemove(account.id, "asset")}
+          />
         </li>
       ))}
       {liabilities.map((account) => (
         <li key={account.id}>
-          <div>
+          <div className="account-row-copy">
             <strong>{account.name}</strong>
             <span>{accountLabels[account.type]}</span>
           </div>
-          <div>
+          <div className="account-row-value">
             <strong>{formatCad(account.currentBalanceCents)}</strong>
             <span>{debtPaymentLabel(account)}</span>
-            <div className="account-row-actions">
-              <ActionMenu
-                label={`More actions for ${account.name}`}
-                title={`${account.name} account`}
-                primaryActionLabel="Update debt details"
-                onPrimaryAction={() => {
-                  onEditLiability(account);
-                }}
-                actionLabel="Remove account"
-                onAction={() => void onRemove(account.id, "liability")}
-              />
-            </div>
           </div>
+          <ActionMenu
+            label={`More actions for ${account.name}`}
+            title={`${account.name} account`}
+            primaryActionLabel="Update debt details"
+            onPrimaryAction={() => {
+              onEditLiability(account);
+            }}
+            actionLabel="Remove account"
+            onAction={() => void onRemove(account.id, "liability")}
+          />
         </li>
       ))}
     </ul>
