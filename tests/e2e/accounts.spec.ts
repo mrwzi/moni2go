@@ -200,8 +200,18 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
   ).toBeVisible();
   await expect(
     page.getByRole("listitem").filter({ hasText: "Credit card" }),
-  ).toContainText("$10.00");
+  ).toContainText("Owed $10.00");
   await expect(page.getByText("No payment due recorded")).toBeVisible();
+
+  await page.getByLabel("More actions for Credit card").click();
+  await page.getByRole("button", { name: "Update debt details" }).click();
+  const debtDialog = page.getByRole("dialog", { name: "Update debt details" });
+  await expect(debtDialog.getByLabel("Payment status")).toHaveValue("flexible");
+  await expect(
+    debtDialog.getByText("No statement payment is recorded yet"),
+  ).toBeVisible();
+  await expect(debtDialog.getByLabel("Required payment amount")).toHaveCount(0);
+  await debtDialog.getByRole("button", { name: "Close" }).click();
 
   await page.goto("/plan");
   await expect(

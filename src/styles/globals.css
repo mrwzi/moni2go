@@ -1097,6 +1097,14 @@ select {
   text-align: right;
 }
 
+.account-list .account-row-debt > strong {
+  color: var(--danger);
+}
+
+.compact-debt-note {
+  margin: 0;
+}
+
 .account-list .action-menu {
   display: grid;
   align-self: center;

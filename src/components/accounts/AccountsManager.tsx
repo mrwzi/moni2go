@@ -266,7 +266,12 @@ export function AccountsManager() {
     setPaymentFrequency(account.paymentFrequency ?? "monthly");
     setNextPaymentDateInput(account.nextPaymentDate ?? "");
     setTargetPayoffDateInput(account.targetPayoffDate ?? "");
-    setPaymentRequirement(account.paymentRequirement ?? "required");
+    setPaymentRequirement(
+      account.paymentRequirement ??
+        (account.type === "credit-card" || account.type === "line-of-credit"
+          ? "flexible"
+          : "required"),
+    );
     setEditingLiabilityId(account.id);
     setMessage(null);
   }
@@ -1238,7 +1243,10 @@ export function AccountsManager() {
                   {kind === "liability" && (
                     <>
                       <label>
-                        Payment schedule
+                        {liabilityType === "credit-card" ||
+                        liabilityType === "line-of-credit"
+                          ? "Payment status"
+                          : "Payment schedule"}
                         <select
                           value={paymentRequirement}
                           onChange={(event) => {
@@ -1251,7 +1259,12 @@ export function AccountsManager() {
                           }}
                         >
                           <option value="required">Required payment</option>
-                          <option value="flexible">No fixed payment</option>
+                          <option value="flexible">
+                            {liabilityType === "credit-card" ||
+                            liabilityType === "line-of-credit"
+                              ? "No payment due recorded"
+                              : "No fixed payment"}
+                          </option>
                         </select>
                       </label>
                       {paymentRequirement === "required" &&
@@ -1308,6 +1321,14 @@ export function AccountsManager() {
                             </small>
                           </label>
                         </div>
+                      ) : paymentRequirement === "flexible" &&
+                        (liabilityType === "credit-card" ||
+                          liabilityType === "line-of-credit") ? (
+                        <p className="cash-place-note compact-debt-note">
+                          No statement payment is recorded yet. Add the real
+                          required amount and due date when your lender provides
+                          them.
+                        </p>
                       ) : paymentRequirement === "flexible" ? (
                         <div className="debt-payment-fields">
                           <p className="cash-place-note">

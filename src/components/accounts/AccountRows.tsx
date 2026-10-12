@@ -54,8 +54,13 @@ export function AccountRows({
             <strong>{account.name}</strong>
             <span>{accountLabels[account.type]}</span>
           </div>
-          <div className="account-row-value">
-            <strong>{formatCad(account.currentBalanceCents)}</strong>
+          <div
+            className={`account-row-value${account.currentBalanceCents > 0 ? " account-row-debt" : ""}`}
+          >
+            <strong>
+              {account.currentBalanceCents > 0 ? "Owed " : ""}
+              {formatCad(account.currentBalanceCents)}
+            </strong>
             <span>{debtPaymentLabel(account)}</span>
           </div>
           <ActionMenu
