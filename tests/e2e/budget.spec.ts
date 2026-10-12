@@ -139,7 +139,7 @@ test("shows current spending separately from completed-month averages", async ({
     await page.getByRole("button", { name: "Money out" }).click();
     await page.getByLabel("What was it for?").selectOption("groceries");
     await page.getByLabel("Amount").fill(amount);
-    await page.getByRole("button", { name: "Save spending" }).click();
+    await page.getByRole("button", { name: "Save purchase" }).click();
     const transaction = page
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
@@ -155,7 +155,7 @@ test("shows current spending separately from completed-month averages", async ({
   await page.getByRole("button", { name: "Money out" }).click();
   await page.getByLabel("What was it for?").selectOption("groceries");
   await page.getByLabel("Amount").fill("75");
-  await page.getByRole("button", { name: "Save spending" }).click();
+  await page.getByRole("button", { name: "Save purchase" }).click();
 
   await page.goto("/plan");
   await page
@@ -201,7 +201,7 @@ test("shows current spending separately from completed-month averages", async ({
     await page.getByRole("button", { name: "Money out" }).click();
     await page.getByLabel("What was it for?").selectOption("restaurants");
     await page.getByLabel("Amount").fill(amount);
-    await page.getByRole("button", { name: "Save spending" }).click();
+    await page.getByRole("button", { name: "Save purchase" }).click();
     const transaction = page
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
@@ -216,7 +216,7 @@ test("shows current spending separately from completed-month averages", async ({
   await page.getByRole("button", { name: "Money out" }).click();
   await page.getByLabel("What was it for?").selectOption("restaurants");
   await page.getByLabel("Amount").fill("145");
-  await page.getByRole("button", { name: "Save spending" }).click();
+  await page.getByRole("button", { name: "Save purchase" }).click();
 
   await page.goto("/plan");
   const restaurants = page

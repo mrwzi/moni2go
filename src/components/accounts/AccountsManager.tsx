@@ -624,7 +624,7 @@ export function AccountsManager() {
                     input.transactionType === "transfer"
                       ? "Transfer between accounts"
                       : input.transactionType === "credit-card-payment"
-                        ? "Credit-card payment"
+                        ? "Card or loan payment"
                         : input.transactionType === "savings-contribution"
                           ? "Savings or investment contribution"
                           : `${input.transactionType === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[spendingCategory]}`,

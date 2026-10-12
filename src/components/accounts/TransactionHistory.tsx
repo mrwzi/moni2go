@@ -17,11 +17,11 @@ import type { FinancialEntityId } from "../../v2/domain/types";
 import { SPENDING_CATEGORIES } from "./account-options";
 
 const TYPE_LABELS: Record<ExpenseTransactionType, string> = {
-  purchase: "Purchase or bill",
-  refund: "Refund",
-  transfer: "Transfer between my accounts",
-  "credit-card-payment": "Credit-card payment",
-  "savings-contribution": "Savings or investment contribution",
+  purchase: "Purchase",
+  refund: "Refund received",
+  transfer: "Transfer between accounts",
+  "credit-card-payment": "Card or loan payment",
+  "savings-contribution": "Savings or investment deposit",
 };
 
 function eventType(event: DatedExpenseEvent): ExpenseTransactionType {
@@ -236,7 +236,7 @@ export function TransactionHistory({
                 </select>
               </label>
               <label>
-                Transaction type
+                What happened?
                 <select
                   value={transactionType}
                   onChange={(event) => {

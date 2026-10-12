@@ -285,7 +285,7 @@ test("records money in and money out against an existing account", async ({
   await page.getByRole("button", { name: "Money out" }).click();
   await page.getByLabel("What was it for?").selectOption("groceries");
   await page.getByLabel("Amount").fill("20.25");
-  await page.getByRole("button", { name: "Save spending" }).click();
+  await page.getByRole("button", { name: "Save purchase" }).click();
   await expect(
     page.getByText("$20.25 spending recorded from Chequing."),
   ).toBeVisible();
@@ -294,12 +294,8 @@ test("records money in and money out against an existing account", async ({
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toBeVisible();
-  await expect(nextSteps).toContainText(
-    "Create a plan before assigning the rest.",
-  );
-  await expect(nextSteps).toContainText(
-    "moni2go needs your real bills and priorities",
-  );
+  await expect(nextSteps).toContainText("Start a simple plan");
+  await expect(nextSteps).toContainText("Add your real bills and priorities");
 });
 
 test("records credit-card purchases once and applies payments to both balances", async ({
@@ -326,11 +322,11 @@ test("records credit-card purchases once and applies payments to both balances",
   await page.getByRole("button", { name: "Money out" }).click();
   let spendingDialog = page.getByRole("dialog", { name: "Record spending" });
   await spendingDialog
-    .getByRole("combobox", { name: "Account" })
+    .getByRole("combobox", { name: "Account or card" })
     .selectOption({ label: "Credit card · owed $420.00" });
   await spendingDialog.getByLabel("What was it for?").selectOption("groceries");
   await spendingDialog.getByLabel("Amount").fill("50");
-  await spendingDialog.getByRole("button", { name: "Save spending" }).click();
+  await spendingDialog.getByRole("button", { name: "Save purchase" }).click();
   await expect(
     page.getByRole("listitem").filter({ hasText: "Credit card" }),
   ).toContainText("$470.00");
@@ -338,13 +334,13 @@ test("records credit-card purchases once and applies payments to both balances",
   await page.getByRole("button", { name: "Money out" }).click();
   spendingDialog = page.getByRole("dialog", { name: "Record spending" });
   await spendingDialog
-    .getByLabel("Transaction type")
+    .getByLabel("What happened?")
     .selectOption("credit-card-payment");
   await spendingDialog
     .getByLabel("Credit card or debt paid")
     .selectOption({ label: "Credit card · owed $470.00" });
   await spendingDialog.getByLabel("Amount").fill("100");
-  await spendingDialog.getByRole("button", { name: "Save spending" }).click();
+  await spendingDialog.getByRole("button", { name: "Save payment" }).click();
 
   await expect(
     page.getByRole("listitem").filter({ hasText: "Chequing" }),
@@ -357,7 +353,7 @@ test("records credit-card purchases once and applies payments to both balances",
   });
   await expect(transactions.getByText("Groceries")).toBeVisible();
   await expect(
-    transactions.getByText("Credit-card payment", { exact: true }),
+    transactions.getByText("Card or loan payment", { exact: true }),
   ).toBeVisible();
 });
 

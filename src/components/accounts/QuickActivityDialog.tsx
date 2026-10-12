@@ -27,18 +27,40 @@ export type QuickActivityInput = Readonly<{
 }>;
 
 const TRANSACTION_TYPE_OPTIONS = [
-  { value: "purchase", label: "Purchase or bill" },
-  { value: "refund", label: "Refund" },
-  { value: "transfer", label: "Transfer between my accounts" },
-  { value: "credit-card-payment", label: "Credit-card payment" },
+  { value: "purchase", label: "Bought or paid for something" },
+  { value: "refund", label: "Got money back (refund)" },
+  { value: "transfer", label: "Moved money between my accounts" },
+  { value: "credit-card-payment", label: "Paid a credit card or loan" },
   {
     value: "savings-contribution",
-    label: "Savings or investment contribution",
+    label: "Added to savings or investments",
   },
 ] as const satisfies readonly {
   value: ExpenseTransactionType;
   label: string;
 }[];
+
+const TRANSACTION_TYPE_HELP: Readonly<Record<ExpenseTransactionType, string>> =
+  {
+    purchase:
+      "Counts as spending. A bank or debit purchase lowers its balance; a credit-card purchase increases the amount owed.",
+    refund:
+      "Money returned to you. It adds back to a bank account or reduces the amount owed on a credit card.",
+    transfer:
+      "Moves money between your own accounts. It is not counted as spending.",
+    "credit-card-payment":
+      "Pays down the selected card or loan from a bank account. It is not counted as another purchase.",
+    "savings-contribution":
+      "Tracks money moved toward savings or investing, separately from everyday spending.",
+  };
+
+const SUBMIT_LABELS: Readonly<Record<ExpenseTransactionType, string>> = {
+  purchase: "Save purchase",
+  refund: "Save refund",
+  transfer: "Save transfer",
+  "credit-card-payment": "Save payment",
+  "savings-contribution": "Save contribution",
+};
 
 export function QuickActivityDialog({
   kind,
@@ -134,7 +156,15 @@ export function QuickActivityDialog({
           }}
         >
           <label>
-            Account
+            {kind === "income"
+              ? "Add money to"
+              : transactionType === "credit-card-payment"
+                ? "Pay from"
+                : transactionType === "transfer"
+                  ? "Move money from"
+                  : transactionType === "savings-contribution"
+                    ? "Money comes from"
+                    : "Account or card"}
             <select
               value={accountId}
               onChange={(event) => {
@@ -174,7 +204,7 @@ export function QuickActivityDialog({
           ) : (
             <>
               <label>
-                Transaction type
+                What happened?
                 <select
                   value={transactionType}
                   onChange={(event) => {
@@ -203,10 +233,15 @@ export function QuickActivityDialog({
                   ))}
                 </select>
               </label>
+              <p className="cash-place-note activity-explanation">
+                {TRANSACTION_TYPE_HELP[transactionType]}
+              </p>
               {(transactionType === "purchase" ||
                 transactionType === "refund") && (
                 <label>
-                  What was it for?
+                  {transactionType === "refund"
+                    ? "What was refunded?"
+                    : "What was it for?"}
                   <select
                     value={spendingCategory}
                     onChange={(event) => {
@@ -263,16 +298,7 @@ export function QuickActivityDialog({
                       ))}
                     </select>
                   </label>
-                  <p className="cash-place-note">
-                    Reduces the selected debt balance but is not counted as a
-                    second purchase.
-                  </p>
                 </>
-              )}
-              {transactionType === "savings-contribution" && (
-                <p className="cash-place-note">
-                  Tracked separately from everyday consumption spending.
-                </p>
               )}
             </>
           )}
@@ -302,7 +328,7 @@ export function QuickActivityDialog({
             at your bank.
           </p>
           <button className="button button-primary" type="submit">
-            {kind === "income" ? "Add money" : "Save spending"}
+            {kind === "income" ? "Add money" : SUBMIT_LABELS[transactionType]}
           </button>
         </form>
       </section>
