@@ -287,6 +287,16 @@ test("records money in and money out against an existing account", async ({
     page.getByText("$20.25 spending recorded from Chequing."),
   ).toBeVisible();
   await expect(page.getByText("$130.00").first()).toBeVisible();
+
+  await page.goto("/");
+  const nextSteps = page.getByRole("region", { name: "What to do next" });
+  await expect(nextSteps).toBeVisible();
+  await expect(nextSteps).toContainText(
+    "Create a plan before assigning the rest.",
+  );
+  await expect(nextSteps).toContainText(
+    "NorthCents needs your real bills and priorities",
+  );
 });
 
 test("records credit-card purchases once and applies payments to both balances", async ({

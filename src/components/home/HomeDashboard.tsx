@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatCad } from "../../domain/money";
 import {
   deriveNetWorthCents,
+  deriveRequiredDebtPayments,
   deriveSpendableCashCents,
   deriveTotalAssetsCents,
   deriveTotalLiabilitiesCents,
@@ -106,6 +107,7 @@ function HomeDashboardContent() {
     );
   const assets = workspace.assetAccounts;
   const liabilities = workspace.liabilityAccounts;
+  const spendableCashCents = deriveSpendableCashCents(assets);
   const savedPlan = workspace.allocationRules.filter(
     (rule) =>
       rule.enabled &&
@@ -145,6 +147,24 @@ function HomeDashboardContent() {
     (total, item) => total + item.definition.amountCents * item.occurrenceCount,
     0,
   );
+  const requiredUpcomingCommitmentTotal = upcomingCommitments.reduce(
+    (total, item) =>
+      item.definition.obligation === "required"
+        ? total + item.definition.amountCents * item.occurrenceCount
+        : total,
+    0,
+  );
+  const requiredDebtPaymentTotal =
+    deriveRequiredDebtPayments(liabilities).totalCents;
+  const flexibleDebtBalance = liabilities
+    .filter(
+      (account) =>
+        account.status === "active" &&
+        account.currentBalanceCents > 0 &&
+        account.paymentRequirement === "flexible",
+    )
+    .reduce((total, account) => total + account.currentBalanceCents, 0);
+  const moneyLeftAfterPlan = spendableCashCents - savedPlanTotal;
   return (
     <div>
       <div className="app-page-heading">
@@ -160,7 +180,7 @@ function HomeDashboardContent() {
       <section className="account-totals">
         <div>
           <span>Spendable cash</span>
-          <strong>{formatCad(deriveSpendableCashCents(assets))}</strong>
+          <strong>{formatCad(spendableCashCents)}</strong>
         </div>
         <div>
           <span>Total assets</span>
@@ -171,6 +191,76 @@ function HomeDashboardContent() {
           <strong>{formatCad(deriveTotalLiabilitiesCents(liabilities))}</strong>
         </div>
       </section>
+      {spendableCashCents > 0 && (
+        <section
+          className="app-card home-next-step"
+          aria-labelledby="home-next-step-heading"
+        >
+          <div className="home-section-heading">
+            <div>
+              <p className="eyebrow">Money available</p>
+              <h2 id="home-next-step-heading">What to do next</h2>
+            </div>
+            <Link href="/plan">Review plan</Link>
+          </div>
+          <ul className="home-next-step-list">
+            {requiredUpcomingCommitmentTotal > 0 && (
+              <li>
+                <span aria-hidden="true">1</span>
+                <p>
+                  <strong>Protect required bills first.</strong>
+                  Keep {formatCad(requiredUpcomingCommitmentTotal)} available
+                  for required commitments due in the next 30 days.
+                </p>
+              </li>
+            )}
+            {requiredDebtPaymentTotal > 0 && (
+              <li>
+                <span aria-hidden="true">
+                  {requiredUpcomingCommitmentTotal > 0 ? "2" : "1"}
+                </span>
+                <p>
+                  <strong>Keep required debt payments covered.</strong>
+                  Your recorded required monthly payments total{" "}
+                  {formatCad(requiredDebtPaymentTotal)}. NorthCents will not
+                  suggest skipping them.
+                </p>
+              </li>
+            )}
+            <li>
+              <span aria-hidden="true">
+                {requiredUpcomingCommitmentTotal > 0 &&
+                requiredDebtPaymentTotal > 0
+                  ? "3"
+                  : requiredUpcomingCommitmentTotal > 0 ||
+                      requiredDebtPaymentTotal > 0
+                    ? "2"
+                    : "1"}
+              </span>
+              <p>
+                <strong>
+                  {savedPlan.length > 0
+                    ? "Check the rest against your plan."
+                    : "Create a plan before assigning the rest."}
+                </strong>
+                {savedPlan.length > 0
+                  ? moneyLeftAfterPlan >= 0
+                    ? ` Your saved plan assigns ${formatCad(savedPlanTotal)}, leaving ${formatCad(moneyLeftAfterPlan)} unassigned.`
+                    : ` Your saved plan is ${formatCad(Math.abs(moneyLeftAfterPlan))} above the money currently available.`
+                  : " NorthCents needs your real bills and priorities before it can show how much remains."}
+              </p>
+            </li>
+          </ul>
+          {flexibleDebtBalance > 0 && (
+            <p className="home-next-step-note">
+              You have {formatCad(flexibleDebtBalance)} of debt with no fixed
+              monthly payment recorded. After essentials, you can keep
+              unassigned money available, save it, or choose an extra debt
+              payment. NorthCents will not choose an amount for you.
+            </p>
+          )}
+        </section>
+      )}
       <section
         className="home-accounts"
         aria-labelledby="home-accounts-heading"
