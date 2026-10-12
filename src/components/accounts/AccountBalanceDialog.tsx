@@ -129,7 +129,7 @@ export function AccountBalanceDialog({
           )}
           <p className="cash-place-note">
             Use Set current balance if several updates were missed. This only
-            updates NorthCents; it does not move money at your provider.
+            updates moni2go; it does not move money at your provider.
           </p>
           <button
             className="button button-primary"

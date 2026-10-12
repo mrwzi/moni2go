@@ -222,7 +222,7 @@ function HomeDashboardContent() {
                 <p>
                   <strong>Keep required debt payments covered.</strong>
                   Your recorded required monthly payments total{" "}
-                  {formatCad(requiredDebtPaymentTotal)}. NorthCents will not
+                  {formatCad(requiredDebtPaymentTotal)}. moni2go will not
                   suggest skipping them.
                 </p>
               </li>
@@ -247,7 +247,7 @@ function HomeDashboardContent() {
                   ? moneyLeftAfterPlan >= 0
                     ? ` Your saved plan assigns ${formatCad(savedPlanTotal)}, leaving ${formatCad(moneyLeftAfterPlan)} unassigned.`
                     : ` Your saved plan is ${formatCad(Math.abs(moneyLeftAfterPlan))} above the money currently available.`
-                  : " NorthCents needs your real bills and priorities before it can show how much remains."}
+                  : " moni2go needs your real bills and priorities before it can show how much remains."}
               </p>
             </li>
           </ul>
@@ -256,7 +256,7 @@ function HomeDashboardContent() {
               You have {formatCad(flexibleDebtBalance)} of debt with no fixed
               monthly payment recorded. After essentials, you can keep
               unassigned money available, save it, or choose an extra debt
-              payment. NorthCents will not choose an amount for you.
+              payment. moni2go will not choose an amount for you.
             </p>
           )}
         </section>
@@ -344,7 +344,7 @@ function HomeDashboardContent() {
             ))}
           </ul>
           <p className="reminder-note">
-            These are in-app reminders. NorthCents does not send email or phone
+            These are in-app reminders. moni2go does not send email or phone
             notifications yet.
           </p>
         </section>

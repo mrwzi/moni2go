@@ -24,7 +24,7 @@ type DebtInterestModel =
     };
 ```
 
-Every payoff result includes the model kind and an assumption disclosure. The user enters the contractual minimum payment; NorthCents does not derive lender-specific minimums.
+Every payoff result includes the model kind and an assumption disclosure. The user enters the contractual minimum payment; moni2go does not derive lender-specific minimums.
 
 The initial model excludes variable-rate mortgages, compound structures not represented above, new purchases, cash advances, grace periods, fees, penalty APRs, promotional financing, and lender-specific formulas. Unsupported behavior returns a typed unsupported result.
 

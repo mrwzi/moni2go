@@ -489,7 +489,7 @@ function MoneyPlanContent() {
                   <div>
                     <strong>Split this payment using your plan</strong>
                     <span>
-                      NorthCents uses your own category proportions and includes
+                      moni2go uses your own category proportions and includes
                       required debt payments. You can change every amount.
                     </span>
                   </div>
@@ -520,7 +520,7 @@ function MoneyPlanContent() {
                 </div>
               )}
               <p className="plan-transfer-note">
-                This creates category envelopes only. NorthCents does not move
+                This creates category envelopes only. moni2go does not move
                 money between your accounts.
               </p>
             </>
@@ -634,7 +634,7 @@ function MoneyPlanContent() {
                     {missingDebtNames.join(", ")}.
                   </strong>
                   <span>
-                    NorthCents cannot calculate your plan accurately from a debt
+                    moni2go cannot calculate your plan accurately from a debt
                     balance alone.
                   </span>
                 </div>
@@ -645,7 +645,7 @@ function MoneyPlanContent() {
                     const firstMissingId = debtPayments.missingAccountIds[0];
                     if (firstMissingId)
                       sessionStorage.setItem(
-                        "northcents-edit-debt",
+                        "moni2go-edit-debt",
                         firstMissingId,
                       );
                   }}
@@ -708,8 +708,8 @@ function MoneyPlanContent() {
                 <p className="eyebrow">This month</p>
                 <h2 id="budget-guidance-heading">Budget guidance</h2>
                 <p>
-                  Informational only. NorthCents never changes your plan or
-                  moves money automatically.
+                  Informational only. moni2go never changes your plan or moves
+                  money automatically.
                 </p>
               </div>
               <ul>
@@ -892,8 +892,8 @@ function MoneyPlanContent() {
                   FCAC says needs differ by person and suggests gradually
                   building an emergency fund toward 3–6 months of regular
                   expenses when possible. Its first-job guidance suggests
-                  starting with 5–10% of each paycheque; NorthCents&apos;
-                  optional starter uses the lower 5% figure.
+                  starting with 5–10% of each paycheque; moni2go&apos;s optional
+                  starter uses the lower 5% figure.
                 </p>
                 <div className="benchmark-links">
                   <a

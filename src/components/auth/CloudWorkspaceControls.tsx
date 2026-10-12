@@ -8,7 +8,7 @@ import {
   loadNewestCloudWorkspace,
   saveWorkspaceToCloud,
 } from "../../cloud/workspace-cloud";
-import { openNorthCentsDatabase, WorkspaceRepository } from "../../v2/storage";
+import { openMoni2GoDatabase, WorkspaceRepository } from "../../v2/storage";
 
 export function CloudWorkspaceControls() {
   const [user, setUser] = useState<User | null>(null);
@@ -35,7 +35,7 @@ export function CloudWorkspaceControls() {
     setPending(true);
     setMessage(null);
     try {
-      const database = await openNorthCentsDatabase();
+      const database = await openMoni2GoDatabase();
       try {
         const workspace = await new WorkspaceRepository(
           database,
@@ -65,7 +65,7 @@ export function CloudWorkspaceControls() {
         setMessage("No cloud workspace was found for this account.");
         return;
       }
-      const database = await openNorthCentsDatabase();
+      const database = await openMoni2GoDatabase();
       try {
         const repository = new WorkspaceRepository(database);
         if (await repository.workspaceExists(workspace.id))

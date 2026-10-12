@@ -1,4 +1,4 @@
-# NorthCents V2 Product and Technical Blueprint
+# moni2go V2 Product and Technical Blueprint
 
 Status: proposed; implementation requires phase approval  
 Date: 2026-09-23  
@@ -7,13 +7,13 @@ V1 compatibility rule: preserve the tested V1 financial engine and Scenario Lab
 
 ## 1. Product purpose
 
-NorthCents V2 is a local-first personal money, cash-flow, debt, budgeting, and financial-decision engine for Canadians. It helps a user model what money is available, when income and obligations occur, where money is allocated, which dated conditions need attention, and what inputs would produce a selected outcome.
+moni2go V2 is a local-first personal money, cash-flow, debt, budgeting, and financial-decision engine for Canadians. It helps a user model what money is available, when income and obligations occur, where money is allocated, which dated conditions need attention, and what inputs would produce a selected outcome.
 
 V2 expands the V1 question—“What happens if one monthly value changes?”—into:
 
 > Given my current cash, dated income, obligations, spending, debts, periodic expenses, and goals, what is my projected position, when are pressure points, and what alternatives can I model?
 
-NorthCents remains an analysis product. It does not make affordability decisions, rank a person’s choices morally, or provide individualized financial advice.
+moni2go remains an analysis product. It does not make affordability decisions, rank a person’s choices morally, or provide individualized financial advice.
 
 ## 2. Initial users
 
@@ -30,7 +30,7 @@ The initial V2 audience is Canadian students, recent graduates, workers with one
 7. **Calendar-safe timing.** Dated models use calendar dates rather than implicit UTC timestamps. Recurrence expansion is explicit and bounded.
 8. **Source clarity.** Personal calculations and public Canadian context are separate layers. Public data always shows source, observation date, retrieval time, geography, and limitations.
 9. **V1 is an asset.** Existing formulas, fixtures, methodology, privacy controls, and tests remain protective contracts. V2 extends around them.
-10. **No universal budget rule.** NorthCents models entered obligations and goals. It does not impose 50/30/20 or another rule as a personalized target.
+10. **No universal budget rule.** moni2go models entered obligations and goals. It does not impose 50/30/20 or another rule as a personalized target.
 
 ## 4. Product modes and information architecture
 
@@ -42,7 +42,7 @@ The initial V2 audience is Canadian students, recent graduates, workers with one
 | My Money          | Maintain the local financial model and primary dashboard        | Browser-local only                    |
 | Advanced Analysis | Preserve the V1 Scenario Lab and add later advanced comparisons | Browser-local or synthetic            |
 | Canada Context    | View official economic, price, and rental reference data        | Public-data selections only           |
-| Ask NorthCents    | Future natural-language interface over deterministic tools      | Not implemented in V2 initial release |
+| Ask moni2go       | Future natural-language interface over deterministic tools      | Not implemented in V2 initial release |
 
 ### 4.2 Proposed routes
 
@@ -150,13 +150,13 @@ The flow must permit partial-but-valid data. Missing optional detail is labeled 
 ### 5.6 Goal solver
 
 1. Select a desired outcome and target remainder/deadline.
-2. Choose the variable NorthCents may solve (income, housing, savings, debt payment, or periodic reservation).
+2. Choose the variable moni2go may solve (income, housing, savings, debt payment, or periodic reservation).
 3. Lock all other inputs.
 4. Show the deterministic solved value, feasibility state, and substituted equation.
 
 ### 5.7 Future next-pay planning
 
-A later budgeting phase should support **Plan my next pay**. Given an expected income event, required obligations before the subsequent expected income, user-entered plans, debt minimums, and flexible budget allocations, NorthCents may produce a deterministic, editable allocation draft. Every proposed reservation must explain why it exists. NorthCents must not silently move real money or claim that there is only one correct allocation.
+A later budgeting phase should support **Plan my next pay**. Given an expected income event, required obligations before the subsequent expected income, user-entered plans, debt minimums, and flexible budget allocations, moni2go may produce a deterministic, editable allocation draft. Every proposed reservation must explain why it exists. moni2go must not silently move real money or claim that there is only one correct allocation.
 
 The future product UI groups `FinancialGoal` and `SinkingFund` records under **Plans**. This is presentation language, not a third `Plan` domain entity. A goal and a known future expense remain distinct concepts.
 
@@ -614,7 +614,7 @@ These equivalents use final cent rounding and never populate the dated short-ter
 
 The initial implemented planner derives its planning base from manually entered
 spendable accounts or an explicitly entered next-payment amount. Category
-amounts remain user-controlled. NorthCents calculates category shares from those
+amounts remain user-controlled. moni2go calculates category shares from those
 amounts and runs five transparent checks: exact-cent reconciliation,
 affordability, debt visibility, emergency-allocation visibility, and dated
 benchmark context. Canadian household averages are contextual comparisons only
@@ -787,7 +787,7 @@ Migration must never invent pay dates, bill due dates, APRs, categories beyond t
 
 ### 10.3 Export, import, recovery, and clearing
 
-- Export is a locally generated UTF-8 JSON file with product name, export format version, generated timestamp, workspace data, and a SHA-256 integrity digest. It contains an explicit warning that the file includes financial data and is not encrypted by NorthCents.
+- Export is a locally generated UTF-8 JSON file with product name, export format version, generated timestamp, workspace data, and a SHA-256 integrity digest. It contains an explicit warning that the file includes financial data and is not encrypted by moni2go.
 - Import parses locally, validates every record, shows a count/validation preview, and requires an explicit replace or merge choice. No network upload occurs.
 - Merge uses entity IDs and rejects source/type collisions; it does not silently overwrite newer records.
 - Before a destructive migration, create an in-database recovery snapshot and retain at most one prior schema snapshot.
@@ -884,7 +884,7 @@ Transaction import is future-ready through a local `TransactionCandidate` stagin
 
 A future regulated connector implements a `FinancialDataProvider` port returning the same normalized local entities. Provider tokens, consent, refresh, revocation, server boundary, and Canadian regulatory requirements require a separate threat model and product approval. Core engines depend only on normalized domain data and therefore do not need redesign. No bank credential collection is planned.
 
-## 13. Future Ask NorthCents architecture
+## 13. Future Ask moni2go architecture
 
 AI is not part of the initial V2 implementation. The future boundary is:
 
@@ -1113,7 +1113,7 @@ Use property-based tests where valuable for recurrence monotonicity, projection 
 **Gate:** zero release-blocking defects; documented rollback including local schema compatibility.  
 **Out of scope:** AI and open banking.
 
-### Future Phase — Ask NorthCents
+### Future Phase — Ask moni2go
 
 Requires separate privacy approval and threat model. It cannot begin merely because V2 engines exist.
 

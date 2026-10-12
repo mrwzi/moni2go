@@ -1,15 +1,15 @@
-# NorthCents
+# moni2go
 
 **Your money, with direction.**
 
-NorthCents is a privacy-first personal money app for tracking accounts,
+moni2go is a privacy-first personal money app for tracking accounts,
 planning monthly spending, and testing clear what-if scenarios. It uses exact
 integer-cent calculations and keeps local data in the browser unless the user
 explicitly chooses cloud backup.
 
 ## Live demo
 
-**[Open NorthCents →](https://northcents.vercel.app)**
+**[Open moni2go →](https://moni2go.vercel.app)**
 
 No bank connection is required. Try a synthetic demo or create an account to
 save your own workspace.
@@ -18,11 +18,11 @@ save your own workspace.
 
 ### Desktop · light mode
 
-![NorthCents scenario analysis on desktop in light mode](docs/screenshots/northcents-desktop-light.png)
+![moni2go scenario analysis on desktop in light mode](docs/screenshots/moni2go-desktop-light.png)
 
 ### Desktop · dark mode
 
-![NorthCents scenario analysis on desktop in dark mode](docs/screenshots/northcents-desktop-dark.png)
+![moni2go scenario analysis on desktop in dark mode](docs/screenshots/moni2go-desktop-dark.png)
 
 ## Highlights
 
@@ -61,7 +61,7 @@ npm run test:a11y
 
 ## Privacy
 
-NorthCents never asks for bank credentials and includes no bank connection,
+moni2go never asks for bank credentials and includes no bank connection,
 analytics, advertising, or financial-data API. Local financial data stays in
 the browser. Cloud transfer occurs only when a signed-in user explicitly saves
 or restores a workspace.
@@ -73,5 +73,5 @@ or restores a workspace.
 - [Deployment guide](docs/deployment.md)
 - [Supabase setup](docs/supabase-setup.md)
 
-NorthCents provides educational financial and economic analysis—not financial
+moni2go provides educational financial and economic analysis—not financial
 advice.

@@ -13,8 +13,8 @@ Browser-local data can be lost when storage is cleared or a device changes. User
 Initial V2 export is a locally generated UTF-8 JSON document:
 
 ```ts
-type NorthCentsExport = Readonly<{
-  format: "northcents-local-export";
+type Moni2GoExport = Readonly<{
+  format: "moni2go-local-export";
   formatVersion: 1;
   dataSchemaVersion: number;
   exportedAt: string;
@@ -24,13 +24,13 @@ type NorthCentsExport = Readonly<{
 }>;
 ```
 
-Following the product rename, new files use `northcents-local-export`. The import
+Following the product rename, new files use `moni2go-local-export`. The import
 boundary continues to accept the former `monevero-local-export` and
 `finscope-local-export` identifiers so existing user-created backups remain
 restorable. Parsed legacy envelopes are normalized to the current identifier;
 no financial values are rewritten.
 
-Before download, the UI must state: “This file contains personal financial information.” It should also explain that the file is not encrypted by NorthCents and should be stored securely. The file contains no application secret, token, credential, cache entry, analytics identifier, or browser metadata unrelated to restoration.
+Before download, the UI must state: “This file contains personal financial information.” It should also explain that the file is not encrypted by moni2go and should be stored securely. The file contains no application secret, token, credential, cache entry, analytics identifier, or browser metadata unrelated to restoration.
 
 ## Consequences
 

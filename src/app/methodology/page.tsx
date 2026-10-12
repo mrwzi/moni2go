@@ -13,7 +13,7 @@ export default function MethodologyPage() {
         <p className="eyebrow">Methodology</p>
         <h1>Every result has a traceable calculation</h1>
         <p>
-          NorthCents compares a validated monthly baseline with one hypothetical
+          moni2go compares a validated monthly baseline with one hypothetical
           change. The same inputs and scenario always produce the same result.
         </p>
       </div>
@@ -27,10 +27,10 @@ export default function MethodologyPage() {
       </nav>
 
       <div className="methodology-stack">
-        <article className="prose-card" id="what-northcents-models">
-          <h2>What NorthCents models</h2>
+        <article className="prose-card" id="what-moni2go-models">
+          <h2>What moni2go models</h2>
           <p>
-            NorthCents models how one housing, income, other-expense, or
+            moni2go models how one housing, income, other-expense, or
             planned-savings assumption changes a simplified monthly financial
             position. It reports arithmetic differences, not predictions or
             recommendations.
@@ -191,7 +191,7 @@ export default function MethodologyPage() {
         </article>
 
         <article className="prose-card" id="limitations">
-          <h2>Limitations and what NorthCents does not do</h2>
+          <h2>Limitations and what moni2go does not do</h2>
           <ul>
             <li>
               Models simplified scenarios; it does not predict future economic

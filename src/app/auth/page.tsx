@@ -9,7 +9,7 @@ export default function AuthPage() {
   return (
     <section className="section shell auth-page">
       <div className="app-page-heading auth-heading">
-        <p className="eyebrow">NorthCents account</p>
+        <p className="eyebrow">moni2go account</p>
         <h1>Keep your money picture available.</h1>
         <p>
           Sign in to save an encrypted-in-transit copy to your private cloud

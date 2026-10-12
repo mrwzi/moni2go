@@ -6,7 +6,7 @@ Accepted (superseded and broadened 2026-09-25)
 
 ## Context
 
-NorthCents must let a person describe where their money exists and what they owe without implying bank connectivity or implementing a full accounting ledger. The earlier liquid-only `CashAccount` model could not represent registered savings, investments, crypto, or manually entered liabilities, and its inclusion boolean did not explain why an asset was or was not spendable.
+moni2go must let a person describe where their money exists and what they owe without implying bank connectivity or implementing a full accounting ledger. The earlier liquid-only `CashAccount` model could not represent registered savings, investments, crypto, or manually entered liabilities, and its inclusion boolean did not explain why an asset was or was not spendable.
 
 ## Decision
 

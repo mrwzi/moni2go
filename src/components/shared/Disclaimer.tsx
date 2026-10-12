@@ -7,7 +7,7 @@ export function Disclaimer() {
       <div>
         <h2 id="disclaimer-heading">Analysis, not advice</h2>
         <p>
-          Estimates are based on the assumptions entered. NorthCents provides
+          Estimates are based on the assumptions entered. moni2go provides
           financial and economic analysis, not financial advice.
         </p>
       </div>

@@ -150,3 +150,6 @@ export async function openNorthCentsDatabase(
     );
   }
 }
+
+/** Product-facing alias; the legacy function remains for backup compatibility. */
+export const openMoni2GoDatabase = openNorthCentsDatabase;

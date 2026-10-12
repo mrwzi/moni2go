@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-NorthCents may display official CPI, retail-price, household-spending, or Bank of Canada context. Those sources do not need a user’s balances, income, expenses, debts, or goals. Combining personal calculations with upstream requests would undermine the local-first guarantee.
+moni2go may display official CPI, retail-price, household-spending, or Bank of Canada context. Those sources do not need a user’s balances, income, expenses, debts, or goals. Combining personal calculations with upstream requests would undermine the local-first guarantee.
 
 ## Decision
 

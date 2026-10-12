@@ -36,7 +36,7 @@ export const METRIC_METHODOLOGY = {
     unit: "CAD per month",
     display: "Displayed to two decimal places.",
     limitation:
-      "NorthCents does not separately calculate taxes or payroll deductions.",
+      "moni2go does not separately calculate taxes or payroll deductions.",
   },
   housing: {
     id: "housing",
@@ -67,7 +67,7 @@ export const METRIC_METHODOLOGY = {
     unit: "CAD per month",
     display: "Displayed to two decimal places.",
     limitation:
-      "NorthCents does not model amortization, interest changes, or loan terms.",
+      "moni2go does not model amortization, interest changes, or loan terms.",
   },
   "non-savings-outflows": {
     id: "non-savings-outflows",

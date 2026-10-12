@@ -1,6 +1,6 @@
-# NorthCents deployment guide
+# moni2go deployment guide
 
-This guide prepares NorthCents for a first production deployment on Vercel. It
+This guide prepares moni2go for a first production deployment on Vercel. It
 does not record a completed deployment. Every item in the post-deployment
 section must be checked against the real production URL after deployment.
 
@@ -32,7 +32,7 @@ npm audit --audit-level=low
 5. Enable branch protection or required checks if appropriate for the account.
 6. Review the rendered README and verify all relative documentation links.
 
-NorthCents local/demo mode requires no secrets. Authentication and cloud backup
+moni2go local/demo mode requires no secrets. Authentication and cloud backup
 require the two public Supabase configuration variables documented below.
 
 ## Recommended Vercel deployment procedure

@@ -106,8 +106,8 @@ export function ImpactSummary({
             {formatCad(plannedSavingsExcess)} per month.
           </strong>
           <p>
-            NorthCents preserves your entered savings amount, resulting in
-            negative remaining flexible cash.
+            moni2go preserves your entered savings amount, resulting in negative
+            remaining flexible cash.
           </p>
         </aside>
       ) : null}

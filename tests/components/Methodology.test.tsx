@@ -27,7 +27,7 @@ describe("methodology experience", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: /Limitations and what NorthCents does not do/i,
+        name: /Limitations and what moni2go does not do/i,
       }),
     ).toBeInTheDocument();
     expect(

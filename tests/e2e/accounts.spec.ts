@@ -298,7 +298,7 @@ test("records money in and money out against an existing account", async ({
     "Create a plan before assigning the rest.",
   );
   await expect(nextSteps).toContainText(
-    "NorthCents needs your real bills and priorities",
+    "moni2go needs your real bills and priorities",
   );
 });
 

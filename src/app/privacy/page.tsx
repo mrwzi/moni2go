@@ -12,7 +12,7 @@ export default function PrivacyPage() {
         <p className="eyebrow">Privacy</p>
         <h1>You control where your information is stored</h1>
         <p>
-          NorthCents works without an account. Cloud backup is optional and only
+          moni2go works without an account. Cloud backup is optional and only
           occurs when a signed-in user explicitly requests it.
         </p>
       </div>
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
         <h2>What is not stored</h2>
         <p>
           Demo selections are synthetic and are not saved into a personal cloud
-          workspace. NorthCents never requests bank passwords, account numbers,
+          workspace. moni2go never requests bank passwords, account numbers,
           transit numbers, card numbers, CVVs, or banking access tokens.
         </p>
         <h2>Deleting information</h2>

@@ -118,7 +118,7 @@ export function AuthForm() {
         Try a demo without signing in
       </Link>
       <p className="auth-privacy">
-        NorthCents never asks for bank credentials. Cloud saving is optional and
+        moni2go never asks for bank credentials. Cloud saving is optional and
         controlled from Settings.
       </p>
     </div>

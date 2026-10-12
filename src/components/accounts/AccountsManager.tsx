@@ -247,9 +247,12 @@ export function AccountsManager() {
 
   useEffect(() => {
     if (!workspace || handledDebtEditIntent.current) return;
-    const debtId = sessionStorage.getItem("northcents-edit-debt");
+    const debtId =
+      sessionStorage.getItem("moni2go-edit-debt") ??
+      sessionStorage.getItem("northcents-edit-debt");
     if (!debtId) return;
     handledDebtEditIntent.current = true;
+    sessionStorage.removeItem("moni2go-edit-debt");
     sessionStorage.removeItem("northcents-edit-debt");
     const account = workspace.liabilityAccounts.find(
       (liability) => liability.id === debtId,
@@ -1157,7 +1160,7 @@ export function AccountsManager() {
                     <label>
                       Account nickname
                       <input
-                        name="northcents-account-nickname"
+                        name="moni2go-account-nickname"
                         value={accountName}
                         onChange={(event) => {
                           setAccountName(event.target.value);
@@ -1282,7 +1285,7 @@ export function AccountsManager() {
                       ) : paymentRequirement === "flexible" ? (
                         <div className="debt-payment-fields">
                           <p className="cash-place-note">
-                            You choose when and how much to pay. NorthCents will
+                            You choose when and how much to pay. moni2go will
                             not add a required payment to your plan.
                           </p>
                           <label>
@@ -1304,7 +1307,7 @@ export function AccountsManager() {
                       ) : (
                         <p className="cash-place-note">
                           Nothing is due while the current balance is $0. If you
-                          add an amount owed later, NorthCents will ask for the
+                          add an amount owed later, moni2go will ask for the
                           required payment details.
                         </p>
                       )}

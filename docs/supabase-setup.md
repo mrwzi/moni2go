@@ -1,6 +1,6 @@
 # Supabase authentication and cloud workspace setup
 
-NorthCents supports optional accounts and user-controlled cloud workspace backup
+moni2go supports optional accounts and user-controlled cloud workspace backup
 through Supabase. The application continues to work in local-only and demo mode
 when Supabase is not configured.
 
@@ -34,7 +34,7 @@ Production. Redeploy after saving them.
 
 ## Security model
 
-- Supabase Auth owns passwords and sessions; NorthCents never stores passwords.
+- Supabase Auth owns passwords and sessions; moni2go never stores passwords.
 - PostgreSQL Row Level Security restricts profiles and workspaces to
   `auth.uid() = owner_id`.
 - Anonymous visitors receive no table grants.

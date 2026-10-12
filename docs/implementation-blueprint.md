@@ -1,4 +1,4 @@
-# NorthCents V1 Implementation Blueprint
+# moni2go V1 Implementation Blueprint
 
 Status: approved for implementation after review  
 Product scope: Canadian students and young adults  
@@ -7,7 +7,7 @@ Data policy: personal financial inputs remain in the browser
 
 ## 1. Product contract
 
-NorthCents is a forward-looking financial scenario simulator. It compares a user's current monthly baseline with one hypothetical change and explains the numerical effect. It does not provide financial advice, connect to bank accounts, or predict an individual's future.
+moni2go is a forward-looking financial scenario simulator. It compares a user's current monthly baseline with one hypothetical change and explains the numerical effect. It does not provide financial advice, connect to bank accounts, or predict an individual's future.
 
 The V1 promise is:
 
@@ -189,7 +189,7 @@ type DemoProfile = {
   name: string;
   description: string;
   baseline: Baseline;
-  provenance: "Synthetic example created for NorthCents; not a statistical average.";
+  provenance: "Synthetic example created for moni2go; not a statistical average.";
 };
 ```
 
@@ -228,7 +228,7 @@ V1 has no application database. A database would add operational and privacy cos
 ## 7. Repository structure
 
 ```text
-NorthCents/
+moni2go/
 ├─ docs/
 │  └─ implementation-blueprint.md
 ├─ public/
@@ -434,7 +434,7 @@ Requirements:
 - Respect reduced-motion preferences.
 - Use true table markup for comparisons and descriptive headings for screen-reader navigation.
 - Use “increase/decrease,” “surplus/deficit,” and “estimate” rather than judgmental language.
-- Display: “Estimates based on the assumptions entered. NorthCents does not provide financial advice.”
+- Display: “Estimates based on the assumptions entered. moni2go does not provide financial advice.”
 
 ## 14. Required test cases
 

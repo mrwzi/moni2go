@@ -13,22 +13,22 @@ import { hasSupabaseConfig } from "../lib/supabase/config";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://northcents.vercel.app"),
+  metadataBase: new URL("https://moni2go.vercel.app"),
   title: {
-    default: "NorthCents",
-    template: "%s · NorthCents",
+    default: "moni2go",
+    template: "%s · moni2go",
   },
   description:
-    "NorthCents gives your money direction with private account tracking, planning, and transparent what-if analysis.",
-  applicationName: "NorthCents",
+    "moni2go gives your money direction with private account tracking, planning, and transparent what-if analysis.",
+  applicationName: "moni2go",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
     locale: "en_CA",
-    siteName: "NorthCents",
-    title: "NorthCents — Your money, with direction.",
+    siteName: "moni2go",
+    title: "moni2go — Your money, with direction.",
     description:
       "See your accounts, plan your money, and explore financial decisions without connecting a bank.",
   },
@@ -51,7 +51,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k='northcents:theme';var t=localStorage.getItem(k)||localStorage.getItem('monevero:theme')||localStorage.getItem('finscope:theme');var v=t==='dark'||t==='light'?t:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');localStorage.setItem(k,v);document.documentElement.dataset.theme=v;document.documentElement.style.colorScheme=v}catch(e){}})()`,
+            __html: `(function(){try{var k='moni2go:theme';var t=localStorage.getItem(k)||localStorage.getItem('northcents:theme')||localStorage.getItem('monevero:theme')||localStorage.getItem('finscope:theme');var v=t==='dark'||t==='light'?t:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');localStorage.setItem(k,v);document.documentElement.dataset.theme=v;document.documentElement.style.colorScheme=v}catch(e){}})()`,
           }}
         />
       </head>
@@ -61,7 +61,7 @@ export default function RootLayout({
         </a>
         <header className="site-header">
           <div className="shell header-inner">
-            <Link className="wordmark" href="/" aria-label="NorthCents home">
+            <Link className="wordmark" href="/" aria-label="moni2go home">
               <span className="wordmark-mark" aria-hidden="true">
                 <svg viewBox="0 0 32 32">
                   <path d="M3 25 11.5 9l4.7 7L21 5l8 20H3Z" />
@@ -72,7 +72,7 @@ export default function RootLayout({
                   />
                 </svg>
               </span>
-              <span>NorthCents</span>
+              <span>moni2go</span>
             </Link>
             <div className="header-actions">
               <DesktopNavigation />

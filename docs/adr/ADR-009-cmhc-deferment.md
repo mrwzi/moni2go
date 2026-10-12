@@ -10,7 +10,7 @@ CMHC publishes authoritative rental-market tables, but Phase 1 has not verified 
 
 ## Decision
 
-CMHC rental context is disabled and is not required for the initial V2 release. NorthCents will not scrape CMHC pages, reverse-engineer private endpoints, or invent an API.
+CMHC rental context is disabled and is not required for the initial V2 release. moni2go will not scrape CMHC pages, reverse-engineer private endpoints, or invent an API.
 
 Before implementation using an official downloadable table, documentation must record its official URL, format/schema, geographic dimensions, reference period, refresh schedule, terms/provenance, validation, failure behavior, and test fixture policy.
 

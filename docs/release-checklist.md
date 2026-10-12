@@ -1,4 +1,4 @@
-# NorthCents release checklist
+# moni2go release checklist
 
 Status labels:
 

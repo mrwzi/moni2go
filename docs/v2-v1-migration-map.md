@@ -1,4 +1,4 @@
-# NorthCents V1 → V2 Migration Map
+# moni2go V1 → V2 Migration Map
 
 Status: companion to `docs/v2-product-blueprint.md`  
 Rule: extend around V1; do not rewrite the tested engine

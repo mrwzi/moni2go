@@ -1,6 +1,6 @@
-# NorthCents architecture
+# moni2go architecture
 
-NorthCents separates financial rules from presentation and persistence. The UI
+moni2go separates financial rules from presentation and persistence. The UI
 must call domain functions instead of recreating calculations inside React
 components.
 

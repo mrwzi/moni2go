@@ -4122,7 +4122,7 @@ main {
   }
 }
 
-/* NorthCents visual system: lightweight, calm, and mountain-inspired. */
+/* moni2go visual system: lightweight, calm, and mountain-inspired. */
 :root {
   --surface-tint: #f2f7f5;
   --surface-blue: #edf5f7;
@@ -4387,7 +4387,7 @@ body {
   border: 2px solid color-mix(in srgb, currentColor 24%, transparent);
   border-top-color: currentColor;
   border-radius: 50%;
-  animation: northcents-spin 720ms linear infinite;
+  animation: moni2go-spin 720ms linear infinite;
 }
 
 .button-spinner {
@@ -4403,7 +4403,7 @@ body {
   color: var(--brand);
 }
 
-@keyframes northcents-spin {
+@keyframes moni2go-spin {
   to {
     transform: rotate(360deg);
   }

@@ -3,14 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const DISMISSAL_KEY = "northcents:disclaimer-dismissed:v1";
+const DISMISSAL_KEY = "moni2go:disclaimer-dismissed:v1";
+const LEGACY_DISMISSAL_KEY = "northcents:disclaimer-dismissed:v1";
 
 export function SiteFooter() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     try {
-      setVisible(localStorage.getItem(DISMISSAL_KEY) !== "true");
+      setVisible(
+        localStorage.getItem(DISMISSAL_KEY) !== "true" &&
+          localStorage.getItem(LEGACY_DISMISSAL_KEY) !== "true",
+      );
     } catch {
       setVisible(true);
     }
@@ -22,7 +26,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="shell footer-inner">
         <p>
-          Estimates are based on your assumptions. NorthCents provides analysis,
+          Estimates are based on your assumptions. moni2go provides analysis,
           not financial advice.
         </p>
         <nav aria-label="Information">

@@ -4,14 +4,15 @@ import { z } from "zod";
 import { NorthCentsStorageError } from "./storage-errors";
 import { WorkspaceRepository } from "./workspace-repository";
 
-export const EXPORT_FORMAT = "northcents-local-export";
+export const EXPORT_FORMAT = "moni2go-local-export";
+export const LEGACY_NORTHCENTS_EXPORT_FORMAT = "northcents-local-export";
 export const LEGACY_MONEVERO_EXPORT_FORMAT = "monevero-local-export";
 export const LEGACY_EXPORT_FORMAT = "finscope-local-export";
 export const EXPORT_FORMAT_VERSION = 1;
 export const EXPORT_PRIVACY_WARNING =
   "This file contains personal financial information.";
 
-export type NorthCentsExport = Readonly<{
+export type Moni2GoExport = Readonly<{
   format: typeof EXPORT_FORMAT;
   formatVersion: 1;
   dataSchemaVersion: 2;
@@ -46,7 +47,7 @@ export async function exportWorkspace(
     workspace,
   ) as unknown as FinancialWorkspace;
   const workspaceJson = JSON.stringify(parsed);
-  const envelope: NorthCentsExport = {
+  const envelope: Moni2GoExport = {
     format: EXPORT_FORMAT,
     formatVersion: 1,
     dataSchemaVersion: 2,
@@ -61,7 +62,7 @@ export async function exportWorkspace(
 
 export async function parseWorkspaceExport(
   serialized: string,
-): Promise<NorthCentsExport> {
+): Promise<Moni2GoExport> {
   let raw: unknown;
   try {
     raw = JSON.parse(serialized) as unknown;
@@ -79,6 +80,7 @@ export async function parseWorkspaceExport(
   if (
     !("format" in raw) ||
     (raw.format !== EXPORT_FORMAT &&
+      raw.format !== LEGACY_NORTHCENTS_EXPORT_FORMAT &&
       raw.format !== LEGACY_MONEVERO_EXPORT_FORMAT &&
       raw.format !== LEGACY_EXPORT_FORMAT)
   )

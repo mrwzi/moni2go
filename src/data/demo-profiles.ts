@@ -1,7 +1,7 @@
 import type { DemoProfile } from "../domain/types";
 
 const provenance =
-  "Synthetic example created for NorthCents; not a statistical average." as const;
+  "Synthetic example created for moni2go; not a statistical average." as const;
 
 export const DEMO_PROFILE_CONTEXT: Readonly<
   Record<DemoProfile["id"], Readonly<{ purpose: string; construction: string }>>
@@ -15,7 +15,7 @@ export const DEMO_PROFILE_CONTEXT: Readonly<
   "student-renter": {
     purpose: "Demonstrates sensitivity to a change in monthly housing cost.",
     construction:
-      "The categories were constructed to reproduce NorthCents' audited renter reference case.",
+      "The categories were constructed to reproduce moni2go's audited renter reference case.",
   },
   "student-part-time": {
     purpose:

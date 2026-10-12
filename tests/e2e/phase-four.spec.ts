@@ -20,7 +20,7 @@ test("methodology exposes every trust section and keyboard-addressable metric", 
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: /Limitations and what NorthCents does not do/i,
+      name: /Limitations and what moni2go does not do/i,
     }),
   ).toBeVisible();
 

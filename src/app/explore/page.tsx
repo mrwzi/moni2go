@@ -26,7 +26,7 @@ export default async function ExplorePage({
         <p className="eyebrow">Explore a demo</p>
         <h1>Choose a synthetic starting point</h1>
         <p>
-          Each profile is an illustrative example created for NorthCents. The
+          Each profile is an illustrative example created for moni2go. The
           values are not Canadian averages and selecting one does not replace
           information saved in your browser.
         </p>

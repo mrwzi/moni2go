@@ -81,7 +81,7 @@ export function ActionMenu({
               </div>
               <p className="action-sheet-copy">
                 {onPrimaryAction
-                  ? "Update this account or remove it from NorthCents."
+                  ? "Update this account or remove it from moni2go."
                   : "Removing this does not contact your bank or provider."}
               </p>
               <div className="action-sheet-actions">

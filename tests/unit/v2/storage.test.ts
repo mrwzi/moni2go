@@ -5,6 +5,7 @@ import { financialWorkspaceSchema } from "../../../src/v2/domain/schemas";
 import type { FinancialWorkspace } from "../../../src/v2/domain/workspace";
 import {
   EXPORT_FORMAT,
+  LEGACY_NORTHCENTS_EXPORT_FORMAT,
   LEGACY_EXPORT_FORMAT,
   LEGACY_MONEVERO_EXPORT_FORMAT,
   exportWorkspace,
@@ -603,7 +604,11 @@ describe("local export and import", () => {
     expect(serialized).not.toContain("availableCashCents");
   });
 
-  it.each([LEGACY_MONEVERO_EXPORT_FORMAT, LEGACY_EXPORT_FORMAT])(
+  it.each([
+    LEGACY_NORTHCENTS_EXPORT_FORMAT,
+    LEGACY_MONEVERO_EXPORT_FORMAT,
+    LEGACY_EXPORT_FORMAT,
+  ])(
     "accepts legacy %s exports without emitting the legacy brand",
     async (legacyFormat) => {
       const serialized = await exportWorkspace(workspace(), {
