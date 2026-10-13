@@ -136,7 +136,7 @@ test("shows current spending separately from completed-month averages", async ({
     ["180", 2],
     ["150", 1],
   ] as const) {
-    await page.getByRole("button", { name: "Money out" }).click();
+    await page.getByRole("button", { name: "Record activity" }).click();
     await page.getByLabel("What was it for?").selectOption("groceries");
     await page.getByLabel("Amount").fill(amount);
     await page.getByRole("button", { name: "Save purchase" }).click();
@@ -152,7 +152,7 @@ test("shows current spending separately from completed-month averages", async ({
     await dialog.getByRole("button", { name: "Save transaction" }).click();
   }
 
-  await page.getByRole("button", { name: "Money out" }).click();
+  await page.getByRole("button", { name: "Record activity" }).click();
   await page.getByLabel("What was it for?").selectOption("groceries");
   await page.getByLabel("Amount").fill("75");
   await page.getByRole("button", { name: "Save purchase" }).click();
@@ -198,7 +198,7 @@ test("shows current spending separately from completed-month averages", async ({
     ["135", 2],
     ["141", 1],
   ] as const) {
-    await page.getByRole("button", { name: "Money out" }).click();
+    await page.getByRole("button", { name: "Record activity" }).click();
     await page.getByLabel("What was it for?").selectOption("restaurants");
     await page.getByLabel("Amount").fill(amount);
     await page.getByRole("button", { name: "Save purchase" }).click();
@@ -213,7 +213,7 @@ test("shows current spending separately from completed-month averages", async ({
       .fill(completedDate(monthsAgo));
     await dialog.getByRole("button", { name: "Save transaction" }).click();
   }
-  await page.getByRole("button", { name: "Money out" }).click();
+  await page.getByRole("button", { name: "Record activity" }).click();
   await page.getByLabel("What was it for?").selectOption("restaurants");
   await page.getByLabel("Amount").fill("145");
   await page.getByRole("button", { name: "Save purchase" }).click();

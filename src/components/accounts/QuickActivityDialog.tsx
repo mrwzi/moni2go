@@ -127,7 +127,7 @@ export function QuickActivityDialog({
           <div>
             <p className="eyebrow">Quick update</p>
             <h2 id="quick-activity-heading">
-              {kind === "income" ? "Add money" : "Record spending"}
+              {kind === "income" ? "Add money" : "Record activity"}
             </h2>
           </div>
           <button

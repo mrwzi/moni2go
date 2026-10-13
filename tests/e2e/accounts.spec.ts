@@ -184,8 +184,8 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
   await expect(page.getByText("Account saved locally.")).toBeVisible();
   await expect(page.getByText("No balance owed")).toBeVisible();
 
-  await page.getByRole("button", { name: "Money out" }).click();
-  const spendingDialog = page.getByRole("dialog", { name: "Record spending" });
+  await page.getByRole("button", { name: "Record activity" }).click();
+  const spendingDialog = page.getByRole("dialog", { name: "Record activity" });
   await spendingDialog
     .getByRole("combobox", { name: "Account or card" })
     .selectOption({ label: "Credit card · owed $0.00" });
@@ -316,7 +316,7 @@ test("records money in and money out against an existing account", async ({
   await expect(page.getByText("$50.25 added to Chequing.")).toBeVisible();
   await expect(page.getByText("$150.25").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Money out" }).click();
+  await page.getByRole("button", { name: "Record activity" }).click();
   await page.getByLabel("What was it for?").selectOption("groceries");
   await page.getByLabel("Amount").fill("20.25");
   await page.getByRole("button", { name: "Save purchase" }).click();
@@ -353,8 +353,8 @@ test("records credit-card purchases once and applies payments to both balances",
   await page.getByLabel("Required payment amount").fill("35");
   await page.getByRole("button", { name: "Save account" }).click();
 
-  await page.getByRole("button", { name: "Money out" }).click();
-  let spendingDialog = page.getByRole("dialog", { name: "Record spending" });
+  await page.getByRole("button", { name: "Record activity" }).click();
+  let spendingDialog = page.getByRole("dialog", { name: "Record activity" });
   await spendingDialog
     .getByRole("combobox", { name: "Account or card" })
     .selectOption({ label: "Credit card · owed $420.00" });
@@ -365,8 +365,8 @@ test("records credit-card purchases once and applies payments to both balances",
     page.getByRole("listitem").filter({ hasText: "Credit card" }),
   ).toContainText("$470.00");
 
-  await page.getByRole("button", { name: "Money out" }).click();
-  spendingDialog = page.getByRole("dialog", { name: "Record spending" });
+  await page.getByRole("button", { name: "Record activity" }).click();
+  spendingDialog = page.getByRole("dialog", { name: "Record activity" });
   await spendingDialog
     .getByLabel("What happened?")
     .selectOption("credit-card-payment");

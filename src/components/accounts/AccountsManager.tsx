@@ -867,8 +867,8 @@ export function AccountsManager() {
           }}
         >
           <span aria-hidden="true">−</span>
-          <strong>Money out</strong>
-          <small>Purchase or bill</small>
+          <strong>Record activity</strong>
+          <small>Spend, transfer, refund, or pay</small>
         </button>
       </section>
 
