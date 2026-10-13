@@ -3757,6 +3757,48 @@ main {
   margin-top: 0.35rem;
 }
 
+.home-financial-details,
+.account-more-totals {
+  margin-top: 0.65rem;
+}
+
+.home-financial-details summary,
+.account-more-totals summary,
+.settings-details > summary {
+  min-height: 44px;
+  color: var(--brand);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.home-financial-details .account-totals,
+.account-more-totals .account-totals {
+  margin-top: 0.55rem;
+}
+
+.settings-details > summary {
+  display: flex;
+  align-items: center;
+}
+
+.settings-details-content {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.settings-details-content h2,
+.settings-details-content .eyebrow {
+  margin: 0;
+}
+
+.settings-details-content h2 {
+  margin-top: 0.2rem;
+}
+
+.settings-details .settings-list {
+  margin-top: 0.75rem;
+}
+
 .transaction-history {
   margin-top: 1.25rem;
 }

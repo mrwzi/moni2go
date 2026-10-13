@@ -11,37 +11,6 @@ export default function SettingsPage() {
         <h1>Settings</h1>
         <p>Account, privacy, and data controls.</p>
       </div>
-      <nav className="settings-list" aria-label="Settings">
-        <Link href="/privacy">
-          <span>
-            <strong>Privacy</strong>
-            <small>How your financial information is handled</small>
-          </span>
-          <span aria-hidden="true">›</span>
-        </Link>
-        <Link href="/methodology">
-          <span>
-            <strong>How calculations work</strong>
-            <small>Definitions, formulas, and sources</small>
-          </span>
-          <span aria-hidden="true">›</span>
-        </Link>
-        <Link href="/build">
-          <span>
-            <strong>Local scenario data</strong>
-            <small>Review or delete values saved on this device</small>
-          </span>
-          <span aria-hidden="true">›</span>
-        </Link>
-      </nav>
-      <section
-        className="app-card cloud-settings"
-        aria-labelledby="local-transfer-heading"
-      >
-        <p className="eyebrow">Move your data</p>
-        <h2 id="local-transfer-heading">Local backup transfer</h2>
-        <LocalWorkspaceTransfer />
-      </section>
       <section
         className="app-card cloud-settings"
         aria-labelledby="cloud-heading"
@@ -59,6 +28,40 @@ export default function SettingsPage() {
           </>
         )}
       </section>
+      <details className="app-card settings-details">
+        <summary>Move or import local data</summary>
+        <div className="settings-details-content">
+          <p className="eyebrow">Manual transfer</p>
+          <h2>Local backup file</h2>
+          <LocalWorkspaceTransfer />
+        </div>
+      </details>
+      <details className="app-card settings-details">
+        <summary>Privacy and technical details</summary>
+        <nav className="settings-list" aria-label="Settings information">
+          <Link href="/privacy">
+            <span>
+              <strong>Privacy</strong>
+              <small>How your financial information is handled</small>
+            </span>
+            <span aria-hidden="true">›</span>
+          </Link>
+          <Link href="/methodology">
+            <span>
+              <strong>How calculations work</strong>
+              <small>Definitions, formulas, and sources</small>
+            </span>
+            <span aria-hidden="true">›</span>
+          </Link>
+          <Link href="/build">
+            <span>
+              <strong>Local scenario data</strong>
+              <small>Review or delete values saved on this device</small>
+            </span>
+            <span aria-hidden="true">›</span>
+          </Link>
+        </nav>
+      </details>
     </section>
   );
 }

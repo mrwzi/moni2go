@@ -158,7 +158,6 @@ function HomeDashboardContent() {
     deriveRequiredDebtPayments(liabilities).totalCents;
   const requiredPriorityTotal =
     requiredUpcomingCommitmentTotal + requiredDebtPaymentTotal;
-  const moneyLeftAfterPlan = spendableCashCents - savedPlanTotal;
   return (
     <div>
       <div className="app-page-heading">
@@ -166,27 +165,33 @@ function HomeDashboardContent() {
         <h1>Your financial picture</h1>
         <p>Based on the balances you entered manually.</p>
       </div>
-      <section className="home-value-card">
-        <span>Net worth</span>
-        <strong>{formatCad(deriveNetWorthCents(assets, liabilities))}</strong>
-        <small>Assets minus liabilities</small>
-      </section>
       <section className="account-totals">
         <div>
-          <span>Spendable cash</span>
+          <span>Available now</span>
           <strong>{formatCad(spendableCashCents)}</strong>
         </div>
         <div>
-          <span>Total assets</span>
-          <strong>
-            {formatCad(deriveTotalOwnedCents(assets, liabilities))}
-          </strong>
-        </div>
-        <div>
-          <span>Liabilities</span>
+          <span>Owed</span>
           <strong>{formatCad(deriveTotalLiabilitiesCents(liabilities))}</strong>
         </div>
       </section>
+      <details className="home-financial-details">
+        <summary>More totals</summary>
+        <div className="account-totals">
+          <div>
+            <span>Net worth</span>
+            <strong>
+              {formatCad(deriveNetWorthCents(assets, liabilities))}
+            </strong>
+          </div>
+          <div>
+            <span>Total assets</span>
+            <strong>
+              {formatCad(deriveTotalOwnedCents(assets, liabilities))}
+            </strong>
+          </div>
+        </div>
+      </details>
       {spendableCashCents > 0 && (
         <section
           className="app-card home-next-step"
@@ -196,81 +201,24 @@ function HomeDashboardContent() {
             <div>
               <p className="eyebrow">Next step</p>
               <h2 id="home-next-step-heading">
-                {savedPlan.length > 0
-                  ? moneyLeftAfterPlan >= 0
-                    ? `${formatCad(moneyLeftAfterPlan)} left after your plan`
-                    : `Your plan is ${formatCad(Math.abs(moneyLeftAfterPlan))} too high`
-                  : "Start a simple plan"}
+                {requiredPriorityTotal > 0
+                  ? `Keep ${formatCad(requiredPriorityTotal)} ready`
+                  : savedPlan.length > 0
+                    ? `Monthly plan: ${formatCad(savedPlanTotal)}`
+                    : "Start a simple plan"}
               </h2>
             </div>
             <Link href="/plan">Open plan</Link>
           </div>
           <p className="home-next-step-summary">
-            {savedPlan.length > 0
-              ? moneyLeftAfterPlan >= 0
-                ? `${formatCad(savedPlanTotal)} planned · ${formatCad(spendableCashCents)} available`
-                : `You have ${formatCad(spendableCashCents)} available, but your plan totals ${formatCad(savedPlanTotal)}. Reduce the plan by ${formatCad(Math.abs(moneyLeftAfterPlan))} before saving.`
-              : "Add your real bills and priorities. moni2go will show what remains without moving any money."}
+            {requiredPriorityTotal > 0
+              ? "Cover required payments first. Then use your monthly plan for the rest."
+              : savedPlan.length > 0
+                ? "Review it when your income or regular costs change."
+                : "Add your real bills and priorities. moni2go will show what remains without moving any money."}
           </p>
-          {(requiredUpcomingCommitmentTotal > 0 ||
-            requiredDebtPaymentTotal > 0) && (
-            <p className="home-priority-guidance">
-              <strong>
-                {requiredUpcomingCommitmentTotal > 0 &&
-                requiredDebtPaymentTotal > 0
-                  ? "Pay required bills and debt first."
-                  : requiredDebtPaymentTotal > 0
-                    ? "Pay required debt first."
-                    : "Pay required bills first."}
-              </strong>{" "}
-              Keep {formatCad(requiredPriorityTotal)} ready, then plan the rest.
-            </p>
-          )}
         </section>
       )}
-      <section
-        className="home-accounts"
-        aria-labelledby="home-accounts-heading"
-      >
-        <div className="home-section-heading">
-          <h2 id="home-accounts-heading">Accounts</h2>
-          <Link href="/accounts">See all</Link>
-        </div>
-        <div className="home-account-list">
-          {workspace.accountGroups.map((group) => {
-            const count =
-              assets.filter((account) => account.groupId === group.id).length +
-              liabilities.filter((account) => account.groupId === group.id)
-                .length;
-            return (
-              <Link href="/accounts" key={group.id}>
-                <span className="institution-mark" aria-hidden="true">
-                  {group.name.slice(0, 1).toUpperCase()}
-                </span>
-                <span>
-                  <strong>{group.name}</strong>
-                  <small>
-                    {count} {count === 1 ? "account" : "accounts"}
-                  </small>
-                </span>
-                <span aria-hidden="true">›</span>
-              </Link>
-            );
-          })}
-          {workspace.accountGroups.length === 0 && (
-            <Link href="/accounts">
-              <span className="institution-mark" aria-hidden="true">
-                $
-              </span>
-              <span>
-                <strong>Review your accounts</strong>
-                <small>Organize them by bank or platform</small>
-              </span>
-              <span aria-hidden="true">›</span>
-            </Link>
-          )}
-        </div>
-      </section>
       {upcomingCommitments.length > 0 && (
         <section
           className="app-card home-due-card"
@@ -316,61 +264,6 @@ function HomeDashboardContent() {
           </p>
         </section>
       )}
-      <section className="app-card home-plan-card" aria-labelledby="home-plan">
-        <div className="home-section-heading">
-          <div>
-            <p className="eyebrow">Your plan</p>
-            <h2 id="home-plan">
-              {savedPlan.length > 0
-                ? "Where your money goes"
-                : "Give your money a job"}
-            </h2>
-          </div>
-          <Link href="/plan">{savedPlan.length > 0 ? "Edit" : "Start"}</Link>
-        </div>
-        {savedPlan.length > 0 ? (
-          <>
-            <div className="home-plan-total">
-              <span>Monthly amount planned</span>
-              <strong>{formatCad(savedPlanTotal)}</strong>
-            </div>
-            <ul className="home-plan-list">
-              {savedPlan.slice(0, 4).map((rule) => (
-                <li key={rule.id}>
-                  <span>
-                    {rule.category
-                      ? BUDGET_CATEGORIES[rule.category]
-                      : rule.name}
-                  </span>
-                  <strong>
-                    {formatCad(
-                      rule.strategy.kind === "fixed-amount"
-                        ? rule.strategy.amountCents
-                        : 0,
-                    )}
-                  </strong>
-                </li>
-              ))}
-            </ul>
-            <Link className="button button-primary" href="/plan">
-              Plan my next payment
-            </Link>
-          </>
-        ) : (
-          <p>
-            Add your regular costs once, then create an editable split for each
-            payment—even if all the money stays in one bank account.
-          </p>
-        )}
-      </section>
-      <div className="home-actions">
-        <Link className="button button-primary" href="/accounts">
-          Manage accounts
-        </Link>
-        <Link className="button button-secondary" href="/scenario">
-          What-if analysis
-        </Link>
-      </div>
     </div>
   );
 }

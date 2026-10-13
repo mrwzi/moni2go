@@ -44,9 +44,10 @@ test("adds manual assets and liabilities and derives the home totals", async ({
 
   await page.goto("/");
   await expect(page.getByText("Your financial picture")).toBeVisible();
-  await expect(page.getByText("$1,000.00")).toBeVisible();
   await expect(page.getByText("$1,420.25").first()).toBeVisible();
   await expect(page.getByText("$420.25").first()).toBeVisible();
+  await page.getByText("More totals").click();
+  await expect(page.getByText("$1,000.00")).toBeVisible();
 });
 
 test("keeps investments out of spendable cash", async ({ page }) => {
@@ -62,6 +63,7 @@ test("keeps investments out of spendable cash", async ({ page }) => {
   await page.getByLabel("Current value").fill("5000");
   await page.getByLabel("Available to spend?").selectOption("non-cash");
   await page.getByRole("button", { name: "Save account" }).click();
+  await page.getByText("More totals").click();
   await expect(page.getByText("$5,000.00").first()).toBeVisible();
   await expect(page.getByText("$0.00").first()).toBeVisible();
 });

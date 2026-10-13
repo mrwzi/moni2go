@@ -97,17 +97,13 @@ test("allocates account money and keeps the review focused", async ({
   await expect(page.getByText("Planned")).toBeVisible();
 
   await page.goto("/");
-  await expect(page.getByText("Where your money goes")).toBeVisible();
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
+  await expect(nextSteps).toContainText("Keep $35.00 ready");
   await expect(nextSteps).toContainText(
-    "Pay required debt first. Keep $35.00 ready, then plan the rest.",
-  );
-  await expect(nextSteps).toContainText("$565.00 left after your plan");
-  await expect(nextSteps).toContainText(
-    "$435.00 planned · $1,000.00 available",
+    "Cover required payments first. Then use your monthly plan for the rest.",
   );
   await expect(
-    page.getByRole("link", { name: "Plan my next payment" }),
+    nextSteps.getByRole("link", { name: "Open plan" }),
   ).toBeVisible();
 });
 

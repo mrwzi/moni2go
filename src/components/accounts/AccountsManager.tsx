@@ -821,30 +821,40 @@ export function AccountsManager() {
         </p>
       )}
       {workspace && (
-        <section className="account-totals" aria-label="Account totals">
-          <div>
-            <span>Spendable</span>
-            <strong>{formatCad(deriveSpendableCashCents(assets))}</strong>
-          </div>
-          <div>
-            <span>Net worth</span>
-            <strong>
-              {formatCad(deriveNetWorthCents(assets, liabilities))}
-            </strong>
-          </div>
-          <div>
-            <span>Assets</span>
-            <strong>
-              {formatCad(deriveTotalOwnedCents(assets, liabilities))}
-            </strong>
-          </div>
-          <div>
-            <span>Owed</span>
-            <strong>
-              {formatCad(deriveTotalLiabilitiesCents(liabilities))}
-            </strong>
-          </div>
-        </section>
+        <>
+          <section className="account-totals" aria-label="Account totals">
+            <div>
+              <span>Spendable</span>
+              <strong>{formatCad(deriveSpendableCashCents(assets))}</strong>
+            </div>
+            <div>
+              <span>Owed</span>
+              <strong>
+                {formatCad(deriveTotalLiabilitiesCents(liabilities))}
+              </strong>
+            </div>
+          </section>
+          <details className="account-more-totals">
+            <summary>More totals</summary>
+            <section
+              className="account-totals"
+              aria-label="More account totals"
+            >
+              <div>
+                <span>Net worth</span>
+                <strong>
+                  {formatCad(deriveNetWorthCents(assets, liabilities))}
+                </strong>
+              </div>
+              <div>
+                <span>Assets</span>
+                <strong>
+                  {formatCad(deriveTotalOwnedCents(assets, liabilities))}
+                </strong>
+              </div>
+            </section>
+          </details>
+        </>
       )}
 
       <section className="account-quick-actions" aria-label="Quick actions">

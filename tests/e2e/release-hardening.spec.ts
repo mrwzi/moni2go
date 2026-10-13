@@ -101,6 +101,7 @@ test("completes the custom-baseline workflow and clears local data with the keyb
   const settings = page.getByRole("link", { name: "Settings" });
   await settings.focus();
   await page.keyboard.press("Enter");
+  await page.getByText("Privacy and technical details").click();
   const methodology = page.getByRole("link", {
     name: /How calculations work/,
   });
@@ -110,7 +111,8 @@ test("completes the custom-baseline workflow and clears local data with the keyb
   const settingsFromMethodology = page.getByRole("link", { name: "Settings" });
   await settingsFromMethodology.focus();
   await page.keyboard.press("Enter");
-  const privacy = page.getByRole("link", { name: "Privacy" });
+  await page.getByText("Privacy and technical details").click();
+  const privacy = page.getByRole("link", { name: "Privacy", exact: true });
   await privacy.focus();
   await page.keyboard.press("Enter");
   const clear = page.getByRole("button", { name: "Clear my data" });
