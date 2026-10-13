@@ -3734,6 +3734,29 @@ main {
   text-align: left;
 }
 
+.plan-inactive-categories {
+  margin-top: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+.plan-inactive-categories summary {
+  min-height: 44px;
+  padding-top: 0.8rem;
+  color: var(--accent-soft);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.plan-inactive-categories > p {
+  margin: 0.15rem 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.plan-inactive-categories ul {
+  margin-top: 0.35rem;
+}
+
 .transaction-history {
   margin-top: 1.25rem;
 }

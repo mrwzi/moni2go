@@ -184,7 +184,9 @@ function MoneyPlanContent() {
   const [message, setMessage] = useState<string | null>(null);
   const [planStep, setPlanStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [editingPlan, setEditingPlan] = useState(false);
   const restoredPlan = useRef(false);
+  const savingPlan = useRef(false);
   const questionCategories = QUESTION_CATEGORIES;
 
   useEffect(() => {
@@ -216,8 +218,10 @@ function MoneyPlanContent() {
       }
     }
     setAmounts(restored);
-    if (Object.keys(restored).length > 0)
+    if (Object.keys(restored).length > 0) {
       setPlanStep(questionCategories.length);
+      setEditingPlan(false);
+    } else setEditingPlan(true);
   }, [questionCategories.length, workspace]);
 
   const spendable = workspace
@@ -299,6 +303,10 @@ function MoneyPlanContent() {
       ? modelPurchase(analysis, purchaseCategory, purchaseCents)
       : null;
 
+  useEffect(() => {
+    if (editingPlan && planStep >= questionCategories.length) void savePlan();
+  }, [editingPlan, planStep]);
+
   if (loading) return <LoadingState label="Loading your money plan…" />;
   if (error) return <p role="alert">{error}</p>;
   if (!workspace || spendable === null)
@@ -319,14 +327,15 @@ function MoneyPlanContent() {
     );
 
   async function savePlan() {
-    if (!analysis || !workspace || analysis.unallocatedCents < 0) return;
+    if (!workspace || invalidAllocation || savingPlan.current) return;
+    savingPlan.current = true;
     const now = new Date().toISOString();
     const unrelatedRules = workspace.allocationRules.filter(
       (rule) => rule.category === undefined,
     );
     const allocationRules = [
       ...unrelatedRules,
-      ...analysis.allocations
+      ...allocations
         .filter((allocation) => allocation.amountCents > 0)
         .map((allocation) => ({
           id: crypto.randomUUID() as AllocationRuleId,
@@ -347,8 +356,13 @@ function MoneyPlanContent() {
           updatedAt: now,
         })),
     ];
-    await save({ ...workspace, allocationRules, updatedAt: now });
-    setMessage("Plan saved and synchronized to your account.");
+    try {
+      await save({ ...workspace, allocationRules, updatedAt: now });
+      setMessage("Monthly plan updated automatically.");
+      setEditingPlan(false);
+    } finally {
+      savingPlan.current = false;
+    }
   }
 
   function addEmergencyStarter() {
@@ -417,109 +431,111 @@ function MoneyPlanContent() {
         <p>Add your real costs first, then decide what happens to the rest.</p>
       </header>
 
-      <section className="plan-basis app-card" aria-labelledby="plan-basis">
-        <h2 id="plan-basis">What are you planning?</h2>
-        <div className="segmented-control" aria-label="Planning basis">
-          <button
-            type="button"
-            aria-pressed={basis === "available"}
-            onClick={() => {
-              setBasis("available");
-            }}
-          >
-            Available now
-          </button>
-          <button
-            type="button"
-            aria-pressed={basis === "payment"}
-            onClick={() => {
-              setBasis("payment");
-            }}
-          >
-            Next payment
-          </button>
-        </div>
-        {basis === "available" ? (
-          <div className="plan-available">
-            <span>Spendable across your included accounts</span>
-            <strong>{formatCad(spendable)}</strong>
+      {editingPlan && (
+        <section className="plan-basis app-card" aria-labelledby="plan-basis">
+          <h2 id="plan-basis">What are you planning?</h2>
+          <div className="segmented-control" aria-label="Planning basis">
+            <button
+              type="button"
+              aria-pressed={basis === "available"}
+              onClick={() => {
+                setBasis("available");
+              }}
+            >
+              Available now
+            </button>
+            <button
+              type="button"
+              aria-pressed={basis === "payment"}
+              onClick={() => {
+                setBasis("payment");
+              }}
+            >
+              Next payment
+            </button>
           </div>
-        ) : (
-          <label className="plan-money-field">
-            <span>
-              Expected take-home payment
-              <small>
-                Enter the amount that reaches your account after tax.
-              </small>
-            </span>
-            <span className="money-input-wrap plan-payment-input">
-              <span>$</span>
-              <input
-                inputMode="decimal"
-                aria-label="Expected take-home payment"
-                value={payment}
-                onChange={(event) => {
-                  setPayment(event.target.value);
-                }}
-                placeholder="0.00"
-              />
-              <span>CAD</span>
-            </span>
-          </label>
-        )}
-        {basis === "payment" &&
-          planningAmount !== null &&
-          planningAmount > 0 && (
-            <>
-              {planStep >= questionCategories.length &&
-              allocations.some(
-                (allocation) =>
-                  allocation.category !== "debt-payments" &&
-                  allocation.amountCents > 0,
-              ) ? (
-                <div className="starter-suggestion payment-split-suggestion">
-                  <div>
-                    <strong>Split this payment using your plan</strong>
-                    <span>
-                      moni2go uses your own category proportions and includes
-                      required debt payments. You can change every amount.
-                    </span>
-                  </div>
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    onClick={applySuggestedPaychequeSplit}
-                  >
-                    Create suggested split
-                  </button>
-                </div>
-              ) : (
-                <div className="starter-suggestion">
-                  <div>
-                    <strong>Start an emergency cushion</strong>
-                    <span>
-                      Add 5% of this payment as an editable starting point—not a
-                      rule.
-                    </span>
-                  </div>
-                  <button
-                    className="button button-secondary"
-                    type="button"
-                    onClick={addEmergencyStarter}
-                  >
-                    Add {formatCad(suggestEmergencyStarter(planningAmount))}
-                  </button>
-                </div>
-              )}
-              <p className="plan-transfer-note">
-                This creates category envelopes only. moni2go does not move
-                money between your accounts.
-              </p>
-            </>
+          {basis === "available" ? (
+            <div className="plan-available">
+              <span>Spendable across your included accounts</span>
+              <strong>{formatCad(spendable)}</strong>
+            </div>
+          ) : (
+            <label className="plan-money-field">
+              <span>
+                Expected take-home payment
+                <small>
+                  Enter the amount that reaches your account after tax.
+                </small>
+              </span>
+              <span className="money-input-wrap plan-payment-input">
+                <span>$</span>
+                <input
+                  inputMode="decimal"
+                  aria-label="Expected take-home payment"
+                  value={payment}
+                  onChange={(event) => {
+                    setPayment(event.target.value);
+                  }}
+                  placeholder="0.00"
+                />
+                <span>CAD</span>
+              </span>
+            </label>
           )}
-      </section>
+          {basis === "payment" &&
+            planningAmount !== null &&
+            planningAmount > 0 && (
+              <>
+                {planStep >= questionCategories.length &&
+                allocations.some(
+                  (allocation) =>
+                    allocation.category !== "debt-payments" &&
+                    allocation.amountCents > 0,
+                ) ? (
+                  <div className="starter-suggestion payment-split-suggestion">
+                    <div>
+                      <strong>Split this payment using your plan</strong>
+                      <span>
+                        moni2go uses your own category proportions and includes
+                        required debt payments. You can change every amount.
+                      </span>
+                    </div>
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      onClick={applySuggestedPaychequeSplit}
+                    >
+                      Create suggested split
+                    </button>
+                  </div>
+                ) : (
+                  <div className="starter-suggestion">
+                    <div>
+                      <strong>Start an emergency cushion</strong>
+                      <span>
+                        Add 5% of this payment as an editable starting point—not
+                        a rule.
+                      </span>
+                    </div>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={addEmergencyStarter}
+                    >
+                      Add {formatCad(suggestEmergencyStarter(planningAmount))}
+                    </button>
+                  </div>
+                )}
+                <p className="plan-transfer-note">
+                  This creates category envelopes only. moni2go does not move
+                  money between your accounts.
+                </p>
+              </>
+            )}
+        </section>
+      )}
 
-      {currentCategory ? (
+      {editingPlan && currentCategory ? (
         <section className="app-card plan-question" aria-live="polite">
           <div className="plan-progress">
             <span>
@@ -612,10 +628,11 @@ function MoneyPlanContent() {
                 type="button"
                 onClick={() => {
                   setMessage(null);
+                  setEditingPlan(true);
                   setPlanStep(0);
                 }}
               >
-                Edit answers
+                Edit monthly plan
               </button>
             </header>
             {hasMissingDebtPayments && (
@@ -647,7 +664,19 @@ function MoneyPlanContent() {
               </aside>
             )}
             <ul>
-              {PLAN_CATEGORY_KEYS.map((category) => {
+              {PLAN_CATEGORY_KEYS.filter((category) => {
+                const planned =
+                  category === "debt-payments"
+                    ? debtPayments.totalCents
+                    : (parseAmount(amounts[category] ?? "0") ?? 0);
+                const history = spendingHistory[category];
+                return (
+                  planned > 0 ||
+                  history.spentThisMonthCents > 0 ||
+                  history.historicalMonthlyAverageCents !== null ||
+                  (savedBillTotals[category] ?? 0) > 0
+                );
+              }).map((category) => {
                 const displayedCents =
                   category === "debt-payments"
                     ? debtPayments.totalCents
@@ -680,6 +709,47 @@ function MoneyPlanContent() {
                 );
               })}
             </ul>
+            {PLAN_CATEGORY_KEYS.some((category) => {
+              const planned =
+                category === "debt-payments"
+                  ? debtPayments.totalCents
+                  : (parseAmount(amounts[category] ?? "0") ?? 0);
+              const history = spendingHistory[category];
+              return (
+                planned === 0 &&
+                history.spentThisMonthCents === 0 &&
+                history.historicalMonthlyAverageCents === null &&
+                (savedBillTotals[category] ?? 0) === 0
+              );
+            }) && (
+              <details className="plan-inactive-categories">
+                <summary>Show unused categories</summary>
+                <p>
+                  Every category remains available for purchases, history, and
+                  future planning.
+                </p>
+                <ul>
+                  {PLAN_CATEGORY_KEYS.filter((category) => {
+                    const planned =
+                      category === "debt-payments"
+                        ? debtPayments.totalCents
+                        : (parseAmount(amounts[category] ?? "0") ?? 0);
+                    const history = spendingHistory[category];
+                    return (
+                      planned === 0 &&
+                      history.spentThisMonthCents === 0 &&
+                      history.historicalMonthlyAverageCents === null &&
+                      (savedBillTotals[category] ?? 0) === 0
+                    );
+                  }).map((category) => (
+                    <li key={category}>
+                      <span>{categoryLabel(category)}</span>
+                      <strong>{formatCad(0)}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </section>
 
           {categoryGuidance.length > 0 && (
@@ -690,10 +760,7 @@ function MoneyPlanContent() {
               <div>
                 <p className="eyebrow">This month</p>
                 <h2 id="budget-guidance-heading">Budget guidance</h2>
-                <p>
-                  Informational only. moni2go never changes your plan or moves
-                  money automatically.
-                </p>
+                <p>Only categories that need attention appear here.</p>
               </div>
               <ul>
                 {categoryGuidance.map((guidance) => (
@@ -701,7 +768,20 @@ function MoneyPlanContent() {
                     <strong>
                       {guidance.level === "over" ? "Review" : "Near plan"}
                     </strong>
-                    <span>{guidance.message}</span>
+                    <span>
+                      {categoryLabel(guidance.category)}:{" "}
+                      {formatCad(
+                        spendingHistory[guidance.category].spentThisMonthCents,
+                      )}{" "}
+                      spent of{" "}
+                      {formatCad(
+                        guidance.category === "debt-payments"
+                          ? debtPayments.totalCents
+                          : (parseAmount(amounts[guidance.category] ?? "0") ??
+                              0),
+                      )}{" "}
+                      planned.
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -719,70 +799,31 @@ function MoneyPlanContent() {
                     Plan summary
                   </h2>
                   <div>
-                    <span>Money selected</span>
+                    <span>Available now</span>
                     <strong>{formatCad(analysis.availableCents)}</strong>
                   </div>
                   <div>
                     <span>Planned</span>
                     <strong>{formatCad(analysis.allocatedCents)}</strong>
                   </div>
-                  <div data-negative={analysis.unallocatedCents < 0}>
-                    <span>
-                      {analysis.unallocatedCents < 0
-                        ? "Over plan"
-                        : "Still available"}
-                    </span>
-                    <strong>{formatCad(analysis.unallocatedCents)}</strong>
+                  <div>
+                    <span>Spent this month</span>
+                    <strong>
+                      {formatCad(
+                        PLAN_CATEGORY_KEYS.reduce(
+                          (total, category) =>
+                            total +
+                            spendingHistory[category].spentThisMonthCents,
+                          0,
+                        ),
+                      )}
+                    </strong>
                   </div>
                 </section>
               ) : (
                 <p className="form-error" role="alert">
                   Enter the money you are planning before saving this plan.
                 </p>
-              )}
-
-              {analysis && analysis.unallocatedCents < 0 && (
-                <aside className="plan-over-warning" role="alert">
-                  <strong>
-                    Your plan is{" "}
-                    {formatCad(Math.abs(analysis.unallocatedCents))} too high.
-                  </strong>
-                  <span>
-                    {basis === "available"
-                      ? `You have ${formatCad(analysis.availableCents)} available now. If this plan is for your next paycheck, enter that paycheck instead.`
-                      : `This payment is ${formatCad(analysis.availableCents)}, but the plan uses ${formatCad(analysis.allocatedCents)}.`}
-                  </span>
-                  <div className="plan-over-actions">
-                    {basis === "available" && (
-                      <button
-                        className="button button-primary"
-                        type="button"
-                        onClick={() => {
-                          setBasis("payment");
-                          window.requestAnimationFrame(() => {
-                            document
-                              .querySelector<HTMLInputElement>(
-                                '[aria-label="Expected take-home payment"]',
-                              )
-                              ?.focus();
-                          });
-                        }}
-                      >
-                        Use next paycheck
-                      </button>
-                    )}
-                    <button
-                      className="button button-secondary"
-                      type="button"
-                      onClick={() => {
-                        setPlanStep(0);
-                        setMessage(null);
-                      }}
-                    >
-                      Reduce my plan
-                    </button>
-                  </div>
-                </aside>
               )}
 
               <details className="app-card purchase-checker">
@@ -844,23 +885,11 @@ function MoneyPlanContent() {
                 )}
               </details>
 
-              <button
-                className="button button-primary"
-                type="button"
-                disabled={!analysis || analysis.unallocatedCents < 0}
-                onClick={() => void savePlan()}
-              >
-                Save plan
-              </button>
               {message && (
                 <p className="save-message" role="status">
                   {message}
                 </p>
               )}
-              <p className="plan-storage-note">
-                Your plan stays on this device and synchronizes automatically to
-                your signed-in account.
-              </p>
             </>
           )}
         </>

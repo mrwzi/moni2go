@@ -56,8 +56,16 @@ test("allocates account money and keeps the review focused", async ({
   await expect(
     page.getByRole("listitem").filter({ hasText: "Debt payments" }),
   ).toContainText("$35.00");
-  await expect(page.getByText("$565.00")).toBeVisible();
+  await expect(
+    page.getByText("Monthly plan updated automatically."),
+  ).toBeVisible();
   await expect(page.getByText("Review plan checks")).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("region", { name: "Your monthly plan" })
+      .getByRole("listitem"),
+  ).toHaveCount(4);
+  await page.getByText("Show unused categories").click();
   await expect(
     page
       .getByRole("region", { name: "Your monthly plan" })
@@ -73,10 +81,7 @@ test("allocates account money and keeps the review focused", async ({
   await expect(
     purchaseChecker.getByText("Groceries left: $175.00"),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Save plan" }).click();
-  await expect(
-    page.getByText("Plan saved and synchronized to your account."),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save plan" })).toHaveCount(0);
 
   await page.reload();
   const savedGroceries = page
@@ -86,21 +91,10 @@ test("allocates account money and keeps the review focused", async ({
   await expect(savedGroceries).toContainText("$250.00");
   await expect(savedGroceries).not.toContainText("No spending history yet");
   await expect(
-    page
-      .getByRole("region", { name: "What are you planning?" })
-      .getByText("$1,000.00"),
-  ).toBeVisible();
-
-  await page.getByRole("button", { name: "Next payment" }).click();
-  await page.getByLabel("Expected take-home payment").fill("1000");
-  await page.getByRole("button", { name: "Create suggested split" }).click();
-  await expect(
-    page.getByText("Drafted from the proportions in your monthly plan."),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("listitem").filter({ hasText: "Groceries" }),
-  ).toContainText("$603.13");
-  await expect(page.getByText("$1,000.00")).toHaveCount(2);
+    page.getByRole("region", { name: "What are you planning?" }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Available now")).toBeVisible();
+  await expect(page.getByText("Planned")).toBeVisible();
 
   await page.goto("/");
   await expect(page.getByText("Where your money goes")).toBeVisible();
@@ -200,7 +194,7 @@ test("shows current spending separately from completed-month averages", async ({
     page.getByRole("heading", { name: "Budget guidance" }),
   ).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Save plan" }).click();
+  await expect(page.getByRole("button", { name: "Save plan" })).toHaveCount(0);
   await page.goto("/accounts");
   for (const [amount, monthsAgo] of [
     ["135", 2],
@@ -234,7 +228,7 @@ test("shows current spending separately from completed-month averages", async ({
   await expect(restaurants).toContainText("Spent this month: $145.00");
   await expect(restaurants).toContainText("Typical: $138.00");
   const guidance = page.getByRole("region", { name: "Budget guidance" });
-  await expect(guidance).toContainText("You are $45.00 over plan");
-  await expect(guidance).toContainText("usual monthly spending");
-  await expect(guidance).toContainText("updating the plan");
+  await expect(guidance).toContainText(
+    "Restaurants / eating out: $145.00 spent of $100.00 planned.",
+  );
 });

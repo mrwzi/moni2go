@@ -430,8 +430,8 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
   await expect(
     page.getByRole("listitem").filter({ hasText: "Transportation" }),
   ).toContainText("Saved bills: $425.00");
-  await expect(page.getByText(/Your plan is .* too high\./)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save plan" })).toBeDisabled();
+  await expect(page.getByText(/Your plan is .* too high\./)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save plan" })).toHaveCount(0);
 });
 
 test("account form is usable without a pointer", async ({ page }) => {
