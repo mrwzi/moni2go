@@ -14,7 +14,7 @@ import {
   applyLiabilityAccountActivity,
   deriveNetWorthCents,
   deriveSpendableCashCents,
-  deriveTotalAssetsCents,
+  deriveTotalOwnedCents,
   deriveTotalLiabilitiesCents,
   monthlyEquivalentDebtPayment,
   type AssetAccount,
@@ -554,19 +554,6 @@ export function AccountsManager() {
       debtAccount?.status !== "active"
     )
       return "Choose the account you paid.";
-    if (
-      input.kind === "spending" &&
-      input.transactionType === "credit-card-payment" &&
-      debtAccount &&
-      amount > debtAccount.currentBalanceCents
-    )
-      return "Payment cannot be more than the current amount owed.";
-    if (
-      input.transactionType === "refund" &&
-      liabilityAccount &&
-      amount > liabilityAccount.currentBalanceCents
-    )
-      return "Refund cannot be more than the current amount owed.";
 
     const now = new Date().toISOString();
     const today = localToday();
@@ -846,7 +833,9 @@ export function AccountsManager() {
           </div>
           <div>
             <span>Assets</span>
-            <strong>{formatCad(deriveTotalAssetsCents(assets))}</strong>
+            <strong>
+              {formatCad(deriveTotalOwnedCents(assets, liabilities))}
+            </strong>
           </div>
           <div>
             <span>Owed</span>

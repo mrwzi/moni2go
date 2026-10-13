@@ -127,7 +127,7 @@ export const liabilityAccountSchema = z
     groupId: entityIdSchema.optional(),
     name: z.string().trim().min(1).max(120),
     type: z.enum(LIABILITY_ACCOUNT_TYPES),
-    currentBalanceCents: nonNegativeV2CentsSchema,
+    currentBalanceCents: v2CentsSchema,
     paymentRequirement: z.enum(DEBT_PAYMENT_REQUIREMENTS).optional(),
     paymentFrequency: z.enum(DEBT_PAYMENT_FREQUENCIES).optional(),
     requiredPaymentCents: nonNegativeV2CentsSchema.optional(),

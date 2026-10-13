@@ -1115,6 +1115,10 @@ select {
   color: var(--danger);
 }
 
+.account-list .account-row-credit > strong {
+  color: var(--brand-light);
+}
+
 .compact-debt-note {
   margin: 0;
 }

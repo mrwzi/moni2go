@@ -381,15 +381,15 @@ test("records credit-card purchases once and applies payments to both balances",
   await expect(spendingDialog.getByLabel("Pay this account")).toContainText(
     "Credit card · owed $470.00",
   );
-  await spendingDialog.getByLabel("Amount").fill("100");
+  await spendingDialog.getByLabel("Amount").fill("500");
   await spendingDialog.getByRole("button", { name: "Save payment" }).click();
 
   await expect(
     page.getByRole("listitem").filter({ hasText: "Chequing" }),
-  ).toContainText("$900.00");
+  ).toContainText("$500.00");
   await expect(
     page.getByRole("listitem").filter({ hasText: "Credit card" }),
-  ).toContainText("$370.00");
+  ).toContainText("Credit $30.00");
   const transactions = page.getByRole("region", {
     name: "Recent transactions",
   });

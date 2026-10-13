@@ -71,7 +71,7 @@ export const DEBT_PAYMENT_FREQUENCIES = [
 ] as const;
 export type DebtPaymentFrequency = (typeof DEBT_PAYMENT_FREQUENCIES)[number];
 
-/** A manually maintained amount owed; available credit is intentionally absent. */
+/** A manually maintained debt. A negative balance represents an account credit. */
 export type LiabilityAccount = EntityMetadata &
   Readonly<{
     id: LiabilityAccountId;
@@ -155,8 +155,6 @@ export function applyLiabilityAccountActivity(
 ): LiabilityAccount {
   if (amountCents < 0)
     throw new RangeError("Debt activity amount must be non-negative.");
-  if (direction === "decrease" && amountCents > account.currentBalanceCents)
-    throw new RangeError("Debt activity cannot create a negative balance.");
   return {
     ...account,
     currentBalanceCents:
@@ -188,7 +186,33 @@ export function deriveTotalLiabilitiesCents(
       .filter(
         (account) => account.status === "active" && account.includeInNetWorth,
       )
-      .map((account) => account.currentBalanceCents),
+      .map((account) => asV2Cents(Math.max(0, account.currentBalanceCents))),
+  );
+}
+
+export function deriveLiabilityCreditsCents(
+  accounts: readonly LiabilityAccount[],
+): V2Cents {
+  return sum(
+    accounts
+      .filter(
+        (account) => account.status === "active" && account.includeInNetWorth,
+      )
+      .map((account) =>
+        account.currentBalanceCents < 0
+          ? subtractCents(asV2Cents(0), account.currentBalanceCents)
+          : asV2Cents(0),
+      ),
+  );
+}
+
+export function deriveTotalOwnedCents(
+  assets: readonly AssetAccount[],
+  liabilities: readonly LiabilityAccount[],
+): V2Cents {
+  return addCents(
+    deriveTotalAssetsCents(assets),
+    deriveLiabilityCreditsCents(liabilities),
   );
 }
 
@@ -234,7 +258,7 @@ export function deriveNetWorthCents(
   liabilities: readonly LiabilityAccount[],
 ): V2Cents {
   return subtractCents(
-    deriveTotalAssetsCents(assets),
+    deriveTotalOwnedCents(assets, liabilities),
     deriveTotalLiabilitiesCents(liabilities),
   );
 }

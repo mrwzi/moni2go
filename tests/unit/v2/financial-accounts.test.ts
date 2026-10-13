@@ -4,9 +4,11 @@ import {
   deriveRequiredDebtPayments,
   DEFAULT_STALE_ACCOUNT_DAYS,
   deriveNetWorthCents,
+  deriveLiabilityCreditsCents,
   deriveSpendableCashCents,
   deriveTotalAssetsCents,
   deriveTotalLiabilitiesCents,
+  deriveTotalOwnedCents,
   isAccountValueStale,
   monthlyEquivalentDebtPayment,
   type AssetAccount,
@@ -274,7 +276,15 @@ describe("manual financial accounts", () => {
     );
   });
 
-  it("supports an overdrawn deposit asset but rejects a negative liability", () => {
+  it("counts an overpaid card as owned value instead of debt", () => {
+    const credit = typedLiability({ currentBalanceCents: -24 });
+    expect(deriveLiabilityCreditsCents([credit])).toBe(24);
+    expect(deriveTotalLiabilitiesCents([credit])).toBe(0);
+    expect(deriveTotalOwnedCents([typedAsset()], [credit])).toBe(142_024);
+    expect(deriveNetWorthCents([typedAsset()], [credit])).toBe(142_024);
+  });
+
+  it("supports overdrawn assets and account credits", () => {
     expect(
       assetAccountSchema.safeParse({ ...asset, currentValueCents: -5_000 })
         .success,
@@ -284,7 +294,7 @@ describe("manual financial accounts", () => {
         ...liability,
         currentBalanceCents: -1,
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("does not admit credit types or credential fields as assets", () => {

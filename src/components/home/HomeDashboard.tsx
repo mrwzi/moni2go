@@ -6,7 +6,7 @@ import {
   deriveNetWorthCents,
   deriveRequiredDebtPayments,
   deriveSpendableCashCents,
-  deriveTotalAssetsCents,
+  deriveTotalOwnedCents,
   deriveTotalLiabilitiesCents,
 } from "../../v2/domain/accounts";
 import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
@@ -178,7 +178,9 @@ function HomeDashboardContent() {
         </div>
         <div>
           <span>Total assets</span>
-          <strong>{formatCad(deriveTotalAssetsCents(assets))}</strong>
+          <strong>
+            {formatCad(deriveTotalOwnedCents(assets, liabilities))}
+          </strong>
         </div>
         <div>
           <span>Liabilities</span>

@@ -42,15 +42,14 @@ describe("liability account activity", () => {
     expect(payment.currentBalanceCents).toBe(37_000);
   });
 
-  it("does not allow a payment or refund to create a negative debt", () => {
-    expect(() =>
-      applyLiabilityAccountActivity(
-        card,
-        "decrease",
-        asV2Cents(42_001),
-        parseCalendarDate("2026-04-15"),
-        "2026-04-15T00:00:00.000Z",
-      ),
-    ).toThrow("negative balance");
+  it("records an overpayment as an account credit", () => {
+    const overpaid = applyLiabilityAccountActivity(
+      card,
+      "decrease",
+      asV2Cents(42_001),
+      parseCalendarDate("2026-04-15"),
+      "2026-04-15T00:00:00.000Z",
+    );
+    expect(overpaid.currentBalanceCents).toBe(-1);
   });
 });

@@ -55,11 +55,14 @@ export function AccountRows({
             <span>{accountLabels[account.type]}</span>
           </div>
           <div
-            className={`account-row-value${account.currentBalanceCents > 0 ? " account-row-debt" : ""}`}
+            className={`account-row-value${account.currentBalanceCents > 0 ? " account-row-debt" : account.currentBalanceCents < 0 ? " account-row-credit" : ""}`}
           >
             <strong>
-              {account.currentBalanceCents > 0 ? "Owed " : ""}
-              {formatCad(account.currentBalanceCents)}
+              {account.currentBalanceCents > 0
+                ? `Owed ${formatCad(account.currentBalanceCents)}`
+                : account.currentBalanceCents < 0
+                  ? `Credit ${formatCad(Math.abs(account.currentBalanceCents))}`
+                  : formatCad(0)}
             </strong>
             <span>{debtPaymentLabel(account)}</span>
           </div>
@@ -80,6 +83,8 @@ export function AccountRows({
 }
 
 function debtPaymentLabel(account: LiabilityAccount): string {
+  if (account.currentBalanceCents < 0)
+    return "Credit available on this account";
   if (account.currentBalanceCents === 0) return "No balance owed";
   if (
     account.requiredPaymentCents !== undefined &&
