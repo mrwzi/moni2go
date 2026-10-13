@@ -16,6 +16,7 @@ import {
   parseCalendarDate,
 } from "../../v2/domain/calendar";
 import { expandRecurrence } from "../../v2/domain/recurrence";
+import { calculateCategorySpendingHistory } from "../../v2/domain/spending-history";
 import type { CalendarDate } from "../../v2/domain/types";
 import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
 import { SignedInGate } from "../auth/SignedInGate";
@@ -121,6 +122,15 @@ function HomeDashboardContent() {
       (rule.strategy.kind === "fixed-amount" ? rule.strategy.amountCents : 0),
     0,
   );
+  const spendingPlanTotal = savedPlan.reduce(
+    (total, rule) =>
+      total +
+      (rule.category !== "savings-goals" &&
+      rule.strategy.kind === "fixed-amount"
+        ? rule.strategy.amountCents
+        : 0),
+    0,
+  );
   const today = localToday();
   const horizonEnd = addCalendarDays(today, 30);
   const upcomingCommitments = workspace.expenseDefinitions
@@ -158,6 +168,34 @@ function HomeDashboardContent() {
     deriveRequiredDebtPayments(liabilities).totalCents;
   const requiredPriorityTotal =
     requiredUpcomingCommitmentTotal + requiredDebtPaymentTotal;
+  const spendingHistory = calculateCategorySpendingHistory(
+    workspace.expenseEvents,
+    today,
+  );
+  const currentSpending = Object.values(spendingHistory)
+    .filter(
+      (item) =>
+        item.spentThisMonthCents > 0 && item.category !== "savings-goals",
+    )
+    .sort(
+      (left, right) => right.spentThisMonthCents - left.spentThisMonthCents,
+    );
+  const spentThisMonth = currentSpending.reduce(
+    (total, item) => total + item.spentThisMonthCents,
+    0,
+  );
+  const comparisonTotal =
+    spendingPlanTotal > 0
+      ? Math.max(spendingPlanTotal, spentThisMonth)
+      : spentThisMonth + spendableCashCents;
+  const spentShare =
+    comparisonTotal > 0
+      ? Math.min(100, (spentThisMonth / comparisonTotal) * 100)
+      : 0;
+  const remainingComparison =
+    spendingPlanTotal > 0
+      ? Math.max(0, spendingPlanTotal - spentThisMonth)
+      : spendableCashCents;
   return (
     <div>
       <div className="app-page-heading">
@@ -219,6 +257,75 @@ function HomeDashboardContent() {
           </p>
         </section>
       )}
+      <section
+        className="app-card home-spending-card"
+        aria-labelledby="home-spending-heading"
+      >
+        <div className="home-section-heading">
+          <div>
+            <p className="eyebrow">This month</p>
+            <h2 id="home-spending-heading">Spending at a glance</h2>
+          </div>
+          <Link href="/accounts">View activity</Link>
+        </div>
+        {currentSpending.length > 0 ? (
+          <div className="home-spending-layout">
+            <div className="home-spending-donut">
+              <svg
+                viewBox="0 0 120 120"
+                role="img"
+                aria-label={`${formatCad(spentThisMonth)} spent this month and ${formatCad(remainingComparison)} ${spendingPlanTotal > 0 ? "left in the monthly spending plan" : "available now"}`}
+              >
+                <circle
+                  className="home-spending-track"
+                  cx="60"
+                  cy="60"
+                  r="48"
+                />
+                <circle
+                  className="home-spending-value"
+                  cx="60"
+                  cy="60"
+                  r="48"
+                  pathLength="100"
+                  strokeDasharray={`${spentShare.toFixed(2)} 100`}
+                />
+              </svg>
+              <div>
+                <strong>{formatCad(spentThisMonth)}</strong>
+                <span>spent</span>
+              </div>
+            </div>
+            <div className="home-spending-breakdown">
+              <div className="home-spending-remaining">
+                <span>
+                  {spendingPlanTotal > 0
+                    ? "Left in spending plan"
+                    : "Available now"}
+                </span>
+                <strong>{formatCad(remainingComparison)}</strong>
+              </div>
+              <ul>
+                {currentSpending.slice(0, 3).map((item) => (
+                  <li key={item.category}>
+                    <span>{BUDGET_CATEGORIES[item.category]}</span>
+                    <strong>{formatCad(item.spentThisMonthCents)}</strong>
+                  </li>
+                ))}
+              </ul>
+              {currentSpending.length > 3 && (
+                <small>
+                  +{(currentSpending.length - 3).toString()} more categories
+                </small>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="empty-group-copy">
+            No spending recorded this month. New purchases will appear here.
+          </p>
+        )}
+      </section>
       {upcomingCommitments.length > 0 && (
         <section
           className="app-card home-due-card"

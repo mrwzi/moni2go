@@ -350,6 +350,12 @@ test("records money in and money out against an existing account", async ({
   await expect(history.getByText("Weekly supermarket trip")).toBeVisible();
 
   await page.goto("/");
+  const spendingChart = page.getByRole("region", {
+    name: "Spending at a glance",
+  });
+  await expect(spendingChart).toContainText("$25.25");
+  await expect(spendingChart).toContainText("Groceries");
+  await expect(spendingChart).toContainText("Subscriptions");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toBeVisible();
   await expect(nextSteps).toContainText("Start a simple plan");
