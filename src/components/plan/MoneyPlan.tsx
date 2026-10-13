@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
   analyzeBudget,
-  modelPurchase,
   suggestEmergencyStarter,
   suggestPaychequeSplit,
   type BudgetAllocation,
@@ -15,10 +14,7 @@ import {
   PLAN_CATEGORY_KEYS,
   type BudgetCategoryKey,
 } from "../../v2/domain/budget-categories";
-import {
-  createCategoryBudgetGuidance,
-  prioritizePlanAdjustments,
-} from "../../v2/domain/budget-guidance";
+import { createCategoryBudgetGuidance } from "../../v2/domain/budget-guidance";
 import {
   deriveRequiredDebtPayments,
   deriveSpendableCashCents,
@@ -181,9 +177,6 @@ function MoneyPlanContent() {
   const [basis, setBasis] = useState<"available" | "payment">("available");
   const [payment, setPayment] = useState("");
   const [amounts, setAmounts] = useState<Record<string, string>>({});
-  const [purchaseCategory, setPurchaseCategory] =
-    useState<BudgetCategoryKey>("groceries");
-  const [purchase, setPurchase] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [planStep, setPlanStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -296,14 +289,19 @@ function MoneyPlanContent() {
       }).filter((guidance) => guidance.level !== "under"),
     [amounts, debtPayments.totalCents, spendingHistory],
   );
-  const purchaseCents = parseAmount(purchase);
-  const impact =
-    analysis && purchaseCents !== null && purchaseCents > 0
-      ? modelPurchase(analysis, purchaseCategory, purchaseCents)
-      : null;
-  const adjustmentOptions = analysis
-    ? prioritizePlanAdjustments(analysis.allocations)
-    : [];
+  const visiblePlanCategories = PLAN_CATEGORY_KEYS.filter((category) => {
+    const planned =
+      category === "debt-payments"
+        ? debtPayments.totalCents
+        : (parseAmount(amounts[category] ?? "0") ?? 0);
+    const history = spendingHistory[category];
+    return (
+      planned > 0 ||
+      history.spentThisMonthCents > 0 ||
+      history.historicalMonthlyAverageCents !== null ||
+      (savedBillTotals[category] ?? 0) > 0
+    );
+  });
 
   if (loading) return <LoadingState label="Loading your money plan…" />;
   if (error) return <p role="alert">{error}</p>;
@@ -653,10 +651,7 @@ function MoneyPlanContent() {
               </aside>
             )}
             <ul>
-              {PLAN_CATEGORY_KEYS.map((category) => {
-                const allocation = analysis?.allocations.find(
-                  (item) => item.category === category,
-                );
+              {visiblePlanCategories.map((category) => {
                 const displayedCents =
                   category === "debt-payments"
                     ? debtPayments.totalCents
@@ -676,21 +671,15 @@ function MoneyPlanContent() {
                           {formatCad(history.spentThisMonthCents)}
                         </small>
                       )}
-                      <small>
-                        {history.historicalMonthlyAverageCents === null
-                          ? "No spending history yet"
-                          : history.completedMonthCount === 1
-                            ? `1 month of history: ${formatCad(history.historicalMonthlyAverageCents)}`
-                            : `Typical monthly spending: ${formatCad(history.historicalMonthlyAverageCents)}`}
-                      </small>
+                      {history.historicalMonthlyAverageCents !== null && (
+                        <small>
+                          {history.completedMonthCount === 1
+                            ? `Last month: ${formatCad(history.historicalMonthlyAverageCents)}`
+                            : `Typical: ${formatCad(history.historicalMonthlyAverageCents)}`}
+                        </small>
+                      )}
                     </div>
                     <strong>{formatCad(displayedCents)}</strong>
-                    <small>
-                      {allocation?.shareOfAvailableBasisPoints === null ||
-                      allocation === undefined
-                        ? "0.0%"
-                        : `${(allocation.shareOfAvailableBasisPoints / 100).toFixed(1)}%`}
-                    </small>
                   </li>
                 );
               })}
@@ -758,172 +747,47 @@ function MoneyPlanContent() {
 
               {analysis && analysis.unallocatedCents < 0 && (
                 <aside className="plan-over-warning" role="alert">
-                  <strong>This plan needs a change before saving.</strong>
+                  <strong>
+                    Your plan is{" "}
+                    {formatCad(Math.abs(analysis.unallocatedCents))} too high.
+                  </strong>
                   <span>
-                    The draft exceeds available money by{" "}
-                    {formatCad(Math.abs(analysis.unallocatedCents))}. Review
-                    flexible categories first, then reconsider an optional
-                    savings goal if needed. Keep essential costs and required
-                    debt payments protected.
+                    {basis === "available"
+                      ? `You have ${formatCad(analysis.availableCents)} available now. If this plan is for your next paycheck, enter that paycheck instead.`
+                      : `This payment is ${formatCad(analysis.availableCents)}, but the plan uses ${formatCad(analysis.allocatedCents)}.`}
                   </span>
-                  {adjustmentOptions.length > 0 && (
-                    <small>
-                      Review first:{" "}
-                      {adjustmentOptions.map(categoryLabel).join(", ")}.
-                    </small>
-                  )}
-                  <button
-                    className="button button-secondary"
-                    type="button"
-                    onClick={() => {
-                      setPlanStep(0);
-                      setMessage(null);
-                    }}
-                  >
-                    Edit amounts
-                  </button>
-                </aside>
-              )}
-
-              {analysis && (
-                <details className="app-card plan-checks">
-                  <summary>Review plan checks</summary>
-                  <ol>
-                    {analysis.checks.map((check) => (
-                      <li key={check.id} data-status={check.status}>
-                        <strong>
-                          {check.status === "pass"
-                            ? "Checked"
-                            : check.status === "attention"
-                              ? "Review"
-                              : "Context"}
-                        </strong>
-                        <span>{check.message}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </details>
-              )}
-
-              <details className="app-card what-if-card">
-                <summary>Test a purchase</summary>
-                <p className="plan-help">
-                  See the effect without changing your accounts or saved plan.
-                </p>
-                <div className="what-if-fields">
-                  <label>
-                    Category
-                    <select
-                      value={purchaseCategory}
-                      onChange={(event) => {
-                        setPurchaseCategory(
-                          event.target.value as BudgetCategoryKey,
-                        );
+                  <div className="plan-over-actions">
+                    {basis === "available" && (
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        onClick={() => {
+                          setBasis("payment");
+                          window.requestAnimationFrame(() => {
+                            document
+                              .querySelector<HTMLInputElement>(
+                                '[aria-label="Expected take-home payment"]',
+                              )
+                              ?.focus();
+                          });
+                        }}
+                      >
+                        Use next paycheck
+                      </button>
+                    )}
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => {
+                        setPlanStep(0);
+                        setMessage(null);
                       }}
                     >
-                      {PLAN_CATEGORY_KEYS.map((category) => (
-                        <option key={category} value={category}>
-                          {categoryLabel(category)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Purchase amount
-                    <span className="money-input">
-                      <span>$</span>
-                      <input
-                        inputMode="decimal"
-                        value={purchase}
-                        onChange={(event) => {
-                          setPurchase(event.target.value);
-                        }}
-                        placeholder="0.00"
-                      />
-                    </span>
-                  </label>
-                </div>
-                {impact && (
-                  <div className="purchase-result" role="status">
-                    <p>
-                      Money after purchase:{" "}
-                      <strong>
-                        {formatCad(impact.remainingAvailableCents)}
-                      </strong>
-                    </p>
-                    {impact.categoryRemainingCents === null ? (
-                      <p>No amount is planned for this category.</p>
-                    ) : (
-                      <p>
-                        Category amount after purchase:{" "}
-                        <strong>
-                          {formatCad(impact.categoryRemainingCents)}
-                        </strong>
-                      </p>
-                    )}
-                    {(impact.exceedsAvailable ||
-                      impact.exceedsCategoryPlan) && (
-                      <p className="form-error">
-                        This modeled purchase exceeds{" "}
-                        {impact.exceedsAvailable
-                          ? "the selected money"
-                          : "this category amount"}
-                        .
-                      </p>
-                    )}
-                    <small>
-                      This is a temporary model. It does not move or spend
-                      money.
-                    </small>
+                      Reduce my plan
+                    </button>
                   </div>
-                )}
-              </details>
-
-              <details className="app-card benchmark-card">
-                <summary>Canadian reference context</summary>
-                <p>
-                  Statistics Canada’s 2023 household survey reported food at
-                  15.7% of consumption, recreation near 6.8%, and clothing near
-                  3.6%. These are dated household averages—not targets for you.
-                </p>
-                <p>
-                  FCAC says needs differ by person and suggests gradually
-                  building an emergency fund toward 3–6 months of regular
-                  expenses when possible. Its first-job guidance suggests
-                  starting with 5–10% of each paycheque; moni2go&apos;s optional
-                  starter uses the lower 5% figure.
-                </p>
-                <div className="benchmark-links">
-                  <a
-                    href="https://www150.statcan.gc.ca/n1/daily-quotidien/250521/dq250521a-eng.htm"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Statistics Canada, 2023 spending survey
-                  </a>
-                  <a
-                    href="https://www.canada.ca/en/financial-consumer-agency/services/make-budget.html"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    FCAC budgeting guidance
-                  </a>
-                  <a
-                    href="https://www.canada.ca/en/financial-consumer-agency/services/savings-investments/setting-up-emergency-funds.html"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    FCAC emergency-fund guidance
-                  </a>
-                  <a
-                    href="https://www.canada.ca/en/financial-consumer-agency/services/first-job.html"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    FCAC first-paycheque guidance
-                  </a>
-                </div>
-              </details>
+                </aside>
+              )}
 
               <button
                 className="button button-primary"

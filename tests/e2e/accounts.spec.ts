@@ -430,9 +430,7 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
   await expect(
     page.getByRole("listitem").filter({ hasText: "Transportation" }),
   ).toContainText("Saved bills: $425.00");
-  await expect(
-    page.getByText("This plan needs a change before saving."),
-  ).toBeVisible();
+  await expect(page.getByText(/Your plan is .* too high\./)).toBeVisible();
   await expect(page.getByRole("button", { name: "Save plan" })).toBeDisabled();
 });
 

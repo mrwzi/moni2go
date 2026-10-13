@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("allocates account money and models a purchase without changing the balance", async ({
+test("allocates account money and keeps the review focused", async ({
   page,
 }) => {
   await page.goto("/accounts");
@@ -57,18 +57,12 @@ test("allocates account money and models a purchase without changing the balance
     page.getByRole("listitem").filter({ hasText: "Debt payments" }),
   ).toContainText("$35.00");
   await expect(page.getByText("$565.00")).toBeVisible();
-  await expect(page.getByText("Review plan checks")).toBeVisible();
-
-  await page.getByText("Test a purchase").click();
-  await page.getByLabel("Purchase amount").fill("75");
-  await expect(page.getByText("Money after purchase:")).toContainText(
-    "$925.00",
-  );
-  await expect(page.getByText("Category amount after purchase:")).toContainText(
-    "$175.00",
-  );
+  await expect(page.getByText("Review plan checks")).toHaveCount(0);
+  await expect(page.getByText("Test a purchase")).toHaveCount(0);
   await page.getByRole("button", { name: "Save plan" }).click();
-  await expect(page.getByText("Plan saved in this browser.")).toBeVisible();
+  await expect(
+    page.getByText("Plan saved and synchronized to your account."),
+  ).toBeVisible();
 
   await page.reload();
   const savedGroceries = page
@@ -76,7 +70,7 @@ test("allocates account money and models a purchase without changing the balance
     .getByRole("listitem")
     .filter({ hasText: "Groceries" });
   await expect(savedGroceries).toContainText("$250.00");
-  await expect(savedGroceries).toContainText("No spending history yet");
+  await expect(savedGroceries).not.toContainText("No spending history yet");
   await expect(
     page
       .getByRole("region", { name: "What are you planning?" })
