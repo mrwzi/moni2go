@@ -222,7 +222,12 @@ export function QuickActivityDialog({
                           : undefined) ??
                         "",
                     );
-                    setDebtAccountId("");
+                    setDebtAccountId(
+                      event.target.value === "credit-card-payment"
+                        ? (activeDebtAccounts[0]?.id ?? "")
+                        : "",
+                    );
+                    setDestinationAccountId("");
                     setError(null);
                   }}
                 >
@@ -282,14 +287,17 @@ export function QuickActivityDialog({
               {transactionType === "credit-card-payment" && (
                 <>
                   <label>
-                    Credit card or debt paid
+                    Pay this account
                     <select
                       value={debtAccountId}
                       onChange={(event) => {
                         setDebtAccountId(event.target.value);
+                        setError(null);
                       }}
                     >
-                      <option value="">Choose debt account</option>
+                      {activeDebtAccounts.length === 0 && (
+                        <option value="">No debt with a balance</option>
+                      )}
                       {activeDebtAccounts.map((account) => (
                         <option key={account.id} value={account.id}>
                           {account.name} · owed{" "}

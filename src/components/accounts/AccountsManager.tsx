@@ -553,7 +553,7 @@ export function AccountsManager() {
       input.transactionType === "credit-card-payment" &&
       debtAccount?.status !== "active"
     )
-      return "Choose the credit card or debt being paid.";
+      return "Choose the account you paid.";
     if (
       input.kind === "spending" &&
       input.transactionType === "credit-card-payment" &&

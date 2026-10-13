@@ -378,9 +378,9 @@ test("records credit-card purchases once and applies payments to both balances",
   await spendingDialog
     .getByLabel("What happened?")
     .selectOption("credit-card-payment");
-  await spendingDialog
-    .getByLabel("Credit card or debt paid")
-    .selectOption({ label: "Credit card · owed $470.00" });
+  await expect(spendingDialog.getByLabel("Pay this account")).toContainText(
+    "Credit card · owed $470.00",
+  );
   await spendingDialog.getByLabel("Amount").fill("100");
   await spendingDialog.getByRole("button", { name: "Save payment" }).click();
 
