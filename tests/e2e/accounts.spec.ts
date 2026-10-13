@@ -309,7 +309,7 @@ test("records money in and money out against an existing account", async ({
   await page.getByLabel("Current value").fill("100");
   await page.getByRole("button", { name: "Save account" }).click();
 
-  await page.getByRole("button", { name: "Money in" }).click();
+  await page.getByRole("button", { name: "Record income" }).click();
   await page.getByLabel("Where did it come from?").selectOption("Gift");
   await page.getByLabel("Amount").fill("50.25");
   await page.getByRole("button", { name: "Add money", exact: true }).click();

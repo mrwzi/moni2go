@@ -856,7 +856,7 @@ export function AccountsManager() {
           }}
         >
           <span aria-hidden="true">+</span>
-          <strong>Money in</strong>
+          <strong>Record income</strong>
           <small>Pay, gift, benefit</small>
         </button>
         <button
