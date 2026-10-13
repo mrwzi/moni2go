@@ -58,7 +58,21 @@ test("allocates account money and keeps the review focused", async ({
   ).toContainText("$35.00");
   await expect(page.getByText("$565.00")).toBeVisible();
   await expect(page.getByText("Review plan checks")).toHaveCount(0);
-  await expect(page.getByText("Test a purchase")).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("region", { name: "Your monthly plan" })
+      .getByRole("listitem"),
+  ).toHaveCount(14);
+  await page.getByText("Check a purchase").click();
+  const purchaseChecker = page.locator(".purchase-checker");
+  await expect(
+    purchaseChecker.getByLabel("Category").locator("option"),
+  ).toHaveCount(14);
+  await purchaseChecker.getByLabel("Amount").fill("75");
+  await expect(purchaseChecker.getByText("Money left: $925.00")).toBeVisible();
+  await expect(
+    purchaseChecker.getByText("Groceries left: $175.00"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Save plan" }).click();
   await expect(
     page.getByText("Plan saved and synchronized to your account."),
@@ -181,7 +195,7 @@ test("shows current spending separately from completed-month averages", async ({
   const groceries = page.getByRole("listitem").filter({ hasText: "Groceries" });
   await expect(groceries).toContainText("$100.00");
   await expect(groceries).toContainText("Spent this month: $75.00");
-  await expect(groceries).toContainText("Typical monthly spending: $150.00");
+  await expect(groceries).toContainText("Typical: $150.00");
   await expect(
     page.getByRole("heading", { name: "Budget guidance" }),
   ).toHaveCount(0);
@@ -218,7 +232,7 @@ test("shows current spending separately from completed-month averages", async ({
     .getByRole("listitem")
     .filter({ hasText: "Restaurants / eating out" });
   await expect(restaurants).toContainText("Spent this month: $145.00");
-  await expect(restaurants).toContainText("Typical monthly spending: $138.00");
+  await expect(restaurants).toContainText("Typical: $138.00");
   const guidance = page.getByRole("region", { name: "Budget guidance" });
   await expect(guidance).toContainText("You are $45.00 over plan");
   await expect(guidance).toContainText("usual monthly spending");

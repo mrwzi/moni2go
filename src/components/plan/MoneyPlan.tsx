@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
   analyzeBudget,
+  modelPurchase,
   suggestEmergencyStarter,
   suggestPaychequeSplit,
   type BudgetAllocation,
@@ -177,6 +178,9 @@ function MoneyPlanContent() {
   const [basis, setBasis] = useState<"available" | "payment">("available");
   const [payment, setPayment] = useState("");
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [purchaseCategory, setPurchaseCategory] =
+    useState<(typeof PLAN_CATEGORY_KEYS)[number]>("groceries");
+  const [purchase, setPurchase] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [planStep, setPlanStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -289,19 +293,11 @@ function MoneyPlanContent() {
       }).filter((guidance) => guidance.level !== "under"),
     [amounts, debtPayments.totalCents, spendingHistory],
   );
-  const visiblePlanCategories = PLAN_CATEGORY_KEYS.filter((category) => {
-    const planned =
-      category === "debt-payments"
-        ? debtPayments.totalCents
-        : (parseAmount(amounts[category] ?? "0") ?? 0);
-    const history = spendingHistory[category];
-    return (
-      planned > 0 ||
-      history.spentThisMonthCents > 0 ||
-      history.historicalMonthlyAverageCents !== null ||
-      (savedBillTotals[category] ?? 0) > 0
-    );
-  });
+  const purchaseCents = parseAmount(purchase);
+  const impact =
+    analysis && purchaseCents !== null && purchaseCents > 0
+      ? modelPurchase(analysis, purchaseCategory, purchaseCents)
+      : null;
 
   if (loading) return <LoadingState label="Loading your money plan…" />;
   if (error) return <p role="alert">{error}</p>;
@@ -651,7 +647,7 @@ function MoneyPlanContent() {
               </aside>
             )}
             <ul>
-              {visiblePlanCategories.map((category) => {
+              {PLAN_CATEGORY_KEYS.map((category) => {
                 const displayedCents =
                   category === "debt-payments"
                     ? debtPayments.totalCents
@@ -788,6 +784,65 @@ function MoneyPlanContent() {
                   </div>
                 </aside>
               )}
+
+              <details className="app-card purchase-checker">
+                <summary>Check a purchase</summary>
+                <p className="plan-help">
+                  See whether a purchase fits before spending. Nothing is saved.
+                </p>
+                <div className="purchase-checker-fields">
+                  <label>
+                    Category
+                    <select
+                      value={purchaseCategory}
+                      onChange={(event) => {
+                        setPurchaseCategory(
+                          event.target
+                            .value as (typeof PLAN_CATEGORY_KEYS)[number],
+                        );
+                      }}
+                    >
+                      {PLAN_CATEGORY_KEYS.map((category) => (
+                        <option key={category} value={category}>
+                          {categoryLabel(category)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Amount
+                    <span className="money-input">
+                      <span>$</span>
+                      <input
+                        inputMode="decimal"
+                        value={purchase}
+                        onChange={(event) => {
+                          setPurchase(event.target.value);
+                        }}
+                        placeholder="0.00"
+                      />
+                    </span>
+                  </label>
+                </div>
+                {impact && (
+                  <div className="purchase-checker-result" role="status">
+                    <span>
+                      Money left: {formatCad(impact.remainingAvailableCents)}
+                    </span>
+                    <strong>
+                      {impact.categoryRemainingCents === null
+                        ? `No money is planned for ${categoryLabel(purchaseCategory)}.`
+                        : `${categoryLabel(purchaseCategory)} left: ${formatCad(impact.categoryRemainingCents)}`}
+                    </strong>
+                    {(impact.exceedsAvailable ||
+                      impact.exceedsCategoryPlan) && (
+                      <small>
+                        This purchase does not fit the current plan.
+                      </small>
+                    )}
+                  </div>
+                )}
+              </details>
 
               <button
                 className="button button-primary"

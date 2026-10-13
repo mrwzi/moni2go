@@ -4105,7 +4105,8 @@ main {
 
 .plan-checks summary,
 .what-if-card summary,
-.benchmark-card summary {
+.benchmark-card summary,
+.purchase-checker summary {
   min-height: 44px;
   font-weight: 800;
   cursor: pointer;
@@ -4113,7 +4114,8 @@ main {
 
 .what-if-card[open] summary,
 .benchmark-card[open] summary,
-.plan-checks[open] summary {
+.plan-checks[open] summary,
+.purchase-checker[open] summary {
   margin-bottom: 0.75rem;
 }
 
@@ -4142,6 +4144,27 @@ main {
   margin-top: 1rem;
   gap: 0.75rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.purchase-checker-fields {
+  display: grid;
+  margin-top: 0.85rem;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.purchase-checker-result {
+  display: grid;
+  margin-top: 0.85rem;
+  padding: 0.85rem;
+  gap: 0.2rem;
+  border-radius: 0.75rem;
+  background: var(--surface-soft);
+}
+
+.purchase-checker-result span,
+.purchase-checker-result small {
+  color: var(--muted);
 }
 
 .what-if-fields select,
@@ -4216,6 +4239,10 @@ main {
   }
 
   .what-if-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-checker-fields {
     grid-template-columns: 1fr;
   }
 
