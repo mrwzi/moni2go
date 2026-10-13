@@ -156,14 +156,8 @@ function HomeDashboardContent() {
   );
   const requiredDebtPaymentTotal =
     deriveRequiredDebtPayments(liabilities).totalCents;
-  const flexibleDebtBalance = liabilities
-    .filter(
-      (account) =>
-        account.status === "active" &&
-        account.currentBalanceCents > 0 &&
-        account.paymentRequirement === "flexible",
-    )
-    .reduce((total, account) => total + account.currentBalanceCents, 0);
+  const requiredPriorityTotal =
+    requiredUpcomingCommitmentTotal + requiredDebtPaymentTotal;
   const moneyLeftAfterPlan = spendableCashCents - savedPlanTotal;
   return (
     <div>
@@ -218,63 +212,17 @@ function HomeDashboardContent() {
           </p>
           {(requiredUpcomingCommitmentTotal > 0 ||
             requiredDebtPaymentTotal > 0) && (
-            <ul className="home-next-step-list">
-              {requiredUpcomingCommitmentTotal > 0 && (
-                <li>
-                  <span aria-hidden="true">1</span>
-                  <p>
-                    <strong>Protect required bills first.</strong>
-                    Keep {formatCad(requiredUpcomingCommitmentTotal)} available
-                    for required commitments due in the next 30 days.
-                  </p>
-                </li>
-              )}
-              {requiredDebtPaymentTotal > 0 && (
-                <li>
-                  <span aria-hidden="true">
-                    {requiredUpcomingCommitmentTotal > 0 ? "2" : "1"}
-                  </span>
-                  <p>
-                    <strong>Keep required debt payments covered.</strong>
-                    Your recorded required monthly payments total{" "}
-                    {formatCad(requiredDebtPaymentTotal)}. moni2go will not
-                    suggest skipping them.
-                  </p>
-                </li>
-              )}
-              <li>
-                <span aria-hidden="true">
-                  {requiredUpcomingCommitmentTotal > 0 &&
-                  requiredDebtPaymentTotal > 0
-                    ? "3"
-                    : requiredUpcomingCommitmentTotal > 0 ||
-                        requiredDebtPaymentTotal > 0
-                      ? "2"
-                      : "1"}
-                </span>
-                <p>
-                  <strong>
-                    {savedPlan.length > 0
-                      ? "Review your choices."
-                      : "Create your plan."}
-                  </strong>
-                  {savedPlan.length > 0
-                    ? moneyLeftAfterPlan >= 0
-                      ? " Nothing happens to unplanned money—it stays available in your account."
-                      : " The plan cannot be saved while it is higher than your available money."
-                    : " You decide where the money goes."}
-                </p>
-              </li>
-            </ul>
-          )}
-          {flexibleDebtBalance > 0 && (
-            <div className="home-next-step-note">
-              <span>
-                <strong>Debt payment</strong>
-                <small>Not set</small>
-              </span>
-              <Link href="/accounts">Add details</Link>
-            </div>
+            <p className="home-priority-guidance">
+              <strong>
+                {requiredUpcomingCommitmentTotal > 0 &&
+                requiredDebtPaymentTotal > 0
+                  ? "Pay required bills and debt first."
+                  : requiredDebtPaymentTotal > 0
+                    ? "Pay required debt first."
+                    : "Pay required bills first."}
+              </strong>{" "}
+              Keep {formatCad(requiredPriorityTotal)} ready, then plan the rest.
+            </p>
           )}
         </section>
       )}

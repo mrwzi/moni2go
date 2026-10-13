@@ -98,7 +98,7 @@ test("allocates account money and models a purchase without changing the balance
   await expect(page.getByText("Where your money goes")).toBeVisible();
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toContainText(
-    "Your recorded required monthly payments total $35.00",
+    "Pay required debt first. Keep $35.00 ready, then plan the rest.",
   );
   await expect(nextSteps).toContainText("$565.00 left after your plan");
   await expect(nextSteps).toContainText(

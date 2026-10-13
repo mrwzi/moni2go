@@ -207,7 +207,14 @@ export function deriveRequiredDebtPayments(
         account.paymentRequirement === "flexible" ||
         account.requiredMonthlyPaymentCents === undefined
           ? []
-          : [account.requiredMonthlyPaymentCents],
+          : [
+              asV2Cents(
+                Math.min(
+                  account.requiredMonthlyPaymentCents,
+                  account.currentBalanceCents,
+                ),
+              ),
+            ],
       ),
     ),
     missingAccountIds: active

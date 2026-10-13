@@ -211,6 +211,14 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
     debtDialog.getByText("No statement payment is recorded yet"),
   ).toBeVisible();
   await expect(debtDialog.getByLabel("Required payment amount")).toHaveCount(0);
+  await debtDialog.getByLabel("Payment status").selectOption("required");
+  await debtDialog.getByLabel("Required payment amount").fill("1000");
+  await debtDialog.getByRole("button", { name: "Save account" }).click();
+  await expect(
+    page.getByText(
+      "The required payment cannot be more than the current amount owed.",
+    ),
+  ).toBeVisible();
   await debtDialog.getByRole("button", { name: "Close" }).click();
 
   await page.goto("/plan");

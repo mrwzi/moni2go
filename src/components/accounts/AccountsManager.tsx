@@ -358,6 +358,16 @@ export function AccountsManager() {
       );
       return;
     }
+    if (
+      needsMonthlyPayment &&
+      monthlyPayment !== null &&
+      monthlyPayment > value
+    ) {
+      setMessage(
+        "The required payment cannot be more than the current amount owed.",
+      );
+      return;
+    }
 
     const current = ensureWorkspace();
     const now = new Date().toISOString();

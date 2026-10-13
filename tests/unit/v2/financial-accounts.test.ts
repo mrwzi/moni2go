@@ -123,6 +123,16 @@ describe("manual financial accounts", () => {
         }),
       ]),
     ).toEqual({ totalCents: 0, missingAccountIds: [] });
+    expect(
+      deriveRequiredDebtPayments([
+        typedLiability({
+          id: "payment-above-balance",
+          currentBalanceCents: 2_000,
+          paymentRequirement: "required",
+          requiredMonthlyPaymentCents: 100_000,
+        }),
+      ]),
+    ).toEqual({ totalCents: 2_000, missingAccountIds: [] });
   });
 
   it("keeps fixed and flexible debt-payment contracts distinct", () => {

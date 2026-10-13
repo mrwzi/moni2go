@@ -379,6 +379,20 @@ select {
   line-height: 1.55;
 }
 
+.home-priority-guidance {
+  margin: 0.85rem 0 0;
+  padding: 0.75rem 0.85rem;
+  border-left: 3px solid var(--brand);
+  border-radius: 0.55rem;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.86rem;
+}
+
+.home-priority-guidance strong {
+  color: var(--ink);
+}
+
 .home-next-step-list {
   display: grid;
   margin: 1rem 0 0;
