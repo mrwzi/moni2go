@@ -574,14 +574,20 @@ select {
 .account-quick-actions {
   display: grid;
   margin: 0 0 1.5rem;
+  align-items: stretch;
   gap: 0.75rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
 }
 
 .quick-money-action {
   display: grid;
-  min-height: 5.25rem;
+  width: 100%;
+  min-height: 5.75rem;
+  height: 100%;
   padding: 0.9rem 1rem;
+  align-content: center;
+  align-items: center;
   border: 1px solid var(--line);
   border-radius: 0.9rem;
   color: var(--ink);
@@ -591,6 +597,7 @@ select {
   grid-template-columns: 2.25rem minmax(0, 1fr);
   grid-template-rows: auto auto;
   column-gap: 0.75rem;
+  row-gap: 0.12rem;
 }
 
 .quick-money-action > span {
@@ -609,10 +616,18 @@ select {
 .quick-money-action strong,
 .quick-money-action small {
   display: block;
+  line-height: 1.3;
+}
+
+.quick-money-action strong {
+  font-size: 1rem;
+  font-weight: 750;
 }
 
 .quick-money-action small {
+  min-height: 2.6em;
   color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .quick-money-action:hover,
@@ -4217,6 +4232,7 @@ main {
 @media (max-width: 360px) {
   .account-quick-actions {
     grid-template-columns: 1fr;
+    grid-auto-rows: 1fr;
   }
 
   .allocation-list > label {
