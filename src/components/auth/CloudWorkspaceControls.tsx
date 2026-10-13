@@ -1,100 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { User } from "@supabase/supabase-js";
+import { useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import {
   CloudWorkspaceError,
   deleteCloudWorkspaces,
-  loadNewestCloudWorkspace,
-  saveWorkspaceToCloud,
 } from "../../cloud/workspace-cloud";
-import { openMoni2GoDatabase, WorkspaceRepository } from "../../v2/storage";
+import { useAuthUser } from "../../lib/supabase/use-auth-user";
+import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
 
 export function CloudWorkspaceControls() {
-  const [user, setUser] = useState<User | null>(null);
+  const auth = useAuthUser();
+  const { loading, error, syncMessage, reload } = useFinancialWorkspace();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    void createClient()
-      .auth.getUser()
-      .then(({ data }) => {
-        setUser(data.user);
-      });
-  }, []);
-
-  if (!user)
+  if (auth.status !== "signed-in")
     return (
       <p className="settings-note">
-        Sign in to save or restore your private workspace across devices.
+        Sign in to synchronize your private workspace across devices.
       </p>
     );
 
-  async function upload() {
-    if (!user) return;
-    setPending(true);
-    setMessage(null);
-    try {
-      const database = await openMoni2GoDatabase();
-      try {
-        const workspace = await new WorkspaceRepository(
-          database,
-        ).getActiveWorkspace(user.id);
-        if (!workspace) {
-          setMessage("Add an account before saving a cloud workspace.");
-          return;
-        }
-        await saveWorkspaceToCloud(createClient(), user.id, workspace);
-        setMessage("This device's workspace is saved to your account.");
-      } finally {
-        database.close();
-      }
-    } catch (error) {
-      setMessage(
-        error instanceof CloudWorkspaceError
-          ? error.message
-          : "Cloud save failed. Your local information was not changed.",
-      );
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function restore() {
-    setPending(true);
-    setMessage(null);
-    try {
-      const workspace = await loadNewestCloudWorkspace(createClient());
-      if (!workspace) {
-        setMessage("No cloud workspace was found for this account.");
-        return;
-      }
-      const database = await openMoni2GoDatabase();
-      try {
-        const repository = new WorkspaceRepository(database);
-        if (await repository.workspaceExists(workspace.id))
-          await repository.saveWorkspace(workspace);
-        else await repository.createWorkspace(workspace);
-        await repository.setActiveWorkspace(workspace.id, user?.id);
-      } finally {
-        database.close();
-      }
-      setMessage("Cloud workspace restored. Reload Home to view it.");
-    } catch (error) {
-      setMessage(
-        error instanceof CloudWorkspaceError
-          ? error.message
-          : "Cloud restore failed. Your local information was not changed.",
-      );
-    } finally {
-      setPending(false);
-    }
-  }
+  const user = auth.user;
 
   async function removeCloudCopy() {
     if (
-      !user ||
       !window.confirm(
         "Delete every cloud workspace for this account? Local data on this device will remain.",
       )
@@ -124,20 +55,22 @@ export function CloudWorkspaceControls() {
         <span>Signed in</span>
         <strong>{user.email}</strong>
       </p>
+      <p className="cloud-sync-status" role="status">
+        <strong>{loading ? "Synchronizing…" : "Automatic sync is on"}</strong>
+        <span>
+          {error ??
+            message ??
+            syncMessage ??
+            "Changes are saved to this account automatically."}
+        </span>
+      </p>
       <div className="cloud-actions">
         <button
-          className="button button-primary"
-          disabled={pending}
-          onClick={() => void upload()}
-        >
-          Save backup
-        </button>
-        <button
           className="button button-secondary"
-          disabled={pending}
-          onClick={() => void restore()}
+          disabled={pending || loading}
+          onClick={() => void reload()}
         >
-          Restore backup
+          Check sync now
         </button>
         <button
           className="button button-danger"
@@ -146,13 +79,13 @@ export function CloudWorkspaceControls() {
             void removeCloudCopy();
           }}
         >
-          Delete backup
+          Delete cloud data
         </button>
       </div>
       <small>
-        Cloud transfer happens only when you choose one of these actions.
+        Open moni2go on another device and sign in—the latest workspace loads
+        automatically.
       </small>
-      {message && <p role="status">{message}</p>}
     </div>
   );
 }

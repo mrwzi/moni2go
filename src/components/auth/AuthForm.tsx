@@ -118,8 +118,8 @@ export function AuthForm() {
         Try a demo without signing in
       </Link>
       <p className="auth-privacy">
-        moni2go never asks for bank credentials. Cloud saving is optional and
-        controlled from Settings.
+        moni2go never asks for bank credentials. Signed-in workspaces
+        synchronize automatically across devices.
       </p>
     </div>
   );

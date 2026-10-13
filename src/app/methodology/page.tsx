@@ -224,9 +224,9 @@ export default function MethodologyPage() {
           <p>
             No account or bank connection is required. A custom baseline is
             stored in the user&apos;s browser when saved; scenario experiments
-            are transient. Optional cloud workspace transfer occurs only after a
-            user signs in and explicitly chooses save or restore in Settings.
-            Demo data is never uploaded as a personal workspace.
+            are transient. Signed-in workspaces synchronize automatically using
+            the newest workspace update while keeping a local copy on each
+            device. Demo data is never uploaded as a personal workspace.
           </p>
         </article>
       </div>

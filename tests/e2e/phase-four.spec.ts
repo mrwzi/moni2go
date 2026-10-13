@@ -94,16 +94,17 @@ test("demo profiles disclose synthetic provenance without average claims", async
   }
 });
 
-test("privacy and methodology state the same optional-cloud boundary", async ({
+test("privacy and methodology explain automatic signed-in sync", async ({
   page,
 }) => {
   await page.goto("/privacy");
   await expect(
     page.getByText(/No account or bank connection is required/i),
   ).toBeVisible();
-  await expect(page.getByText(/Cloud backup is optional/i)).toBeVisible();
   await expect(
-    page.getByText(/only when you choose a cloud save or restore action/i),
+    page.getByText(
+      /synchronizes the newest valid workspace across your devices/i,
+    ),
   ).toBeVisible();
 
   await page.goto("/methodology#privacy-boundary");
@@ -111,9 +112,9 @@ test("privacy and methodology state the same optional-cloud boundary", async ({
     page.getByText(/No account or bank connection is required/i),
   ).toBeVisible();
   await expect(
-    page.getByText(/Optional cloud workspace transfer/i),
+    page.getByText(/Signed-in workspaces synchronize automatically/i),
   ).toBeVisible();
   await expect(
-    page.getByText(/explicitly chooses save or restore/i),
+    page.getByText(/keeping a local copy on each device/i),
   ).toBeVisible();
 });

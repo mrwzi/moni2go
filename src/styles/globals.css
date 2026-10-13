@@ -3313,6 +3313,26 @@ main {
   font-size: 0.9rem;
 }
 
+.cloud-sync-status {
+  display: grid;
+  margin: 0 0 1rem;
+  padding: 0.85rem;
+  gap: 0.15rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line));
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface-soft));
+}
+
+.cloud-sync-status strong {
+  color: var(--brand-light);
+  font-size: 0.9rem;
+}
+
+.cloud-sync-status span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .cloud-actions {
   display: flex;
   flex-wrap: wrap;

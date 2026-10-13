@@ -12,8 +12,8 @@ export default function PrivacyPage() {
         <p className="eyebrow">Privacy</p>
         <h1>You control where your information is stored</h1>
         <p>
-          moni2go works without an account. Cloud backup is optional and only
-          occurs when a signed-in user explicitly requests it.
+          moni2go works without an account. If you choose to sign in, your
+          financial workspace synchronizes automatically across your devices.
         </p>
       </div>
       <PrivacyNotice />
@@ -26,9 +26,10 @@ export default function PrivacyPage() {
         </p>
         <p>
           If you create an account, Supabase processes your email and session.
-          Financial workspace data is transmitted to Supabase only when you
-          choose a cloud save or restore action in Settings. Database policies
-          restrict workspace rows to their authenticated owner.
+          Financial workspace data is transmitted to Supabase only when you sign
+          in. The app synchronizes the newest valid workspace across your
+          devices. Database policies restrict workspace rows to their
+          authenticated owner.
         </p>
         <h2>What is not stored</h2>
         <p>

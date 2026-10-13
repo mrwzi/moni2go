@@ -354,9 +354,7 @@ function MoneyPlanContent() {
         })),
     ];
     await save({ ...workspace, allocationRules, updatedAt: now });
-    setMessage(
-      "Plan saved in this browser. Use Settings › Save backup to access it from another device.",
-    );
+    setMessage("Plan saved and synchronized to your account.");
   }
 
   function addEmergencyStarter() {
@@ -941,9 +939,8 @@ function MoneyPlanContent() {
                 </p>
               )}
               <p className="plan-storage-note">
-                Plans stay in this browser on this device. To use the same data
-                on another phone or computer, open Settings and choose Save
-                backup, then restore it after signing in there.
+                Your plan stays on this device and synchronizes automatically to
+                your signed-in account.
               </p>
             </>
           )}
