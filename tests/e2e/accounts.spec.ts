@@ -46,7 +46,6 @@ test("adds manual assets and liabilities and derives the home totals", async ({
   await expect(page.getByText("Your financial picture")).toBeVisible();
   await expect(page.getByText("$1,420.25").first()).toBeVisible();
   await expect(page.getByText("$420.25").first()).toBeVisible();
-  await page.getByText("More totals").click();
   await expect(page.getByText("$1,000.00")).toBeVisible();
 });
 

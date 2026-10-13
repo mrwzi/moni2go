@@ -212,24 +212,17 @@ function HomeDashboardContent() {
           <span>Owed</span>
           <strong>{formatCad(deriveTotalLiabilitiesCents(liabilities))}</strong>
         </div>
-      </section>
-      <details className="home-financial-details">
-        <summary>More totals</summary>
-        <div className="account-totals">
-          <div>
-            <span>Net worth</span>
-            <strong>
-              {formatCad(deriveNetWorthCents(assets, liabilities))}
-            </strong>
-          </div>
-          <div>
-            <span>Total assets</span>
-            <strong>
-              {formatCad(deriveTotalOwnedCents(assets, liabilities))}
-            </strong>
-          </div>
+        <div>
+          <span>Net worth</span>
+          <strong>{formatCad(deriveNetWorthCents(assets, liabilities))}</strong>
         </div>
-      </details>
+        <div>
+          <span>Assets</span>
+          <strong>
+            {formatCad(deriveTotalOwnedCents(assets, liabilities))}
+          </strong>
+        </div>
+      </section>
       {spendableCashCents > 0 && (
         <section
           className="app-card home-next-step"

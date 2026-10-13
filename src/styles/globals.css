@@ -3680,6 +3680,17 @@ main {
   gap: 0.65rem;
 }
 
+.plan-edit-toolbar {
+  display: flex;
+  min-height: 44px;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
 .plan-review > header {
   display: flex;
   align-items: center;
@@ -3757,12 +3768,10 @@ main {
   margin-top: 0.35rem;
 }
 
-.home-financial-details,
 .account-more-totals {
   margin-top: 0.65rem;
 }
 
-.home-financial-details summary,
 .account-more-totals summary,
 .settings-details > summary {
   min-height: 44px;
@@ -3771,7 +3780,6 @@ main {
   cursor: pointer;
 }
 
-.home-financial-details .account-totals,
 .account-more-totals .account-totals {
   margin-top: 0.55rem;
 }

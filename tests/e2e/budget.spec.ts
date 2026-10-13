@@ -19,12 +19,6 @@ test("allocates account money and keeps the review focused", async ({
   await page.getByRole("button", { name: "Save account" }).click();
 
   await page.goto("/plan");
-  await expect(
-    page
-      .getByRole("region", { name: "What are you planning?" })
-      .getByText("$1,000.00"),
-  ).toBeVisible();
-
   await expect(page.getByText("Step 1 of 13")).toBeVisible();
   await page
     .getByRole("button", { name: "I do not pay housing costs" })
@@ -99,6 +93,13 @@ test("allocates account money and keeps the review focused", async ({
   ).toHaveCount(0);
   await expect(page.getByText("Available now")).toBeVisible();
   await expect(page.getByText("Planned")).toBeVisible();
+  await page.getByRole("button", { name: "Edit monthly plan" }).click();
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+  await page.getByLabel("Housing amount").fill("999");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    page.getByRole("region", { name: "Your monthly plan" }),
+  ).not.toContainText("$999.00");
 
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
