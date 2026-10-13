@@ -67,6 +67,45 @@ test("keeps investments out of spendable cash", async ({ page }) => {
   await expect(page.getByText("$0.00").first()).toBeVisible();
 });
 
+test("records a transfer to an owned account that is not tracked", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Personal bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("101");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Record activity" }).click();
+  const activity = page.getByRole("dialog", { name: "Record activity" });
+  await activity.getByLabel("What happened?").selectOption("transfer");
+  await expect(activity.getByLabel("Where did it go?")).toContainText(
+    "Another account I own (not listed)",
+  );
+  await activity
+    .getByLabel("Where did it go?")
+    .selectOption("untracked-owned-account");
+  await activity.getByLabel("Amount").fill("35");
+  await activity.getByLabel("Note").fill("Business bank");
+  await activity.getByRole("button", { name: "Save transfer" }).click();
+
+  await expect(
+    page.getByText("$35.00 moved from Chequing to another account you own."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Chequing" }),
+  ).toContainText("$66.00");
+  const transactions = page.getByRole("region", {
+    name: "Recent transactions",
+  });
+  await expect(
+    transactions.getByText("Transfer to untracked account"),
+  ).toBeVisible();
+  await expect(transactions.getByText("Business bank")).toBeVisible();
+});
+
 test("updates an investment for dividends, losses, and missed changes", async ({
   page,
 }) => {

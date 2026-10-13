@@ -24,13 +24,16 @@ export type QuickActivityInput = Readonly<{
   transactionType: ExpenseTransactionType;
   note?: string;
   destinationAccountId?: string;
+  transferToUntrackedAccount?: boolean;
   debtAccountId?: string;
 }>;
 
+const UNTRACKED_ACCOUNT_VALUE = "untracked-owned-account";
+
 const TRANSACTION_TYPE_OPTIONS = [
-  { value: "purchase", label: "Bought or paid for something" },
+  { value: "purchase", label: "Bought, paid, or sent money" },
   { value: "refund", label: "Got money back (refund)" },
-  { value: "transfer", label: "Moved money between my accounts" },
+  { value: "transfer", label: "Transferred between accounts I own" },
   { value: "credit-card-payment", label: "Paid a credit card or loan" },
   {
     value: "savings-contribution",
@@ -44,11 +47,11 @@ const TRANSACTION_TYPE_OPTIONS = [
 const TRANSACTION_TYPE_HELP: Readonly<Record<ExpenseTransactionType, string>> =
   {
     purchase:
-      "Counts as spending. A bank or debit purchase lowers its balance; a credit-card purchase increases the amount owed.",
+      "Use for purchases, bills, gifts, or money sent to another person. It counts as spending.",
     refund:
       "Money returned to you. It adds back to a bank account or reduces the amount owed on a credit card.",
     transfer:
-      "Moves money between your own accounts. It is not counted as spending.",
+      "Use only when both accounts belong to you. It moves your balance and is not counted as spending.",
     "credit-card-payment":
       "Pays down the selected card or loan from a bank account. It is not counted as another purchase.",
     "savings-contribution":
@@ -96,6 +99,8 @@ export function QuickActivityDialog({
   const [transactionType, setTransactionType] =
     useState<ExpenseTransactionType>("purchase");
   const [destinationAccountId, setDestinationAccountId] = useState("");
+  const [transferToUntrackedAccount, setTransferToUntrackedAccount] =
+    useState(false);
   const [debtAccountId, setDebtAccountId] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +115,9 @@ export function QuickActivityDialog({
   const allowCreditSource =
     kind === "spending" &&
     (transactionType === "purchase" || transactionType === "refund");
+  const availableDestinations = accounts.filter(
+    (account) => account.id !== accountId,
+  );
 
   return (
     <div
@@ -154,6 +162,9 @@ export function QuickActivityDialog({
               transactionType,
               ...(note.trim() ? { note: note.trim() } : {}),
               ...(destinationAccountId ? { destinationAccountId } : {}),
+              ...(transferToUntrackedAccount
+                ? { transferToUntrackedAccount: true }
+                : {}),
               ...(debtAccountId ? { debtAccountId } : {}),
             }).then(setError);
           }}
@@ -231,6 +242,7 @@ export function QuickActivityDialog({
                         : "",
                     );
                     setDestinationAccountId("");
+                    setTransferToUntrackedAccount(false);
                     setError(null);
                   }}
                 >
@@ -268,23 +280,37 @@ export function QuickActivityDialog({
               )}
               {transactionType === "transfer" && (
                 <label>
-                  Move it to
+                  Where did it go?
                   <select
-                    value={destinationAccountId}
+                    value={
+                      transferToUntrackedAccount
+                        ? UNTRACKED_ACCOUNT_VALUE
+                        : destinationAccountId
+                    }
                     onChange={(event) => {
-                      setDestinationAccountId(event.target.value);
+                      const isUntracked =
+                        event.target.value === UNTRACKED_ACCOUNT_VALUE;
+                      setTransferToUntrackedAccount(isUntracked);
+                      setDestinationAccountId(
+                        isUntracked ? "" : event.target.value,
+                      );
+                      setError(null);
                     }}
                   >
-                    <option value="">Choose destination account</option>
-                    {accounts
-                      .filter((account) => account.id !== accountId)
-                      .map((account) => (
-                        <option key={account.id} value={account.id}>
-                          {account.name} ·{" "}
-                          {formatCad(account.currentValueCents)}
-                        </option>
-                      ))}
+                    <option value="">Choose where the money went</option>
+                    {availableDestinations.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} · {formatCad(account.currentValueCents)}
+                      </option>
+                    ))}
+                    <option value={UNTRACKED_ACCOUNT_VALUE}>
+                      Another account I own (not listed)
+                    </option>
                   </select>
+                  <small>
+                    Sent it to another person? Choose “Bought, paid, or sent
+                    money” instead.
+                  </small>
                 </label>
               )}
               {transactionType === "credit-card-payment" && (
@@ -341,7 +367,9 @@ export function QuickActivityDialog({
                 placeholder={
                   transactionType === "credit-card-payment"
                     ? "For example, October card payment"
-                    : "For example, Netflix or lunch"
+                    : transactionType === "transfer"
+                      ? "For example, business bank"
+                      : "For example, Netflix or lunch"
                 }
               />
             </label>

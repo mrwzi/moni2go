@@ -540,6 +540,7 @@ export function AccountsManager() {
     if (
       input.kind === "spending" &&
       input.transactionType === "transfer" &&
+      !input.transferToUntrackedAccount &&
       (destination?.status !== "active" || destination.id === assetAccount?.id)
     )
       return "Choose a different active destination account.";
@@ -651,7 +652,9 @@ export function AccountsManager() {
                   ...(input.note ? { note: input.note } : {}),
                   name:
                     input.transactionType === "transfer"
-                      ? "Transfer between accounts"
+                      ? input.transferToUntrackedAccount
+                        ? "Transfer to untracked account"
+                        : "Transfer between accounts"
                       : input.transactionType === "credit-card-payment"
                         ? "Card or loan payment"
                         : input.transactionType === "savings-contribution"
@@ -680,7 +683,9 @@ export function AccountsManager() {
           : input.transactionType === "refund"
             ? `${formatCad(cents)} refund recorded for ${accountName}.`
             : input.transactionType === "transfer"
-              ? `${formatCad(cents)} moved from ${accountName} to ${destination?.name ?? "the destination account"}.`
+              ? input.transferToUntrackedAccount
+                ? `${formatCad(cents)} moved from ${accountName} to another account you own.`
+                : `${formatCad(cents)} moved from ${accountName} to ${destination?.name ?? "the destination account"}.`
               : input.transactionType === "credit-card-payment"
                 ? `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount?.name ?? "the debt account"}.`
                 : input.transactionType === "purchase"
