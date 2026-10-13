@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
   analyzeBudget,
-  modelPurchase,
   suggestEmergencyStarter,
   suggestPaychequeSplit,
   type BudgetAllocation,
@@ -298,10 +297,30 @@ function MoneyPlanContent() {
     [amounts, debtPayments.totalCents, spendingHistory],
   );
   const purchaseCents = parseAmount(purchase);
-  const impact =
-    analysis && purchaseCents !== null && purchaseCents > 0
-      ? modelPurchase(analysis, purchaseCategory, purchaseCents)
-      : null;
+  const purchaseCheck = useMemo(() => {
+    if (!analysis || purchaseCents === null || purchaseCents <= 0) return null;
+    const categoryPlan =
+      purchaseCategory === "debt-payments"
+        ? debtPayments.totalCents
+        : (parseAmount(amounts[purchaseCategory] ?? "0") ?? 0);
+    const alreadySpent = spendingHistory[purchaseCategory].spentThisMonthCents;
+    const cashAfter = analysis.availableCents - purchaseCents;
+    const categoryAfter = categoryPlan - alreadySpent - purchaseCents;
+    return {
+      categoryPlan,
+      cashAfter,
+      categoryAfter,
+      exceedsCash: cashAfter < 0,
+      exceedsCategory: categoryAfter < 0,
+    };
+  }, [
+    analysis,
+    amounts,
+    debtPayments.totalCents,
+    purchaseCategory,
+    purchaseCents,
+    spendingHistory,
+  ]);
 
   useEffect(() => {
     if (editingPlan && planStep >= questionCategories.length) void savePlan();
@@ -827,13 +846,13 @@ function MoneyPlanContent() {
               )}
 
               <details className="app-card purchase-checker">
-                <summary>Check a purchase</summary>
+                <summary>Can I afford this?</summary>
                 <p className="plan-help">
-                  See whether a purchase fits before spending. Nothing is saved.
+                  Enter a possible purchase. This will not change your accounts.
                 </p>
                 <div className="purchase-checker-fields">
                   <label>
-                    Category
+                    What is it for?
                     <select
                       value={purchaseCategory}
                       onChange={(event) => {
@@ -851,7 +870,7 @@ function MoneyPlanContent() {
                     </select>
                   </label>
                   <label>
-                    Amount
+                    Purchase amount
                     <span className="money-input">
                       <span>$</span>
                       <input
@@ -865,21 +884,32 @@ function MoneyPlanContent() {
                     </span>
                   </label>
                 </div>
-                {impact && (
-                  <div className="purchase-checker-result" role="status">
-                    <span>
-                      Money left: {formatCad(impact.remainingAvailableCents)}
-                    </span>
+                {purchaseCheck && (
+                  <div
+                    className="purchase-checker-result"
+                    data-status={
+                      purchaseCheck.exceedsCash || purchaseCheck.exceedsCategory
+                        ? "attention"
+                        : "fits"
+                    }
+                    role="status"
+                  >
                     <strong>
-                      {impact.categoryRemainingCents === null
-                        ? `No money is planned for ${categoryLabel(purchaseCategory)}.`
-                        : `${categoryLabel(purchaseCategory)} left: ${formatCad(impact.categoryRemainingCents)}`}
+                      {purchaseCheck.exceedsCash
+                        ? `Not enough available cash. You are short ${formatCad(Math.abs(purchaseCheck.cashAfter))}.`
+                        : purchaseCheck.categoryPlan === 0
+                          ? `You have the cash, but no budget is set for ${categoryLabel(purchaseCategory)}.`
+                          : purchaseCheck.exceedsCategory
+                            ? `This is ${formatCad(Math.abs(purchaseCheck.categoryAfter))} over your ${categoryLabel(purchaseCategory)} budget.`
+                            : "This purchase fits your budget."}
                     </strong>
-                    {(impact.exceedsAvailable ||
-                      impact.exceedsCategoryPlan) && (
-                      <small>
-                        This purchase does not fit the current plan.
-                      </small>
+                    {!purchaseCheck.exceedsCash && (
+                      <span>
+                        {categoryLabel(purchaseCategory)} budget afterward:{" "}
+                        {formatCad(Math.max(0, purchaseCheck.categoryAfter))} ·
+                        Available cash afterward:{" "}
+                        {formatCad(purchaseCheck.cashAfter)}
+                      </span>
                     )}
                   </div>
                 )}

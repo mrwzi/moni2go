@@ -71,15 +71,19 @@ test("allocates account money and keeps the review focused", async ({
       .getByRole("region", { name: "Your monthly plan" })
       .getByRole("listitem"),
   ).toHaveCount(14);
-  await page.getByText("Check a purchase").click();
+  await page.getByText("Can I afford this?").click();
   const purchaseChecker = page.locator(".purchase-checker");
   await expect(
-    purchaseChecker.getByLabel("Category").locator("option"),
+    purchaseChecker.getByLabel("What is it for?").locator("option"),
   ).toHaveCount(14);
-  await purchaseChecker.getByLabel("Amount").fill("75");
-  await expect(purchaseChecker.getByText("Money left: $925.00")).toBeVisible();
+  await purchaseChecker.getByLabel("Purchase amount").fill("75");
   await expect(
-    purchaseChecker.getByText("Groceries left: $175.00"),
+    purchaseChecker.getByText("This purchase fits your budget."),
+  ).toBeVisible();
+  await expect(
+    purchaseChecker.getByText(
+      "Groceries budget afterward: $175.00 · Available cash afterward: $925.00",
+    ),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Save plan" })).toHaveCount(0);
 

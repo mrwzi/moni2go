@@ -4334,6 +4334,12 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.purchase-checker-fields label {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 700;
+}
+
 .purchase-checker-result {
   display: grid;
   margin-top: 0.85rem;
@@ -4348,8 +4354,18 @@ main {
   color: var(--muted);
 }
 
+.purchase-checker-result[data-status="fits"] strong {
+  color: var(--brand);
+}
+
+.purchase-checker-result[data-status="attention"] strong {
+  color: var(--danger);
+}
+
 .what-if-fields select,
-.what-if-fields input {
+.what-if-fields input,
+.purchase-checker-fields select,
+.purchase-checker-fields input {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
