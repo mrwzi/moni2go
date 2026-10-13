@@ -13,6 +13,14 @@ export const BALANCE_UPDATE_REASONS = [
   { value: "fee-withdrawal", label: "Fee or withdrawal" },
 ] as const;
 
+const INVESTMENT_ACCOUNT_TYPES: ReadonlySet<AssetAccount["type"]> = new Set([
+  "tfsa",
+  "rrsp",
+  "fhsa",
+  "non-registered-investment",
+  "crypto",
+]);
+
 export type BalanceUpdateReason =
   (typeof BALANCE_UPDATE_REASONS)[number]["value"];
 
@@ -37,6 +45,10 @@ export function AccountBalanceDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const isInvestmentAccount = INVESTMENT_ACCOUNT_TYPES.has(account.type);
+  const availableReasons = isInvestmentAccount
+    ? BALANCE_UPDATE_REASONS.filter((option) => option.value !== "deposit")
+    : BALANCE_UPDATE_REASONS.filter((option) => option.value === "set");
 
   return (
     <div
@@ -55,7 +67,7 @@ export function AccountBalanceDialog({
         <header>
           <div>
             <p className="eyebrow">{account.name}</p>
-            <h2 id="balance-update-heading">Update balance</h2>
+            <h2 id="balance-update-heading">Correct balance</h2>
           </div>
           <button
             className="icon-button"
@@ -84,28 +96,35 @@ export function AccountBalanceDialog({
             Current balance{" "}
             <strong>{formatCad(account.currentValueCents)}</strong>
           </p>
-          <label>
-            What changed?
-            <select
-              value={reason}
-              onChange={(event) => {
-                const nextReason = event.target.value as BalanceUpdateReason;
-                setReason(nextReason);
-                setAmount(
-                  nextReason === "set"
-                    ? (account.currentValueCents / 100).toFixed(2)
-                    : "",
-                );
-                setError(null);
-              }}
-            >
-              {BALANCE_UPDATE_REASONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p className="cash-place-note">
+            {isInvestmentAccount
+              ? "Use this for a corrected statement balance or a market-value change."
+              : "Only use this when the balance shown here does not match your bank. For income, spending, transfers, refunds, or payments, use Record activity."}
+          </p>
+          {isInvestmentAccount && (
+            <label>
+              What changed?
+              <select
+                value={reason}
+                onChange={(event) => {
+                  const nextReason = event.target.value as BalanceUpdateReason;
+                  setReason(nextReason);
+                  setAmount(
+                    nextReason === "set"
+                      ? (account.currentValueCents / 100).toFixed(2)
+                      : "",
+                  );
+                  setError(null);
+                }}
+              >
+                {availableReasons.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             {reason === "set" ? "New current balance" : "Amount"}
             <span className="money-input">
@@ -128,8 +147,8 @@ export function AccountBalanceDialog({
             </p>
           )}
           <p className="cash-place-note">
-            Use Set current balance if several updates were missed. This only
-            updates moni2go; it does not move money at your provider.
+            This corrects moni2go only. It does not move money at your bank or
+            provider and does not create transaction history.
           </p>
           <button
             className="button button-primary"
@@ -138,7 +157,7 @@ export function AccountBalanceDialog({
             aria-busy={pending}
           >
             {pending && <span className="button-spinner" aria-hidden="true" />}
-            <span>{pending ? "Updating…" : "Update balance"}</span>
+            <span>{pending ? "Saving…" : "Save corrected balance"}</span>
           </button>
         </form>
       </section>

@@ -39,7 +39,7 @@ export function AccountRows({
           <ActionMenu
             label={`More actions for ${account.name}`}
             title={`${account.name} account`}
-            primaryActionLabel="Update balance"
+            primaryActionLabel="Correct balance"
             onPrimaryAction={() => {
               onUpdateAsset(account);
             }}

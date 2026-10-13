@@ -4,7 +4,7 @@ async function openBalanceUpdate(page: Page, accountName: string) {
   await page.getByLabel(`More actions for ${accountName}`).click();
   await page
     .getByRole("dialog", { name: `${accountName} account` })
-    .getByRole("button", { name: "Update balance" })
+    .getByRole("button", { name: "Correct balance" })
     .click();
 }
 
@@ -124,7 +124,7 @@ test("updates an investment for dividends, losses, and missed changes", async ({
   await openBalanceUpdate(page, "TFSA");
   await page.getByLabel("What changed?").selectOption("interest-dividend");
   await page.getByLabel("Amount").fill("25.50");
-  await page.getByRole("button", { name: "Update balance" }).click();
+  await page.getByRole("button", { name: "Save corrected balance" }).click();
   await expect(
     page.getByText("TFSA updated to $1,025.50 · Interest or dividend."),
   ).toBeVisible();
@@ -132,14 +132,14 @@ test("updates an investment for dividends, losses, and missed changes", async ({
   await openBalanceUpdate(page, "TFSA");
   await page.getByLabel("What changed?").selectOption("loss");
   await page.getByLabel("Amount").fill("100");
-  await page.getByRole("button", { name: "Update balance" }).click();
+  await page.getByRole("button", { name: "Save corrected balance" }).click();
   await expect(
     page.getByText("TFSA updated to $925.50 · Investment or crypto loss."),
   ).toBeVisible();
 
   await openBalanceUpdate(page, "TFSA");
   await page.getByLabel("New current balance").fill("1500");
-  await page.getByRole("button", { name: "Update balance" }).click();
+  await page.getByRole("button", { name: "Save corrected balance" }).click();
   await expect(
     page.getByText("TFSA updated to $1,500.00 · Set current balance."),
   ).toBeVisible();
