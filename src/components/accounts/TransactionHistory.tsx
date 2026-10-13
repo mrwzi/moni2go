@@ -44,6 +44,8 @@ export function TransactionHistory({
   const [transactionType, setTransactionType] =
     useState<ExpenseTransactionType>("purchase");
   const [accountId, setAccountId] = useState("");
+  const [note, setNote] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const transactions = useMemo(
     () =>
@@ -71,6 +73,7 @@ export function TransactionHistory({
         workspace.liabilityAccounts[0]?.id ??
         "",
     );
+    setNote(event.note ?? "");
     setError(null);
   }
 
@@ -92,21 +95,23 @@ export function TransactionHistory({
     await save({
       ...workspace,
       updatedAt: now,
-      expenseEvents: workspace.expenseEvents.map((event) =>
-        event.id === editing.id
-          ? {
-              ...event,
-              accountId: accountId as FinancialEntityId,
-              amountCents: parsed.cents,
-              category,
-              transactionType,
-              actualDate: parsedDate,
-              dueDate: parsedDate,
-              name: BUDGET_CATEGORIES[category],
-              updatedAt: now,
-            }
-          : event,
-      ),
+      expenseEvents: workspace.expenseEvents.map((event) => {
+        if (event.id !== editing.id) return event;
+        const updatedEvent = {
+          ...event,
+          accountId: accountId as FinancialEntityId,
+          amountCents: parsed.cents,
+          category,
+          transactionType,
+          actualDate: parsedDate,
+          dueDate: parsedDate,
+          name: BUDGET_CATEGORIES[category],
+          updatedAt: now,
+        };
+        if (note.trim()) updatedEvent.note = note.trim();
+        else delete updatedEvent.note;
+        return updatedEvent;
+      }),
     });
     setEditingId(null);
   }
@@ -143,10 +148,11 @@ export function TransactionHistory({
         rewrite a balance you may have updated later.
       </p>
       <ul className="transaction-history-list">
-        {transactions.slice(0, 10).map((event) => (
+        {transactions.slice(0, showAll ? 10 : 2).map((event) => (
           <li key={event.id}>
             <div className="transaction-history-details">
               <strong>{event.name}</strong>
+              {event.note && <span>{event.note}</span>}
               <small>
                 {event.actualDate ?? event.dueDate} ·{" "}
                 {TYPE_LABELS[eventType(event)]}
@@ -180,6 +186,20 @@ export function TransactionHistory({
           </li>
         ))}
       </ul>
+      {transactions.length > 2 && (
+        <button
+          className="button button-secondary transaction-history-toggle"
+          type="button"
+          aria-expanded={showAll}
+          onClick={() => {
+            setShowAll((current) => !current);
+          }}
+        >
+          {showAll
+            ? "Show recent only"
+            : `Show all activity (${Math.min(transactions.length, 10).toString()})`}
+        </button>
+      )}
       {editing && (
         <div
           className="modal-backdrop"
@@ -291,6 +311,17 @@ export function TransactionHistory({
                     }}
                   />
                 </span>
+              </label>
+              <label>
+                Note <small>(optional)</small>
+                <input
+                  value={note}
+                  maxLength={160}
+                  onChange={(event) => {
+                    setNote(event.target.value);
+                  }}
+                  placeholder="For example, Netflix or October payment"
+                />
               </label>
               {error && (
                 <p className="form-error" role="alert">

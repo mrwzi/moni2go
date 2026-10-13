@@ -22,6 +22,7 @@ export type QuickActivityInput = Readonly<{
   incomeLabel: IncomeLabel;
   spendingCategory: BudgetCategoryKey;
   transactionType: ExpenseTransactionType;
+  note?: string;
   destinationAccountId?: string;
   debtAccountId?: string;
 }>;
@@ -96,6 +97,7 @@ export function QuickActivityDialog({
     useState<ExpenseTransactionType>("purchase");
   const [destinationAccountId, setDestinationAccountId] = useState("");
   const [debtAccountId, setDebtAccountId] = useState("");
+  const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const activeDebtAccounts = liabilityAccounts.filter(
     (account) => account.status === "active" && account.currentBalanceCents > 0,
@@ -150,6 +152,7 @@ export function QuickActivityDialog({
               incomeLabel,
               spendingCategory,
               transactionType,
+              ...(note.trim() ? { note: note.trim() } : {}),
               ...(destinationAccountId ? { destinationAccountId } : {}),
               ...(debtAccountId ? { debtAccountId } : {}),
             }).then(setError);
@@ -326,6 +329,23 @@ export function QuickActivityDialog({
               />
             </span>
           </label>
+          {kind === "spending" && (
+            <label>
+              Note <small>(optional)</small>
+              <input
+                value={note}
+                maxLength={160}
+                onChange={(event) => {
+                  setNote(event.target.value);
+                }}
+                placeholder={
+                  transactionType === "credit-card-payment"
+                    ? "For example, October card payment"
+                    : "For example, Netflix or lunch"
+                }
+              />
+            </label>
+          )}
           {error && (
             <p className="form-error" role="alert">
               {error}

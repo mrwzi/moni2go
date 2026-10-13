@@ -255,6 +255,7 @@ export const datedExpenseEventSchema = z
     accountId: entityIdSchema.optional(),
     relatedAccountId: entityIdSchema.optional(),
     transactionType: z.enum(EXPENSE_TRANSACTION_TYPES).optional(),
+    note: z.string().trim().min(1).max(160).optional(),
   })
   .strict();
 export const debtInterestModelSchema = z.discriminatedUnion("kind", [

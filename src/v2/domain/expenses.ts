@@ -50,5 +50,6 @@ export type DatedExpenseEvent = EntityMetadata &
     accountId?: FinancialEntityId;
     relatedAccountId?: FinancialEntityId;
     transactionType?: ExpenseTransactionType;
+    note?: string;
     provenance: PersonalProvenance;
   }>;

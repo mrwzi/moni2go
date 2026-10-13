@@ -3812,6 +3812,18 @@ main {
   line-height: 1.35;
 }
 
+.transaction-history-details > span {
+  color: var(--text-soft);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.transaction-history-toggle {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
 .transaction-history-summary {
   display: flex;
   align-items: center;

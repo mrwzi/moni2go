@@ -327,11 +327,25 @@ test("records money in and money out against an existing account", async ({
   await page.getByRole("button", { name: "Record activity" }).click();
   await page.getByLabel("What was it for?").selectOption("groceries");
   await page.getByLabel("Amount").fill("20.25");
+  await page.getByLabel("Note (optional)").fill("Weekly supermarket trip");
   await page.getByRole("button", { name: "Save purchase" }).click();
   await expect(
     page.getByText("$20.25 spending recorded from Chequing."),
   ).toBeVisible();
   await expect(page.getByText("$130.00").first()).toBeVisible();
+  await expect(page.getByText("Weekly supermarket trip")).toBeVisible();
+
+  for (const amount of ["2", "3"]) {
+    await page.getByRole("button", { name: "Record activity" }).click();
+    await page.getByLabel("What was it for?").selectOption("subscriptions");
+    await page.getByLabel("Amount").fill(amount);
+    await page.getByRole("button", { name: "Save purchase" }).click();
+  }
+  const history = page.getByRole("region", { name: "Recent transactions" });
+  await expect(history.getByRole("listitem")).toHaveCount(2);
+  await history.getByRole("button", { name: "Show all activity (3)" }).click();
+  await expect(history.getByRole("listitem")).toHaveCount(3);
+  await expect(history.getByText("Weekly supermarket trip")).toBeVisible();
 
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });

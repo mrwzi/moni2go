@@ -648,6 +648,7 @@ export function AccountsManager() {
                     ? { relatedAccountId: relatedAccount.id }
                     : {}),
                   transactionType: input.transactionType,
+                  ...(input.note ? { note: input.note } : {}),
                   name:
                     input.transactionType === "transfer"
                       ? "Transfer between accounts"
