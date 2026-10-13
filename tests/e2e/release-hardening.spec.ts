@@ -112,7 +112,9 @@ test("completes the custom-baseline workflow and clears local data with the keyb
   await settingsFromMethodology.focus();
   await page.keyboard.press("Enter");
   await page.getByText("Privacy and technical details").click();
-  const privacy = page.getByRole("link", { name: "Privacy", exact: true });
+  const privacy = page
+    .getByRole("navigation", { name: "Settings information" })
+    .getByRole("link", { name: /^Privacy/ });
   await privacy.focus();
   await page.keyboard.press("Enter");
   const clear = page.getByRole("button", { name: "Clear my data" });

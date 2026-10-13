@@ -13,7 +13,6 @@ import type {
 } from "../../v2/domain/expenses";
 import { parseV2CadInput } from "../../v2/domain/money";
 import type { FinancialWorkspace } from "../../v2/domain/workspace";
-import type { FinancialEntityId } from "../../v2/domain/types";
 import { SPENDING_CATEGORIES } from "./account-options";
 
 const TYPE_LABELS: Record<ExpenseTransactionType, string> = {
@@ -41,9 +40,6 @@ export function TransactionHistory({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
   const [category, setCategory] = useState<BudgetCategoryKey>("groceries");
-  const [transactionType, setTransactionType] =
-    useState<ExpenseTransactionType>("purchase");
-  const [accountId, setAccountId] = useState("");
   const [note, setNote] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,13 +62,6 @@ export function TransactionHistory({
     setAmount((event.amountCents / 100).toFixed(2));
     setDate(event.actualDate ?? event.dueDate);
     setCategory(event.category);
-    setTransactionType(eventType(event));
-    setAccountId(
-      event.accountId ??
-        workspace.assetAccounts[0]?.id ??
-        workspace.liabilityAccounts[0]?.id ??
-        "",
-    );
     setNote(event.note ?? "");
     setError(null);
   }
@@ -87,8 +76,8 @@ export function TransactionHistory({
       setError("Enter a valid transaction date.");
       return;
     }
-    if (!parsed.ok || parsed.cents <= 0 || !accountId) {
-      setError("Enter an account, date, and amount greater than $0.");
+    if (!parsed.ok || parsed.cents <= 0) {
+      setError("Enter a date and an amount greater than $0.");
       return;
     }
     const now = new Date().toISOString();
@@ -97,15 +86,17 @@ export function TransactionHistory({
       updatedAt: now,
       expenseEvents: workspace.expenseEvents.map((event) => {
         if (event.id !== editing.id) return event;
+        const type = eventType(event);
         const updatedEvent = {
           ...event,
-          accountId: accountId as FinancialEntityId,
           amountCents: parsed.cents,
           category,
-          transactionType,
           actualDate: parsedDate,
           dueDate: parsedDate,
-          name: BUDGET_CATEGORIES[category],
+          name:
+            type === "purchase" || type === "refund"
+              ? `${type === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[category]}`
+              : event.name,
           updatedAt: now,
         };
         if (note.trim()) updatedEvent.note = note.trim();
@@ -237,58 +228,28 @@ export function TransactionHistory({
                 void saveEdit();
               }}
             >
-              <label>
-                Account
-                <select
-                  value={accountId}
-                  onChange={(event) => {
-                    setAccountId(event.target.value);
-                  }}
-                >
-                  {workspace.assetAccounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name}
-                    </option>
-                  ))}
-                  {workspace.liabilityAccounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                What happened?
-                <select
-                  value={transactionType}
-                  onChange={(event) => {
-                    setTransactionType(
-                      event.target.value as ExpenseTransactionType,
-                    );
-                  }}
-                >
-                  {Object.entries(TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Category
-                <select
-                  value={category}
-                  onChange={(event) => {
-                    setCategory(event.target.value as BudgetCategoryKey);
-                  }}
-                >
-                  {SPENDING_CATEGORIES.map((key) => (
-                    <option key={key} value={key}>
-                      {BUDGET_CATEGORIES[key]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <p className="cash-place-note">
+                {TYPE_LABELS[eventType(editing)]}. Editing history updates Plan
+                insights but does not change an account balance.
+              </p>
+              {(eventType(editing) === "purchase" ||
+                eventType(editing) === "refund") && (
+                <label>
+                  Category
+                  <select
+                    value={category}
+                    onChange={(event) => {
+                      setCategory(event.target.value as BudgetCategoryKey);
+                    }}
+                  >
+                    {SPENDING_CATEGORIES.map((key) => (
+                      <option key={key} value={key}>
+                        {BUDGET_CATEGORIES[key]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label>
                 Date
                 <input

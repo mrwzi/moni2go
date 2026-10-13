@@ -104,6 +104,18 @@ test("records a transfer to an owned account that is not tracked", async ({
     transactions.getByText("Transfer to untracked account"),
   ).toBeVisible();
   await expect(transactions.getByText("Business bank")).toBeVisible();
+
+  await transactions
+    .getByRole("button", {
+      name: "Edit Transfer to untracked account transaction",
+    })
+    .click();
+  const editDialog = page.getByRole("dialog", { name: "Edit transaction" });
+  await expect(
+    editDialog.getByText("Transfer between accounts."),
+  ).toBeVisible();
+  await expect(editDialog.getByLabel("What happened?")).toHaveCount(0);
+  await expect(editDialog.getByLabel("Category")).toHaveCount(0);
 });
 
 test("updates an investment for dividends, losses, and missed changes", async ({
