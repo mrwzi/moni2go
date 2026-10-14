@@ -700,18 +700,24 @@ select {
 }
 
 .account-group-card > header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   min-height: 4.5rem;
   padding: 0.85rem 1rem;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
+}
+
+.account-group-card > header > div:first-child {
+  min-width: 0;
 }
 
 .account-group-actions {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 0.45rem;
+  white-space: nowrap;
 }
 
 .action-menu {
@@ -863,6 +869,12 @@ select {
   font-size: 0.76rem;
 }
 
+.account-group-card header p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .account-group-card header .add-account-button {
   min-height: 44px;
   padding: 0 0.7rem;
@@ -871,6 +883,7 @@ select {
   color: var(--brand-dark);
   background: var(--brand-soft);
   font-weight: 750;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -4891,7 +4904,6 @@ body {
 
   .account-group-actions {
     justify-content: flex-end;
-    flex-wrap: wrap;
   }
 }
 

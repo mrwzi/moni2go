@@ -939,7 +939,9 @@ export function AccountsManager() {
               <header>
                 <div>
                   <h3>{group.name}</h3>
-                  <p>{groupLabels[group.type]} · Manually added</p>
+                  <p title={groupLabels[group.type]}>
+                    {groupLabels[group.type]}
+                  </p>
                 </div>
                 <div className="account-group-actions">
                   <button
