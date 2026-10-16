@@ -31,7 +31,10 @@ export function AccountRows({
         <li key={account.id}>
           <div className="account-row-copy">
             <strong>{account.name}</strong>
-            <span>{accountLabels[account.type]}</span>
+            {account.name.trim().toLocaleLowerCase() !==
+              accountLabels[account.type].toLocaleLowerCase() && (
+              <span>{accountLabels[account.type]}</span>
+            )}
           </div>
           <div className="account-row-value">
             <strong>{formatCad(account.currentValueCents)}</strong>
@@ -52,7 +55,10 @@ export function AccountRows({
         <li key={account.id}>
           <div className="account-row-copy">
             <strong>{account.name}</strong>
-            <span>{accountLabels[account.type]}</span>
+            {account.name.trim().toLocaleLowerCase() !==
+              accountLabels[account.type].toLocaleLowerCase() && (
+              <span>{accountLabels[account.type]}</span>
+            )}
           </div>
           <div
             className={`account-row-value${account.currentBalanceCents > 0 ? " account-row-debt" : account.currentBalanceCents < 0 ? " account-row-credit" : ""}`}
