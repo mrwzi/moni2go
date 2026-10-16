@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatCad } from "../../domain/money";
+import type { AccountGroup } from "../../v2/domain/account-groups";
 import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
 import type { ExpenseTransactionType } from "../../v2/domain/expenses";
 import {
@@ -70,12 +71,14 @@ export function QuickActivityDialog({
   kind,
   accounts,
   liabilityAccounts,
+  accountGroups,
   onClose,
   onSave,
 }: Readonly<{
   kind: QuickActivityKind;
   accounts: readonly AssetAccount[];
   liabilityAccounts: readonly LiabilityAccount[];
+  accountGroups: readonly AccountGroup[];
   onClose: () => void;
   onSave: (input: QuickActivityInput) => Promise<string | null>;
 }>) {
@@ -118,6 +121,25 @@ export function QuickActivityDialog({
   const availableDestinations = accounts.filter(
     (account) => account.id !== accountId,
   );
+  const duplicateNames = new Set(
+    [...accounts, ...liabilityAccounts]
+      .map((account) => account.name.trim().toLocaleLowerCase())
+      .filter(
+        (name, index, names) =>
+          names.indexOf(name) !== index || names.lastIndexOf(name) !== index,
+      ),
+  );
+  const accountLabel = (account: AssetAccount | LiabilityAccount) => {
+    const repeated = duplicateNames.has(
+      account.name.trim().toLocaleLowerCase(),
+    );
+    const provider = account.groupId
+      ? accountGroups.find((group) => group.id === account.groupId)?.name
+      : undefined;
+    return repeated && provider
+      ? `${provider} · ${account.name}`
+      : account.name;
+  };
 
   return (
     <div
@@ -187,13 +209,14 @@ export function QuickActivityDialog({
             >
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.name} · {formatCad(account.currentValueCents)}
+                  {accountLabel(account)} ·{" "}
+                  {formatCad(account.currentValueCents)}
                 </option>
               ))}
               {allowCreditSource &&
                 creditAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.name} · owed{" "}
+                    {accountLabel(account)} · owed{" "}
                     {formatCad(account.currentBalanceCents)}
                   </option>
                 ))}
@@ -300,7 +323,8 @@ export function QuickActivityDialog({
                     <option value="">Choose where the money went</option>
                     {availableDestinations.map((account) => (
                       <option key={account.id} value={account.id}>
-                        {account.name} · {formatCad(account.currentValueCents)}
+                        {accountLabel(account)} ·{" "}
+                        {formatCad(account.currentValueCents)}
                       </option>
                     ))}
                     <option value={UNTRACKED_ACCOUNT_VALUE}>
@@ -329,7 +353,7 @@ export function QuickActivityDialog({
                       )}
                       {activeDebtAccounts.map((account) => (
                         <option key={account.id} value={account.id}>
-                          {account.name} · owed{" "}
+                          {accountLabel(account)} · owed{" "}
                           {formatCad(account.currentBalanceCents)}
                         </option>
                       ))}

@@ -1016,6 +1016,7 @@ export function AccountsManager() {
           kind={activityKind}
           accounts={activeAssets}
           liabilityAccounts={liabilities}
+          accountGroups={groups}
           onClose={() => {
             setActivityKind(null);
           }}

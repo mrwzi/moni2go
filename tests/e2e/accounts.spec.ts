@@ -118,6 +118,28 @@ test("records a transfer to an owned account that is not tracked", async ({
   await expect(editDialog.getByLabel("Category")).toHaveCount(0);
 });
 
+test("distinguishes duplicate account names by provider", async ({ page }) => {
+  await page.goto("/accounts");
+  for (const [bank, balance] of [
+    ["BMO", "76"],
+    ["PC Finance", "428.20"],
+  ] as const) {
+    await page.getByRole("button", { name: "+ Add provider" }).click();
+    await page.getByLabel("Bank name").fill(bank);
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Current value").fill(balance);
+    await page.getByRole("button", { name: "Save account" }).click();
+  }
+
+  await page.getByRole("button", { name: "Record activity" }).click();
+  const account = page
+    .getByRole("dialog", { name: "Record activity" })
+    .getByRole("combobox", { name: "Account or card" });
+  await expect(account).toContainText("BMO · Chequing · $76.00");
+  await expect(account).toContainText("PC Finance · Chequing · $428.20");
+});
+
 test("updates an investment for dividends, losses, and missed changes", async ({
   page,
 }) => {
