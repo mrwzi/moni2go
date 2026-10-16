@@ -3221,6 +3221,55 @@ main {
     border-radius: 1.25rem 1.25rem 0 0;
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  .quick-activity-dialog > header {
+    padding: 0.75rem 0.9rem 0.6rem;
+  }
+
+  .quick-activity-dialog > header .eyebrow {
+    font-size: 0.68rem;
+  }
+
+  .quick-activity-dialog > header h2 {
+    font-size: 1.1rem;
+  }
+
+  .quick-activity-dialog > header .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .quick-activity-dialog .account-form {
+    padding: 0.8rem 0.9rem max(0.8rem, env(safe-area-inset-bottom));
+    gap: 0.7rem;
+  }
+
+  .quick-activity-dialog .account-form input,
+  .quick-activity-dialog .account-form select {
+    min-height: 44px;
+    margin-top: 0.25rem;
+    padding-block: 0.55rem;
+  }
+
+  .quick-activity-dialog .account-form label {
+    font-size: 0.9rem;
+  }
+
+  .quick-activity-dialog .cash-place-note {
+    padding: 0.55rem 0.7rem;
+    font-size: 0.76rem;
+    line-height: 1.4;
+  }
+
+  .quick-activity-dialog .activity-save-note {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .quick-activity-dialog .button-primary {
+    min-height: 46px;
+  }
 }
 
 @media (min-width: 1024px) {

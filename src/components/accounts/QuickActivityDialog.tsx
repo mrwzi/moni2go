@@ -48,15 +48,14 @@ const TRANSACTION_TYPE_OPTIONS = [
 const TRANSACTION_TYPE_HELP: Readonly<Record<ExpenseTransactionType, string>> =
   {
     purchase:
-      "Use for purchases, bills, gifts, or money sent to another person. It counts as spending.",
-    refund:
-      "Money returned to you. It adds back to a bank account or reduces the amount owed on a credit card.",
+      "Use for purchases, bills, gifts, or money sent to someone. Counts as spending.",
+    refund: "Adds money back or reduces the amount owed on a credit card.",
     transfer:
-      "Use only when both accounts belong to you. It moves your balance and is not counted as spending.",
+      "For accounts you own. Moves the balance without counting it as spending.",
     "credit-card-payment":
-      "Pays down the selected card or loan from a bank account. It is not counted as another purchase.",
+      "Pays down a card or loan. It is not counted as another purchase.",
     "savings-contribution":
-      "Tracks money moved toward savings or investing, separately from everyday spending.",
+      "Tracks savings or investing separately from everyday spending.",
   };
 
 const SUBMIT_LABELS: Readonly<Record<ExpenseTransactionType, string>> = {
@@ -403,9 +402,8 @@ export function QuickActivityDialog({
               {error}
             </p>
           )}
-          <p className="cash-place-note">
-            This updates the manual balance in moni2go. It does not move money
-            at your bank.
+          <p className="cash-place-note activity-save-note">
+            Updates moni2go only—not your bank.
           </p>
           <button className="button button-primary" type="submit">
             {kind === "income" ? "Add money" : SUBMIT_LABELS[transactionType]}
