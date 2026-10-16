@@ -3226,6 +3226,19 @@ main {
     padding: 0.75rem 0.9rem 0.6rem;
   }
 
+  .quick-activity-backdrop {
+    padding: 1rem;
+    place-items: center;
+  }
+
+  .quick-activity-dialog {
+    width: min(28rem, 100%);
+    max-height: calc(100dvh - 2rem);
+    border: 1px solid var(--line);
+    border-radius: 1.1rem;
+    padding-bottom: 0;
+  }
+
   .quick-activity-dialog > header .eyebrow {
     font-size: 0.68rem;
   }

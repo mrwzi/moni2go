@@ -142,7 +142,7 @@ export function QuickActivityDialog({
 
   return (
     <div
-      className="modal-backdrop"
+      className="modal-backdrop quick-activity-backdrop"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
