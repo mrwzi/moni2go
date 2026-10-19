@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatCad } from "../../domain/money";
 import type { AssetAccount } from "../../v2/domain/accounts";
+import { MoneySelect } from "./MoneySelect";
 
 export const BALANCE_UPDATE_REASONS = [
   { value: "set", label: "Set current balance" },
@@ -52,14 +53,14 @@ export function AccountBalanceDialog({
 
   return (
     <div
-      className="modal-backdrop"
+      className="modal-backdrop money-dialog-backdrop"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       <section
-        className="account-dialog"
+        className="account-dialog money-dialog balance-update-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="balance-update-heading"
@@ -96,34 +97,26 @@ export function AccountBalanceDialog({
             Current balance{" "}
             <strong>{formatCad(account.currentValueCents)}</strong>
           </p>
-          <p className="cash-place-note">
+          <p className="balance-update-help">
             {isInvestmentAccount
               ? "Use this for a corrected statement balance or a market-value change."
               : "Only use this when the balance shown here does not match your bank. For income, spending, transfers, refunds, or payments, use Record activity."}
           </p>
           {isInvestmentAccount && (
-            <label>
-              What changed?
-              <select
-                value={reason}
-                onChange={(event) => {
-                  const nextReason = event.target.value as BalanceUpdateReason;
-                  setReason(nextReason);
-                  setAmount(
-                    nextReason === "set"
-                      ? (account.currentValueCents / 100).toFixed(2)
-                      : "",
-                  );
-                  setError(null);
-                }}
-              >
-                {availableReasons.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <MoneySelect
+              label="What changed?"
+              value={reason}
+              options={availableReasons}
+              onChange={(nextReason) => {
+                setReason(nextReason);
+                setAmount(
+                  nextReason === "set"
+                    ? (account.currentValueCents / 100).toFixed(2)
+                    : "",
+                );
+                setError(null);
+              }}
+            />
           )}
           <label>
             {reason === "set" ? "New current balance" : "Amount"}
@@ -146,9 +139,8 @@ export function AccountBalanceDialog({
               {error}
             </p>
           )}
-          <p className="cash-place-note">
-            This corrects moni2go only. It does not move money at your bank or
-            provider and does not create transaction history.
+          <p className="activity-save-note">
+            Updates moni2go only—no money moves and no transaction is created.
           </p>
           <button
             className="button button-primary"

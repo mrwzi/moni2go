@@ -638,6 +638,152 @@ select {
   max-width: 30rem;
 }
 
+.account-dialog.money-dialog {
+  width: min(30rem, 100%);
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.money-dialog .account-form {
+  gap: 0.8rem;
+}
+
+.money-dialog .button-primary {
+  min-height: 48px;
+}
+
+.money-select {
+  position: relative;
+  min-width: 0;
+}
+
+.money-select-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 700;
+}
+
+.money-select-trigger {
+  display: grid;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem 0.8rem;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.82rem;
+  color: var(--ink);
+  background: var(--surface-raised);
+  text-align: left;
+  cursor: pointer;
+}
+
+.money-select-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.money-select-trigger:hover,
+.money-select-trigger[aria-expanded="true"] {
+  border-color: var(--brand);
+}
+
+.money-select-trigger:focus-visible {
+  border-color: var(--brand);
+  outline: 0;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.money-select-chevron {
+  color: var(--muted);
+  transition: transform 150ms ease;
+}
+
+.money-select-trigger[aria-expanded="true"] .money-select-chevron {
+  transform: rotate(180deg);
+}
+
+.money-select-menu {
+  display: grid;
+  max-height: min(14rem, 35dvh);
+  margin-top: 0.35rem;
+  padding: 0.3rem;
+  gap: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.82rem;
+  background: var(--surface-raised);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 18%);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.money-select-menu button {
+  display: flex;
+  min-height: 42px;
+  padding: 0.55rem 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 0;
+  border-radius: 0.62rem;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.money-select-menu button:hover,
+.money-select-menu button:focus-visible,
+.money-select-menu button[aria-selected="true"] {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
+.money-select-menu button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.money-select small {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.activity-explanation,
+.balance-update-help,
+.activity-save-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.optional-note {
+  border-top: 1px solid var(--line);
+  padding-top: 0.7rem;
+}
+
+.optional-note summary {
+  color: var(--brand-dark);
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.optional-note summary span {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.optional-note label {
+  margin-top: 0.55rem;
+}
+
 .account-totals span {
   color: var(--muted);
   font-size: 0.8rem;
@@ -3313,66 +3459,69 @@ main {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .quick-activity-dialog > header {
+  .money-dialog > header {
     padding: 0.75rem 0.9rem 0.6rem;
   }
 
-  .quick-activity-backdrop {
+  .money-dialog-backdrop {
     padding: 1rem;
     place-items: center;
   }
 
-  .quick-activity-dialog {
-    width: min(28rem, 100%);
+  .money-dialog {
+    width: min(30rem, 100%);
     max-height: calc(100dvh - 2rem);
     border: 1px solid var(--line);
     border-radius: 1.1rem;
     padding-bottom: 0;
   }
 
-  .quick-activity-dialog > header .eyebrow {
+  .money-dialog > header .eyebrow {
     font-size: 0.68rem;
   }
 
-  .quick-activity-dialog > header h2 {
+  .money-dialog > header h2 {
     font-size: 1.1rem;
   }
 
-  .quick-activity-dialog > header .icon-button {
+  .money-dialog > header .icon-button {
     width: 40px;
     height: 40px;
   }
 
-  .quick-activity-dialog .account-form {
+  .money-dialog .account-form {
     padding: 0.8rem 0.9rem max(0.8rem, env(safe-area-inset-bottom));
     gap: 0.7rem;
   }
 
-  .quick-activity-dialog .account-form input,
-  .quick-activity-dialog .account-form select {
+  .money-dialog .account-form input,
+  .money-dialog .money-select-trigger {
     min-height: 44px;
     margin-top: 0.25rem;
     padding-block: 0.55rem;
   }
 
-  .quick-activity-dialog .account-form label {
+  .money-dialog .account-form label,
+  .money-dialog .money-select-label {
     font-size: 0.9rem;
   }
 
-  .quick-activity-dialog .cash-place-note {
-    padding: 0.55rem 0.7rem;
+  .money-dialog .money-select-menu {
+    max-height: min(12rem, 32dvh);
+  }
+
+  .money-dialog .activity-explanation,
+  .money-dialog .balance-update-help,
+  .money-dialog .activity-save-note {
     font-size: 0.76rem;
-    line-height: 1.4;
   }
 
-  .quick-activity-dialog .activity-save-note {
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-
-  .quick-activity-dialog .button-primary {
+  .money-dialog .button-primary {
+    position: sticky;
+    z-index: 2;
+    bottom: max(0px, env(safe-area-inset-bottom));
     min-height: 46px;
+    box-shadow: 0 -8px 18px var(--surface-raised);
   }
 
   .debt-dialog-backdrop {
