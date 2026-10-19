@@ -361,6 +361,7 @@ export function AccountsManager() {
     if (
       needsMonthlyPayment &&
       monthlyPayment !== null &&
+      !editingLiabilityId &&
       monthlyPayment > value
     ) {
       setMessage(
@@ -368,6 +369,11 @@ export function AccountsManager() {
       );
       return;
     }
+    const effectivePayment: number = needsMonthlyPayment
+      ? editingLiabilityId
+        ? Math.min(monthlyPayment ?? 0, value)
+        : (monthlyPayment ?? 0)
+      : 0;
 
     const current = ensureWorkspace();
     const now = new Date().toISOString();
@@ -393,9 +399,9 @@ export function AccountsManager() {
             paymentRequirement,
             ...(needsMonthlyPayment
               ? {
-                  requiredPaymentCents: asV2Cents(monthlyPayment ?? 0),
+                  requiredPaymentCents: asV2Cents(effectivePayment),
                   requiredMonthlyPaymentCents: monthlyEquivalentDebtPayment(
-                    asV2Cents(monthlyPayment ?? 0),
+                    asV2Cents(effectivePayment),
                     paymentFrequency,
                   ),
                   paymentFrequency,
@@ -413,7 +419,11 @@ export function AccountsManager() {
         await save(next);
         setDialogGroupId(null);
         setEditingLiabilityId(null);
-        setMessage("Debt details updated locally.");
+        setMessage(
+          monthlyPayment !== null && monthlyPayment > value
+            ? `Debt updated to ${formatCad(asV2Cents(value))}. The required payment was adjusted to the remaining balance.`
+            : `Debt updated to ${formatCad(asV2Cents(value))}.`,
+        );
       } catch {
         setMessage(
           "The debt could not be updated. Your existing data was not changed.",
@@ -1036,14 +1046,14 @@ export function AccountsManager() {
 
       {dialogOpen && (
         <div
-          className="modal-backdrop"
+          className={`modal-backdrop${editingLiabilityId ? " debt-dialog-backdrop" : ""}`}
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setDialogGroupId(null);
           }}
         >
           <section
-            className="account-dialog"
+            className={`account-dialog${editingLiabilityId ? " debt-account-dialog" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-account-heading"

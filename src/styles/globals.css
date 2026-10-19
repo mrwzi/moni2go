@@ -3374,6 +3374,26 @@ main {
   .quick-activity-dialog .button-primary {
     min-height: 46px;
   }
+
+  .debt-dialog-backdrop {
+    padding: 1rem;
+    place-items: center;
+  }
+
+  .debt-account-dialog {
+    width: min(32rem, 100%);
+    max-height: calc(100dvh - 2rem);
+    border: 1px solid var(--line);
+    border-radius: 1.1rem;
+    padding-bottom: 0;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .debt-account-dialog .wizard-actions {
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  }
 }
 
 @media (min-width: 1024px) {

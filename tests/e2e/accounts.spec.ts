@@ -290,15 +290,98 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
   await debtDialog.getByRole("button", { name: "Save account" }).click();
   await expect(
     page.getByText(
-      "The required payment cannot be more than the current amount owed.",
+      "Debt updated to $10.00. The required payment was adjusted to the remaining balance.",
     ),
   ).toBeVisible();
-  await debtDialog.getByRole("button", { name: "Close" }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+  ).toContainText("$10.00 every month");
 
   await page.goto("/plan");
   await expect(
     page.getByRole("heading", { name: "Finish your debt setup" }),
   ).toHaveCount(0);
+});
+
+test("corrects a debt balance without inventing spending and keeps the correction", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Card bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Money I owe" }).click();
+  await page
+    .getByLabel("Account type", { exact: true })
+    .selectOption("credit-card");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current amount owed").fill("27.67");
+  await page.getByLabel("Required payment amount").fill("20");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByLabel("More actions for Credit card").click();
+  await page.getByRole("button", { name: "Update debt details" }).click();
+  const debtDialog = page.getByRole("dialog", { name: "Update debt details" });
+  await expect(debtDialog).toBeVisible();
+
+  if (testInfo.project.name === "mobile-chromium") {
+    const box = await debtDialog.boundingBox();
+    const viewport = page.viewportSize();
+    if (!box || !viewport)
+      throw new Error("Debt dialog bounds are unavailable");
+    expect(box.x).toBeGreaterThanOrEqual(15);
+    expect(box.y).toBeGreaterThanOrEqual(15);
+    expect(viewport.width - box.x - box.width).toBeGreaterThanOrEqual(15);
+    expect(viewport.height - box.y - box.height).toBeGreaterThanOrEqual(15);
+  }
+
+  await debtDialog.getByLabel("Current amount owed").fill("13.23");
+  await debtDialog.getByRole("button", { name: "Save account" }).click();
+
+  await expect(page.getByText("Debt updated to $13.23.")).toBeVisible();
+  const creditCard = page
+    .getByRole("listitem")
+    .filter({ hasText: "Credit card" });
+  await expect(creditCard).toContainText("Owed $13.23");
+  await expect(creditCard).toContainText("$13.23 every month");
+  await expect(
+    page.getByRole("region", { name: "Recent transactions" }),
+  ).toHaveCount(0);
+
+  await page.getByText("More totals").click();
+  await expect(page.getByText("−$13.23")).toBeVisible();
+
+  await page.goto("/");
+  await expect(page.getByText("$13.23").first()).toBeVisible();
+  await expect(page.getByText("−$13.23")).toBeVisible();
+
+  await page.goto("/accounts");
+  await page.reload();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+  ).toContainText("Owed $13.23");
+
+  await page.getByRole("button", { name: "Record activity" }).click();
+  const activity = page.getByRole("dialog", { name: "Record activity" });
+  await activity
+    .getByRole("combobox", { name: "Account or card" })
+    .selectOption({ label: "Credit card · owed $13.23" });
+  await activity.getByLabel("What was it for?").selectOption("groceries");
+  await activity.getByLabel("Amount").fill("2");
+  await activity.getByRole("button", { name: "Save purchase" }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+  ).toContainText("Owed $15.23");
+  await expect(
+    page
+      .getByRole("region", { name: "Recent transactions" })
+      .getByRole("listitem"),
+  ).toHaveCount(1);
+
+  await page.reload();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+  ).toContainText("Owed $15.23");
 });
 
 test("offers a clear university or college debt path", async ({ page }) => {
