@@ -1046,14 +1046,14 @@ export function AccountsManager() {
 
       {dialogOpen && (
         <div
-          className={`modal-backdrop${editingLiabilityId ? " debt-dialog-backdrop" : ""}`}
+          className={`modal-backdrop${editingLiabilityId ? " debt-dialog-backdrop money-dialog-backdrop" : ""}`}
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setDialogGroupId(null);
           }}
         >
           <section
-            className={`account-dialog${editingLiabilityId ? " debt-account-dialog" : ""}`}
+            className={`account-dialog${editingLiabilityId ? " debt-account-dialog money-dialog" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-account-heading"

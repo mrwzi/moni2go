@@ -400,6 +400,11 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await page.getByRole("button", { name: "+ Add provider" }).click();
   await page.getByLabel("Bank name").fill("Card bank");
   await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("0");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "+ Account" }).click();
   await page.getByRole("button", { name: "Money I owe" }).click();
   await page
     .getByLabel("Account type", { exact: true })
@@ -409,10 +414,19 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await page.getByLabel("Required payment amount").fill("20");
   await page.getByRole("button", { name: "Save account" }).click();
 
+  await page.getByRole("button", { name: "Record income" }).click();
+  const addMoneyDialog = page.getByRole("dialog", { name: "Add money" });
+  const addMoneyBox = await addMoneyDialog.boundingBox();
+  await addMoneyDialog.getByRole("button", { name: "Close" }).click();
+
   await page.getByLabel("More actions for Credit card").click();
   await page.getByRole("button", { name: "Update debt details" }).click();
   const debtDialog = page.getByRole("dialog", { name: "Update debt details" });
   await expect(debtDialog).toBeVisible();
+  const debtDialogBox = await debtDialog.boundingBox();
+  if (!addMoneyBox || !debtDialogBox)
+    throw new Error("Debt dialog comparison bounds are unavailable");
+  expect(Math.abs(addMoneyBox.width - debtDialogBox.width)).toBeLessThan(1);
 
   if (testInfo.project.name === "mobile-chromium") {
     const box = await debtDialog.boundingBox();
@@ -444,6 +458,11 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await page.goto("/");
   await expect(page.getByText("$13.23").first()).toBeVisible();
   await expect(page.getByText("−$13.23")).toBeVisible();
+  await expect(
+    page.getByText(
+      "No spending recorded this month. New purchases will appear here.",
+    ),
+  ).toBeVisible();
 
   await page.goto("/accounts");
   await page.reload();
