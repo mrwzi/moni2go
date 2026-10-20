@@ -4,7 +4,10 @@ import { useState } from "react";
 import { formatCad } from "../../domain/money";
 import type { AccountGroup } from "../../v2/domain/account-groups";
 import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
-import type { ExpenseTransactionType } from "../../v2/domain/expenses";
+import type {
+  ExpenseDefinition,
+  ExpenseTransactionType,
+} from "../../v2/domain/expenses";
 import {
   BUDGET_CATEGORIES,
   type BudgetCategoryKey,
@@ -29,6 +32,7 @@ export type QuickActivityInput = Readonly<{
   transferToUntrackedAccount?: boolean;
   debtAccountId?: string;
   principalAmount?: string;
+  definitionId?: string;
 }>;
 
 const UNTRACKED_ACCOUNT_VALUE = "untracked-owned-account";
@@ -50,6 +54,7 @@ export function QuickActivityDialog({
   accounts,
   liabilityAccounts,
   accountGroups,
+  expenseDefinitions,
   onClose,
   onSave,
 }: Readonly<{
@@ -57,6 +62,7 @@ export function QuickActivityDialog({
   accounts: readonly AssetAccount[];
   liabilityAccounts: readonly LiabilityAccount[];
   accountGroups: readonly AccountGroup[];
+  expenseDefinitions: readonly ExpenseDefinition[];
   onClose: () => void;
   onSave: (input: QuickActivityInput) => Promise<string | null>;
 }>) {
@@ -86,6 +92,7 @@ export function QuickActivityDialog({
   const [destinationValue, setDestinationValue] = useState("");
   const [principalAmount, setPrincipalAmount] = useState("");
   const [note, setNote] = useState("");
+  const [definitionId, setDefinitionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -152,6 +159,9 @@ export function QuickActivityDialog({
       ...(destinationDebt ? { debtAccountId: destinationDebt.id } : {}),
       ...(isInstallmentLoan && principalAmount.trim()
         ? { principalAmount }
+        : {}),
+      ...(kind === "expense" && expenseType === "purchase" && definitionId
+        ? { definitionId }
         : {}),
     });
     setError(result);
@@ -258,6 +268,42 @@ export function QuickActivityDialog({
                 }))}
                 onChange={setSpendingCategory}
               />
+              {expenseType === "purchase" &&
+                expenseDefinitions.some(
+                  (definition) =>
+                    definition.status !== "paused" &&
+                    definition.status !== "cancelled",
+                ) && (
+                  <MoneySelect
+                    label="Saved bill (optional)"
+                    value={definitionId}
+                    options={[
+                      { value: "", label: "Not a saved bill" },
+                      ...expenseDefinitions
+                        .filter(
+                          (definition) =>
+                            definition.status !== "paused" &&
+                            definition.status !== "cancelled",
+                        )
+                        .map((definition) => ({
+                          value: definition.id,
+                          label: `${definition.name} · ${formatCad(definition.amountCents)}`,
+                        })),
+                    ]}
+                    onChange={(value) => {
+                      setDefinitionId(value);
+                      const definition = expenseDefinitions.find(
+                        (item) => item.id === value,
+                      );
+                      if (definition) {
+                        setSpendingCategory(definition.category);
+                        setAmount((definition.amountCents / 100).toFixed(2));
+                      }
+                      setError(null);
+                    }}
+                    hint="Linking the payment prevents the bill from being forecast twice."
+                  />
+                )}
             </>
           )}
 

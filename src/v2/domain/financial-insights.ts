@@ -68,6 +68,7 @@ export type Obligation = Readonly<{
 export type SmartRecommendation = Readonly<{
   priority: 1 | 2 | 3 | 4 | 5 | 6;
   title: string;
+  amountCents: V2Cents | null;
   explanation: string;
   actionLabel: string;
   actionHref: "/accounts" | "/plan";
@@ -242,6 +243,8 @@ export function classifyObligations(
   }
 
   for (const definition of uniqueDefinitions(workspace.expenseDefinitions)) {
+    if (definition.status === "paused" || definition.status === "cancelled")
+      continue;
     const expanded = expandRecurrence({
       recurrence: definition.recurrence,
       bounds: definition.bounds,
@@ -645,7 +648,10 @@ function forecastForHorizon(
     uniqueById(workspace.expenseEvents),
     today,
   );
-  const definitions = uniqueDefinitions(workspace.expenseDefinitions);
+  const definitions = uniqueDefinitions(workspace.expenseDefinitions).filter(
+    (definition) =>
+      definition.status !== "paused" && definition.status !== "cancelled",
+  );
   const monthlyScheduledByCategory = new Map<BudgetCategoryKey, number>();
   for (const definition of definitions)
     monthlyScheduledByCategory.set(
@@ -767,7 +773,8 @@ function chooseRecommendation(
     return {
       priority: 1,
       title: "Check an overdue payment",
-      explanation: `${overdue.length === 1 ? firstOverdue.name : `${overdue.length.toString()} required payments`} ${overdue.length === 1 ? "is" : "are"} overdue${total > 0 ? ` with ${cad(total)} remaining` : ""}. Record a payment or correct the saved details.`,
+      amountCents: asV2Cents(total),
+      explanation: `${overdue.length === 1 ? firstOverdue.name : `${overdue.length.toString()} payments`} ${overdue.length === 1 ? "is" : "are"} overdue.`,
       actionLabel: "Review payments",
       actionHref: "/accounts",
     };
@@ -776,7 +783,8 @@ function chooseRecommendation(
     return {
       priority: 2,
       title: "Cash may run short",
-      explanation: `Scheduled payments may put available cash below $0 before more money arrives. Review the timing and amounts.`,
+      amountCents: asV2Cents(Math.abs(Math.min(0, forecast.lowestCashCents))),
+      explanation: "A scheduled payment may put available cash below $0.",
       actionLabel: "Review plan",
       actionHref: "/plan",
     };
@@ -789,7 +797,8 @@ function chooseRecommendation(
     return {
       priority: 3,
       title: "Recorded spending is above recorded income",
-      explanation: `${cad(spending.spentThisMonthCents)} of spending and ${cad(recordedIncome)} of income are recorded this month. Check for missing income or review the plan.`,
+      amountCents: asV2Cents(spending.spentThisMonthCents - recordedIncome),
+      explanation: "Check for missing income or adjust this month's plan.",
       actionLabel: "Review monthly plan",
       actionHref: "/plan",
     };
@@ -799,8 +808,9 @@ function chooseRecommendation(
     if (!first) throw new Error("Expected a budget overage.");
     return {
       priority: 3,
-      title: `${BUDGET_CATEGORIES[first.category]} is ${cad(first.amountCents)} over plan`,
-      explanation: first.message,
+      title: `${BUDGET_CATEGORIES[first.category]} is over plan`,
+      amountCents: first.amountCents,
+      explanation: "Review the amount planned for this category.",
       actionLabel: "Review monthly plan",
       actionHref: "/plan",
     };
@@ -810,7 +820,8 @@ function chooseRecommendation(
     return {
       priority: 4,
       title: `${BUDGET_CATEGORIES[unusual.category]} is higher than usual`,
-      explanation: `${cad(unusual.spentCents)} is recorded this month, compared with a ${cad(unusual.historicalAverageCents)} completed-month average.`,
+      amountCents: unusual.spentCents,
+      explanation: `Usual monthly average: ${cad(unusual.historicalAverageCents)}.`,
       actionLabel: "View activity",
       actionHref: "/accounts",
     };
@@ -822,7 +833,9 @@ function chooseRecommendation(
     return {
       priority: 6,
       title: "Finish a payment setup",
-      explanation: `${unknownRequired.name} needs a payment date or amount before moni2go can forecast it reliably.`,
+      amountCents:
+        unknownRequired.remainingCents ?? unknownRequired.amountCents,
+      explanation: `${unknownRequired.name} needs an amount or date.`,
       actionLabel: "Add details",
       actionHref: "/accounts",
     };
@@ -835,8 +848,9 @@ function chooseRecommendation(
     return {
       priority: 6,
       title: "Add expected income when you know it",
+      amountCents: null,
       explanation:
-        "Your current balances are shown, but future cash cannot include income until an amount and date are saved.",
+        "Forecasts cannot include income until an amount and date are saved.",
       actionLabel: "Review accounts",
       actionHref: "/accounts",
     };
@@ -844,8 +858,8 @@ function chooseRecommendation(
   return {
     priority: 5,
     title: "Your next 30 days look covered",
-    explanation:
-      "No higher-priority issue is visible from the dates, balances, and history currently saved.",
+    amountCents: forecast.endCashCents,
+    explanation: "Based on the balances and dates saved.",
     actionLabel: "Review plan",
     actionHref: "/plan",
   };

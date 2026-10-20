@@ -460,6 +460,23 @@ describe("financial insights", () => {
     expect(repeated).toHaveLength(2);
   });
 
+  it("keeps paused and cancelled bill definitions out of obligations and forecasts", () => {
+    const paused = { ...bill("paused", 8_000, 25), status: "paused" };
+    const cancelled = {
+      ...bill("cancelled", 9_000, 26),
+      status: "cancelled",
+    };
+    const result = analyzeFinancialWorkspace(
+      workspace({
+        assetAccounts: [chequing(50_000)],
+        expenseDefinitions: [paused, cancelled] as never,
+      }),
+      today,
+    );
+    expect(result.obligations).toEqual([]);
+    expect(result.forecasts[30].scheduledOutflowCents).toBe(0);
+  });
+
   it("classifies cancelled bills and partial linked payments without hiding them", () => {
     const definition = bill("utility", 12_000, 10);
     const partial = {

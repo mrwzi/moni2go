@@ -109,9 +109,7 @@ test("allocates account money and keeps the review focused", async ({
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toContainText("Finish a payment setup");
-  await expect(nextSteps).toContainText(
-    "Credit card needs a payment date or amount before moni2go can forecast it reliably.",
-  );
+  await expect(nextSteps).toContainText("Credit card needs an amount or date.");
   await expect(
     nextSteps.getByRole("link", { name: "Add details" }),
   ).toBeVisible();

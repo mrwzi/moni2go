@@ -13,6 +13,7 @@ import type {
   WorkspaceId,
 } from "./types";
 export type ExpenseNature = "fixed" | "variable" | "periodic" | "unexpected";
+export type ExpenseDefinitionStatus = "active" | "paused" | "cancelled";
 export const EXPENSE_TRANSACTION_TYPES = [
   "purchase",
   "refund",
@@ -30,6 +31,8 @@ export type ExpenseDefinition = EntityMetadata &
     category: BudgetCategoryKey;
     nature: ExpenseNature;
     obligation: ObligationClassification;
+    /** Missing on older records means active. */
+    status?: ExpenseDefinitionStatus;
     recurrence: Recurrence;
     bounds: RecurrenceBounds;
     provenance: PersonalProvenance;

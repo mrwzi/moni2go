@@ -27,6 +27,7 @@ import {
 } from "../../v2/domain/accounts";
 import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
 import { parseCalendarDate } from "../../v2/domain/calendar";
+import { classifyObligations } from "../../v2/domain/financial-insights";
 import { MAX_V2_CENTS, asV2Cents } from "../../v2/domain/money";
 import type {
   AccountGroupId,
@@ -38,6 +39,7 @@ import type {
 import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
 import { LoadingState } from "../shared/LoadingState";
 import { AccountRows } from "./AccountRows";
+import { CommitmentsManager } from "./CommitmentsManager";
 import { ActionMenu } from "./ActionMenu";
 import {
   AccountBalanceDialog,
@@ -148,6 +150,8 @@ function applyCreditActivity(
 export function AccountsManager() {
   const { workspace, loading, error, save, ensureWorkspace } =
     useFinancialWorkspace();
+  const [initialWorkspace] = useState(() => ensureWorkspace());
+  const activeWorkspace = workspace ?? initialWorkspace;
   const [dialogGroupId, setDialogGroupId] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [kind, setKind] = useState<"asset" | "liability">("asset");
@@ -376,7 +380,7 @@ export function AccountsManager() {
         : (monthlyPayment ?? 0)
       : 0;
 
-    const current = ensureWorkspace();
+    const current = activeWorkspace;
     const now = new Date().toISOString();
     if (editingLiabilityId) {
       const next = {
@@ -525,6 +529,7 @@ export function AccountsManager() {
     input: QuickActivityInput,
   ): Promise<string | null> {
     if (!workspace) return "Your workspace is not ready yet.";
+    const today = localToday();
     const amount = parseMoney(input.amount, false);
     const assetAccount = workspace.assetAccounts.find(
       (candidate) => candidate.id === input.accountId,
@@ -574,6 +579,37 @@ export function AccountsManager() {
     )
       return "Choose where the money is going.";
 
+    const billDefinition = input.definitionId
+      ? workspace.expenseDefinitions.find(
+          (definition) => definition.id === input.definitionId,
+        )
+      : undefined;
+    if (
+      input.definitionId &&
+      (!billDefinition ||
+        billDefinition.status === "paused" ||
+        billDefinition.status === "cancelled")
+    )
+      return "Choose an active saved bill.";
+    const billObligation = billDefinition
+      ? classifyObligations(workspace, today, 90).find(
+          (obligation) =>
+            obligation.sourceId === billDefinition.id &&
+            (obligation.status === "overdue" ||
+              obligation.status === "upcoming") &&
+            obligation.date !== null &&
+            (obligation.remainingCents ?? 0) > 0,
+        )
+      : undefined;
+    if (billDefinition && !billObligation)
+      return "This bill has no unpaid occurrence in the next 90 days.";
+    if (
+      billObligation?.remainingCents !== null &&
+      billObligation?.remainingCents !== undefined &&
+      amount > billObligation.remainingCents
+    )
+      return `Enter no more than the ${formatCad(billObligation.remainingCents)} still due.`;
+
     const principalAmount = input.principalAmount
       ? parseMoney(input.principalAmount, false)
       : null;
@@ -586,7 +622,6 @@ export function AccountsManager() {
       return "Principal must be greater than $0 and no more than the payment.";
 
     const now = new Date().toISOString();
-    const today = localToday();
     const cents = asV2Cents(amount);
     try {
       const sourceDirection =
@@ -694,9 +729,13 @@ export function AccountsManager() {
                       }
                     : {}),
                   transactionType: input.transactionType,
+                  ...(billDefinition
+                    ? { definitionId: billDefinition.id }
+                    : {}),
                   ...(input.note ? { note: input.note } : {}),
-                  name:
-                    input.transactionType === "transfer"
+                  name: billDefinition
+                    ? billDefinition.name
+                    : input.transactionType === "transfer"
                       ? input.transferToUntrackedAccount
                         ? "Transfer to untracked account"
                         : "Transfer between accounts"
@@ -706,10 +745,11 @@ export function AccountsManager() {
                           ? "Savings or investment contribution"
                           : `${input.transactionType === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[spendingCategory]}`,
                   amountCents: cents,
-                  category: spendingCategory,
-                  nature: "variable" as const,
-                  obligation: "flexible" as const,
-                  dueDate: today,
+                  category: billDefinition?.category ?? spendingCategory,
+                  nature: billDefinition?.nature ?? ("variable" as const),
+                  obligation:
+                    billDefinition?.obligation ?? ("flexible" as const),
+                  dueDate: billObligation?.date ?? today,
                   status: "actual" as const,
                   actualDate: today,
                   provenance: "user-entered" as const,
@@ -1069,12 +1109,15 @@ export function AccountsManager() {
 
       {workspace && <TransactionHistory workspace={workspace} save={save} />}
 
+      <CommitmentsManager workspace={activeWorkspace} save={save} />
+
       {activityKind && (
         <QuickActivityDialog
           kind={activityKind}
           accounts={activeAssets}
           liabilityAccounts={liabilities}
           accountGroups={groups}
+          expenseDefinitions={workspace?.expenseDefinitions ?? []}
           onClose={() => {
             setActivityKind(null);
           }}

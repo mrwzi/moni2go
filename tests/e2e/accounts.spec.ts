@@ -436,9 +436,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await expect(page.getByText("$13.23").first()).toBeVisible();
   await expect(page.getByText("−$13.23")).toBeVisible();
   await expect(
-    page.getByText(
-      "No spending has been recorded in moni2go this month. This does not mean no money was spent.",
-    ),
+    page.getByText("No spending recorded — activity may be incomplete."),
   ).toBeVisible();
 
   await page.goto("/accounts");
@@ -601,13 +599,21 @@ test("records money in and money out against an existing account", async ({
   await expect(nextSteps).toBeVisible();
   await expect(nextSteps).toContainText("Add expected income when you know it");
   await expect(nextSteps).toContainText(
-    "future cash cannot include income until an amount and date are saved",
+    "Forecasts cannot include income until an amount and date are saved",
   );
   const outlook = page.getByRole("region", { name: "Financial outlook" });
   await expect(outlook).toBeVisible();
   await expect(
     outlook.getByRole("button", { name: "30 days" }),
   ).toHaveAttribute("aria-pressed", "true");
+  await expect(outlook).toContainText(
+    "Spending estimate unavailable — not enough history.",
+  );
+  await expect(
+    outlook.getByText(/The periods match because/),
+  ).not.toBeVisible();
+  await outlook.getByText("More details").click();
+  await expect(outlook.getByText(/The periods match because/)).toBeVisible();
   await outlook.getByRole("button", { name: "90 days" }).click();
   await expect(
     outlook.getByRole("button", { name: "90 days" }),
@@ -711,7 +717,7 @@ test("moves money between tracked accounts and into savings without changing spe
     page.getByRole("heading", { name: "Spending at a glance" }),
   ).toBeVisible();
   await expect(
-    page.getByText("No spending has been recorded in moni2go this month."),
+    page.getByText("No spending recorded — activity may be incomplete."),
   ).toBeVisible();
 });
 
@@ -761,30 +767,77 @@ test("uses a known loan principal split and leaves an unknown split unchanged", 
 });
 
 test("adds and prioritizes a recurring household bill", async ({ page }) => {
+  const longPaymentName =
+    "Family transportation loan with an unusually long account name";
   await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Bills bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("1000");
+  await page.getByRole("button", { name: "Save account" }).click();
+
   await page.getByRole("button", { name: "+ Add bill" }).click();
-  await page.getByLabel("Bill or membership name").fill("Family car loan");
+  await page.getByLabel("Bill name").fill(longPaymentName);
   await page.getByLabel("Amount").fill("425");
-  await page.getByLabel("Category").selectOption("transportation");
-  await page.getByLabel("Priority").selectOption("required");
+  await expect(
+    page.getByRole("combobox", { name: "Payment priority" }),
+  ).toContainText("Flexible");
+  await chooseMoneyOption(page, "Category", "Transportation");
+  await chooseMoneyOption(page, "Payment priority", "Required — must be paid");
   await page.getByLabel("Due day each month", { exact: true }).fill("12");
   await page.getByRole("button", { name: "Save bill" }).click();
 
-  await expect(page.getByText("Family car loan")).toBeVisible();
+  await expect(page.getByText(longPaymentName)).toBeVisible();
   await expect(page.getByText("$425.00")).toBeVisible();
   await expect(page.getByText("Monthly · day 12")).toBeVisible();
   await expect(page.getByText("required", { exact: true })).toBeVisible();
 
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("dialog", { name: "Edit bill" })).toBeVisible();
+  await page.getByLabel("Amount").fill("400");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("$400.00")).toBeVisible();
+
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.getByText("paused", { exact: true })).toBeVisible();
   await page.goto("/");
+  await expect(page.getByText(longPaymentName)).toHaveCount(0);
+  await page.goto("/accounts#bills-commitments");
+  await page.getByRole("button", { name: "Resume" }).click();
+  await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText(`${longPaymentName} removed.`)).toBeVisible();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText(longPaymentName)).toBeVisible();
+
+  await page.getByRole("button", { name: "Record expense" }).click();
+  await chooseMoneyOption(
+    page,
+    "Saved bill (optional)",
+    `${longPaymentName} · $400.00`,
+  );
+  await page.getByLabel("Amount").fill("100");
+  await page.getByRole("button", { name: "Save expense" }).click();
   await expect(
-    page.getByRole("heading", { name: "Required and upcoming" }),
+    page.getByText("$100.00 spending recorded from Chequing."),
   ).toBeVisible();
-  await expect(page.getByText("Family car loan")).toBeVisible();
-  await expect(page.getByText("Required", { exact: true })).toBeVisible();
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible();
+  await expect(page.getByText(longPaymentName)).toBeVisible();
+  await expect(page.getByText("$300.00").first()).toBeVisible();
+  await expect(page.getByText(/Required · (Overdue|Due)/)).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
   await expect(
     page.getByRole("region", { name: "Financial outlook" }),
-  ).toContainText("$425.00");
-  await expect(page.getByText("These are in-app reminders.")).toBeVisible();
+  ).toContainText("$300.00");
+  await expect(page.getByText("About reminders")).toBeVisible();
 
   await page.goto("/plan");
   await expect(
@@ -792,9 +845,45 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByRole("listitem").filter({ hasText: "Transportation" }),
-  ).toContainText("Saved bills: $425.00");
+  ).toContainText("Saved bills: $400.00");
   await expect(page.getByText(/Your plan is .* too high\./)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Save plan" })).toHaveCount(0);
+
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "Record expense" }).click();
+  await chooseMoneyOption(
+    page,
+    "Saved bill (optional)",
+    `${longPaymentName} · $400.00`,
+  );
+  await page.getByLabel("Amount").fill("300");
+  await page.getByRole("button", { name: "Save expense" }).click();
+  await page.goto("/");
+  await expect(page.getByText(longPaymentName)).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Spending at a glance" }),
+  ).toContainText("$400.00");
+
+  await page.goto("/accounts#bills-commitments");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByText("cancelled", { exact: true })).toBeVisible();
+  await page.goto("/plan");
+  await expect(page.getByText("Saved bills: $400.00")).toHaveCount(0);
+});
+
+test("uses the selected weekday for weekly bills", async ({ page }) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add bill" }).click();
+  await page.getByLabel("Bill name").fill("Friday membership");
+  await page.getByLabel("Amount").fill("25");
+  await chooseMoneyOption(page, "How often?", "Every week");
+  await chooseMoneyOption(page, "Payment day", "Friday");
+  await page.getByRole("button", { name: "Save bill" }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Friday membership" }),
+  ).toContainText("Friday");
+  await page.reload();
+  await expect(page.getByText("Friday membership")).toBeVisible();
 });
 
 test("account form is usable without a pointer", async ({ page }) => {

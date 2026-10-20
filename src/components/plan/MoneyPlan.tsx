@@ -200,6 +200,8 @@ function MoneyPlanContent() {
     if (Object.keys(restored).length === 0) {
       const commitmentTotals: Record<string, number> = {};
       for (const commitment of workspace.expenseDefinitions) {
+        if (commitment.status === "paused" || commitment.status === "cancelled")
+          continue;
         commitmentTotals[commitment.category] =
           (commitmentTotals[commitment.category] ?? 0) +
           monthlyCommitmentCents(commitment.amountCents, commitment.recurrence);
@@ -234,10 +236,13 @@ function MoneyPlanContent() {
   );
   const savedBillTotals = useMemo(() => {
     const totals: Partial<Record<BudgetCategoryKey, number>> = {};
-    for (const commitment of workspace?.expenseDefinitions ?? [])
+    for (const commitment of workspace?.expenseDefinitions ?? []) {
+      if (commitment.status === "paused" || commitment.status === "cancelled")
+        continue;
       totals[commitment.category] =
         (totals[commitment.category] ?? 0) +
         monthlyCommitmentCents(commitment.amountCents, commitment.recurrence);
+    }
     return totals;
   }, [workspace?.expenseDefinitions]);
   const hasMissingDebtPayments = debtPayments.missingAccountIds.length > 0;

@@ -236,6 +236,7 @@ export const expenseDefinitionSchema = z
     category: categorySchema,
     nature: z.enum(["fixed", "variable", "periodic", "unexpected"]),
     obligation: obligationSchema,
+    status: z.enum(["active", "paused", "cancelled"]).optional(),
     recurrence: recurrenceSchema,
     bounds: recurrenceBoundsSchema,
   })

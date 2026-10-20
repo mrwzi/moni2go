@@ -351,10 +351,12 @@ select {
 
 .home-due-card {
   margin-top: 1rem;
+  padding: 1rem;
 }
 
 .home-next-step {
-  margin: 1rem 0 1.5rem;
+  margin: 1rem 0;
+  padding: 1rem;
   border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
   background: color-mix(in srgb, var(--surface-raised) 88%, var(--brand-soft));
 }
@@ -370,22 +372,32 @@ select {
 
 .home-next-step h2 {
   margin-top: 0.2rem;
+  font-size: clamp(1.15rem, 3vw, 1.4rem);
+}
+
+.home-next-step-amount {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
 }
 
 .home-next-step-summary {
-  margin: 0.55rem 0 0;
+  margin: 0.35rem 0 0;
   color: var(--muted);
   font-size: 0.88rem;
-  line-height: 1.55;
+  line-height: 1.4;
 }
 
 .home-next-step-action {
   width: fit-content;
-  margin-top: 0.85rem;
+  margin-top: 0.7rem;
 }
 
 .home-outlook-card {
   margin-bottom: 1rem;
+  padding: 1rem;
 }
 
 .outlook-tabs {
@@ -423,44 +435,55 @@ select {
 
 .outlook-summary {
   display: grid;
-  margin-top: 1rem;
-  gap: 0.65rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 0.75rem;
+  gap: 0.5rem;
+  grid-template-columns: minmax(11rem, 1.2fr) minmax(0, 2fr);
 }
 
-.outlook-summary > div {
+.outlook-primary,
+.outlook-secondary > div {
   min-width: 0;
-  padding: 0.6rem 0.65rem;
+  padding: 0.55rem 0.65rem;
   border: 1px solid var(--line);
-  border-radius: 0.8rem;
+  border-radius: 0.7rem;
   background: var(--surface-soft);
 }
 
-.outlook-summary span,
-.outlook-summary strong {
+.outlook-primary span,
+.outlook-primary strong,
+.outlook-secondary span,
+.outlook-secondary strong {
   display: block;
 }
 
-.outlook-summary span {
-  min-height: 2.4em;
+.outlook-primary span,
+.outlook-secondary span {
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.2;
 }
 
-.outlook-summary strong {
+.outlook-primary strong,
+.outlook-secondary strong {
   margin-top: 0.2rem;
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
 
-.outlook-summary > div:first-child {
+.outlook-primary {
   border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
   background: color-mix(in srgb, var(--brand-soft) 45%, var(--surface-soft));
 }
 
-.outlook-summary > div:first-child strong {
-  font-size: 1.2rem;
+.outlook-primary strong {
+  font-size: 1.45rem;
+}
+
+.outlook-secondary {
+  display: grid;
+  min-width: 0;
+  gap: 0.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .money-negative,
@@ -469,8 +492,8 @@ select {
 }
 
 .outlook-warning {
-  margin: 0.8rem 0 0;
-  padding: 0.65rem 0.75rem;
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0.65rem;
   border-radius: 0.7rem;
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 9%, transparent);
@@ -480,7 +503,7 @@ select {
 
 .outlook-data-warning,
 .outlook-same-note {
-  margin: 0.65rem 0 0;
+  margin: 0.5rem 0 0;
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
@@ -492,7 +515,7 @@ select {
 }
 
 .outlook-details {
-  margin-top: 0.75rem;
+  margin-top: 0.55rem;
   color: var(--muted);
   font-size: 0.82rem;
 }
@@ -528,11 +551,7 @@ select {
   }
 
   .outlook-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .outlook-summary > div:first-child {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 
   .home-next-step-action {
@@ -632,7 +651,7 @@ select {
 
 .home-due-list li {
   display: flex;
-  padding: 0.8rem 0;
+  padding: 0.65rem 0;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -641,11 +660,17 @@ select {
 
 .home-due-list li > span {
   display: grid;
+  min-width: 0;
   gap: 0.2rem;
+}
+
+.home-due-list li > span:first-child strong {
+  overflow-wrap: anywhere;
 }
 
 .home-due-list li > span:last-child {
   justify-items: end;
+  flex: none;
 }
 
 .home-due-list small,
@@ -656,6 +681,10 @@ select {
 .reminder-note {
   margin: 0.75rem 0 0;
   font-size: 0.78rem;
+}
+
+.reminder-details {
+  margin-top: 0.45rem;
 }
 
 .home-plan-card .home-section-heading {
@@ -1509,6 +1538,57 @@ select {
 .commitments-card {
   margin-top: 1.25rem;
 }
+
+.commitment-dialog {
+  max-width: 30rem;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.commitment-dialog .account-form {
+  gap: 0.8rem;
+}
+
+.commitment-dialog .wizard-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 0.35rem;
+  background: var(--surface-raised);
+}
+
+.commitment-undo {
+  display: flex;
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.7rem;
+  background: var(--surface-soft);
+  font-size: 0.85rem;
+}
+
+.commitment-undo button,
+.commitment-actions button {
+  min-height: 40px;
+  padding: 0.35rem 0.55rem;
+  border: 0;
+  border-radius: 0.55rem;
+  color: var(--brand-dark);
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.commitment-undo button:hover,
+.commitment-undo button:focus-visible,
+.commitment-actions button:hover,
+.commitment-actions button:focus-visible {
+  background: var(--brand-soft);
+}
+
 .commitment-list {
   display: grid;
   gap: 0.65rem;
@@ -1525,6 +1605,7 @@ select {
   border-radius: 0.85rem;
 }
 .commitment-list li > div {
+  min-width: 0;
   display: grid;
   gap: 0.2rem;
 }
@@ -1534,6 +1615,23 @@ select {
 .commitment-list span,
 .commitment-list small {
   color: var(--muted);
+}
+
+.commitment-copy strong,
+.commitment-copy span {
+  overflow-wrap: anywhere;
+}
+
+.commitment-actions {
+  display: flex;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.15rem;
+}
+
+.commitment-actions .danger-link {
+  color: var(--danger);
 }
 .priority {
   padding: 0.15rem 0.45rem;
@@ -1553,9 +1651,26 @@ select {
   color: var(--muted);
   background: var(--surface-soft);
 }
+.priority-paused,
+.priority-cancelled {
+  width: fit-content;
+  color: var(--muted);
+  background: var(--surface-soft);
+}
 @media (max-width: 600px) {
   .commitment-list li {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .commitment-list li > div:last-child {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .commitment-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
@@ -4305,15 +4420,19 @@ main {
 
 .home-spending-layout {
   display: grid;
-  margin-top: 0.9rem;
+  margin-top: 0.65rem;
   align-items: center;
-  gap: 1.25rem;
-  grid-template-columns: minmax(9rem, 0.7fr) minmax(0, 1.3fr);
+  gap: 0.9rem;
+  grid-template-columns: minmax(7rem, 0.55fr) minmax(0, 1.45fr);
+}
+
+.home-spending-card {
+  padding: 1rem;
 }
 
 .home-spending-donut {
   position: relative;
-  width: min(100%, 9.5rem);
+  width: min(100%, 7.75rem);
   margin-inline: auto;
   aspect-ratio: 1;
 }
@@ -4371,7 +4490,7 @@ main {
 .home-spending-breakdown,
 .home-spending-breakdown ul {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.4rem;
 }
 
 .home-spending-remaining {
@@ -4403,11 +4522,35 @@ main {
 
 @media (max-width: 520px) {
   .home-spending-layout {
-    grid-template-columns: 1fr;
+    align-items: start;
+    grid-template-columns: 6.25rem minmax(0, 1fr);
   }
 
   .home-spending-donut {
-    width: 7.5rem;
+    width: 6.25rem;
+  }
+
+  .home-spending-donut strong {
+    font-size: 0.95rem;
+  }
+
+  .home-spending-breakdown li {
+    font-size: 0.82rem;
+  }
+
+  .home-spending-remaining {
+    display: grid;
+    gap: 0.1rem;
+  }
+}
+
+@media (max-width: 350px) {
+  .outlook-secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .home-spending-layout {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -48,8 +48,7 @@ function dueLabel(today: CalendarDate, date: CalendarDate): string {
   if (days < 0) return "Overdue";
   if (days === 0) return "Due today";
   if (days === 1) return "Due tomorrow";
-  if (days <= 7) return `Due in ${days.toString()} days`;
-  return readableDate(date);
+  return `Due in ${days.toString()} days`;
 }
 
 export function HomeDashboard() {
@@ -187,6 +186,13 @@ function HomeDashboardContent() {
       <section className="app-card home-next-step" aria-label="Money guidance">
         <p className="eyebrow">Next useful step</p>
         <h2 id="home-next-step-heading">{recommendation.title}</h2>
+        {recommendation.amountCents !== null && (
+          <strong
+            className={`home-next-step-amount${recommendation.priority <= 2 ? " money-negative" : ""}`}
+          >
+            {formatCad(recommendation.amountCents)}
+          </strong>
+        )}
         <p className="home-next-step-summary">{recommendation.explanation}</p>
         <Link
           className="button button-primary home-next-step-action"
@@ -221,7 +227,7 @@ function HomeDashboardContent() {
           </div>
         </div>
         <div className="outlook-summary" aria-live="polite">
-          <div>
+          <div className="outlook-primary">
             <span>Projected available</span>
             <strong
               className={forecast.endCashCents < 0 ? "money-negative" : ""}
@@ -229,47 +235,51 @@ function HomeDashboardContent() {
               {formatCad(forecast.endCashCents)}
             </strong>
           </div>
-          <div>
-            <span>Expected income</span>
-            <strong>{formatCad(forecast.scheduledIncomeCents)}</strong>
-          </div>
-          <div>
-            <span>Known payments</span>
-            <strong>{formatCad(forecast.scheduledOutflowCents)}</strong>
-          </div>
-          <div>
-            <span>Estimated everyday spending</span>
-            <strong>
-              {forecast.estimatedOutflowCents === null
-                ? "Not enough history"
-                : formatCad(forecast.estimatedOutflowCents)}
-            </strong>
+          <div className="outlook-secondary">
+            <div>
+              <span>Income</span>
+              <strong>{formatCad(forecast.scheduledIncomeCents)}</strong>
+            </div>
+            <div>
+              <span>Payments</span>
+              <strong>{formatCad(forecast.scheduledOutflowCents)}</strong>
+            </div>
+            <div>
+              <span>Spending</span>
+              <strong>
+                {forecast.estimatedOutflowCents === null
+                  ? "Unknown"
+                  : formatCad(forecast.estimatedOutflowCents)}
+              </strong>
+            </div>
           </div>
         </div>
         {forecast.shortageDate && (
           <p className="outlook-warning" role="status">
-            Available cash may fall below $0 by{" "}
-            {readableDate(forecast.shortageDate)}.
+            Cash may fall below $0 by {readableDate(forecast.shortageDate)}.
           </p>
         )}
-        {forecast.unknowns.length > 0 && (
+        {forecast.estimatedOutflowCents === null ? (
           <p className="outlook-data-warning" role="status">
-            This outlook excludes amounts that are not known yet, including{" "}
-            {forecast.unknowns[0]?.toLocaleLowerCase("en-CA")}
+            Spending estimate unavailable — not enough history.
           </p>
-        )}
-        {forecastsAreIdentical && (
-          <p className="outlook-same-note">
-            The periods match because no additional dated activity is saved
-            after 30 days.
+        ) : forecast.unknowns.length > 0 ? (
+          <p className="outlook-data-warning" role="status">
+            Some future amounts are missing.
           </p>
-        )}
+        ) : null}
         <details className="outlook-details">
-          <summary>How this estimate works</summary>
+          <summary>More details</summary>
+          {forecastsAreIdentical && (
+            <p>
+              The periods match because no additional dated activity is saved
+              after 30 days.
+            </p>
+          )}
           <p>
-            Starts with spendable balances, then applies dated income, bills,
-            required debt payments, and reliable completed-month spending
-            history in date order. Expected income is scheduled, not guaranteed.
+            Starts with spendable balances, then applies dated income, payments,
+            and reliable spending history in date order. Expected income is not
+            guaranteed.
           </p>
           {forecast.unknowns.length > 0 && (
             <ul>
@@ -330,10 +340,10 @@ function HomeDashboardContent() {
               <div className="home-spending-remaining">
                 <span>
                   {!hasSpendingPlan
-                    ? "No spending plan saved"
+                    ? "No budget"
                     : spending.planDifferenceCents < 0
-                      ? "Over spending plan"
-                      : "Left in spending plan"}
+                      ? "Over budget"
+                      : "Budget left"}
                 </span>
                 <strong
                   className={
@@ -357,8 +367,7 @@ function HomeDashboardContent() {
           </div>
         ) : (
           <p className="empty-group-copy">
-            No spending has been recorded in moni2go this month. This does not
-            mean no money was spent.
+            No spending recorded — activity may be incomplete.
           </p>
         )}
       </section>
@@ -370,7 +379,7 @@ function HomeDashboardContent() {
           <div className="home-section-heading">
             <div>
               <p className="eyebrow">Payment dates</p>
-              <h2 id="home-due-heading">Required and upcoming</h2>
+              <h2 id="home-due-heading">Payments</h2>
             </div>
             <Link
               href={
@@ -388,12 +397,8 @@ function HomeDashboardContent() {
                 <span>
                   <strong>{obligation.name}</strong>
                   <small>
-                    {obligation.kind === "debt-payment"
-                      ? "Debt payment"
-                      : "Bill"}{" "}
-                    ·{" "}
                     {obligation.date
-                      ? `${dueLabel(today, obligation.date)} · ${readableDate(obligation.date)}`
+                      ? `${obligation.required ? "Required" : "Optional"} · ${dueLabel(today, obligation.date)}`
                       : "Date unknown"}
                   </small>
                 </span>
@@ -403,23 +408,17 @@ function HomeDashboardContent() {
                       ? "Amount unknown"
                       : formatCad(obligation.remainingCents)}
                   </strong>
-                  <small
-                    className={`priority priority-${obligation.status === "overdue" ? "required" : "flexible"}`}
-                  >
-                    {obligation.status === "overdue"
-                      ? "Overdue"
-                      : obligation.required
-                        ? "Required"
-                        : "Optional plan"}
-                  </small>
                 </span>
               </li>
             ))}
           </ul>
-          <p className="reminder-note">
-            These are in-app reminders. moni2go does not send email or phone
-            notifications yet.
-          </p>
+          <details className="outlook-details reminder-details">
+            <summary>About reminders</summary>
+            <p>
+              These are in-app reminders. Email and phone notifications are not
+              available yet.
+            </p>
+          </details>
         </section>
       )}
     </div>
