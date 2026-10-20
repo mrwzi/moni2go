@@ -149,6 +149,7 @@ export function CommitmentsManager() {
 
   return (
     <section
+      id="bills-commitments"
       className="app-card commitments-card"
       aria-labelledby="commitments-heading"
     >

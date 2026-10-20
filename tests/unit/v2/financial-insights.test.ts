@@ -153,9 +153,7 @@ describe("financial insights", () => {
     expect(result.find((item) => item.name === "Late utility")?.status).toBe(
       "overdue",
     );
-    expect(result.find((item) => item.name === "Rent")?.status).toBe(
-      "upcoming",
-    );
+    expect(result.find((item) => item.name === "Rent")?.status).toBe("overdue");
     expect(result.find((item) => item.name === "Paid phone")?.status).toBe(
       "paid",
     );
@@ -213,7 +211,7 @@ describe("financial insights", () => {
     });
     expect(
       analyzeFinancialWorkspace(future, today).forecasts[30],
-    ).toMatchObject({ confirmedOutflowCents: 0, shortageDate: null });
+    ).toMatchObject({ scheduledOutflowCents: 0, shortageDate: null });
   });
 
   it("recognizes a recorded debt payment without rewriting its history", () => {
@@ -251,7 +249,7 @@ describe("financial insights", () => {
       result.find(
         (item) => item.kind === "debt-payment" && item.status === "paid",
       ),
-    ).toMatchObject({ amountCents: 5_000, date: "2026-10-12" });
+    ).toMatchObject({ amountCents: 5_000, date: "2026-10-10" });
     expect(result.some((item) => item.status === "overdue")).toBe(false);
     expect(
       result.find(
@@ -280,7 +278,7 @@ describe("financial insights", () => {
         (item) => item.name === "Rent" && item.date === "2026-10-25",
       ),
     ).toHaveLength(1);
-    expect(insights.forecasts[30].confirmedOutflowCents).toBe(0);
+    expect(insights.forecasts[30].scheduledOutflowCents).toBe(50_000);
     expect(insights.spending.spentThisMonthCents).toBe(50_000);
   });
 
@@ -354,10 +352,10 @@ describe("financial insights", () => {
       expenseDefinitions: [bill("rent", 80_000, 2)] as never,
     });
     const forecast = analyzeFinancialWorkspace(data, today).forecasts[30];
-    expect(forecast.confirmedIncomeCents).toBe(100_000);
-    expect(forecast.confirmedOutflowCents).toBe(80_000);
-    expect(forecast.endCashCents).toBe(30_000);
-    expect(forecast.shortageDate).toBeNull();
+    expect(forecast.scheduledIncomeCents).toBe(100_000);
+    expect(forecast.scheduledOutflowCents).toBe(160_000);
+    expect(forecast.endCashCents).toBe(-50_000);
+    expect(forecast.shortageDate).toBe(today);
   });
 
   it("does not use investments as available cash or invent irregular income", () => {
@@ -385,9 +383,172 @@ describe("financial insights", () => {
     });
     const forecast = analyzeFinancialWorkspace(data, today).forecasts[30];
     expect(forecast.startCashCents).toBe(0);
-    expect(forecast.confirmedIncomeCents).toBe(0);
+    expect(forecast.scheduledIncomeCents).toBe(0);
     expect(forecast.unknowns).toContain(
       "Freelance has no confirmed future date.",
     );
+  });
+
+  it("keeps a missed recurring occurrence overdue", () => {
+    const result = classifyObligations(
+      workspace({ expenseDefinitions: [bill("rent", 100_000, 10)] as never }),
+      today,
+      30,
+    );
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceId: "rent",
+          date: "2026-10-10",
+          status: "overdue",
+          remainingCents: 100_000,
+        }),
+      ]),
+    );
+  });
+
+  it("adds multiple partial debt payments and keeps the unpaid remainder overdue", () => {
+    const account = {
+      id: "card-partial",
+      workspaceId: "workspace-1",
+      name: "Card",
+      type: "credit-card",
+      currentBalanceCents: 17_000,
+      paymentRequirement: "required",
+      paymentFrequency: "monthly",
+      requiredPaymentCents: 10_000,
+      nextPaymentDate: "2026-10-10",
+      balanceAsOfDate: today,
+      includeInNetWorth: true,
+      status: "active",
+      provenance: "user-entered",
+      createdAt: now,
+      updatedAt: now,
+    } as const;
+    const first = {
+      ...purchase("part-1", "2026-10-05", 3_000, "credit-card-payment"),
+      relatedAccountId: "card-partial",
+    };
+    const second = {
+      ...purchase("part-2", "2026-10-08", 2_000, "credit-card-payment"),
+      relatedAccountId: "card-partial",
+    };
+    const item = classifyObligations(
+      workspace({
+        liabilityAccounts: [account] as never,
+        expenseEvents: [first, second] as never,
+      }),
+      today,
+      30,
+    ).find((obligation) => obligation.sourceId === "card-partial");
+    expect(item).toMatchObject({
+      status: "overdue",
+      amountCents: 10_000,
+      paidCents: 5_000,
+      remainingCents: 5_000,
+    });
+  });
+
+  it("deduplicates repeated IDs but preserves separate identical bills", () => {
+    const first = bill("rent-a", 80_000, 25);
+    const second = { ...first, id: "rent-b" };
+    const repeated = classifyObligations(
+      workspace({ expenseDefinitions: [first, first, second] as never }),
+      today,
+      10,
+    ).filter((item) => item.date === "2026-10-25");
+    expect(repeated).toHaveLength(2);
+  });
+
+  it("classifies cancelled bills and partial linked payments without hiding them", () => {
+    const definition = bill("utility", 12_000, 10);
+    const partial = {
+      ...purchase("utility-part", "2026-10-10", 4_000),
+      definitionId: "utility",
+      dueDate: "2026-10-10",
+      name: "Rent",
+      obligation: "required",
+    };
+    const item = classifyObligations(
+      workspace({
+        expenseDefinitions: [definition] as never,
+        expenseEvents: [partial] as never,
+      }),
+      today,
+      30,
+    ).find((obligation) => obligation.date === "2026-10-10");
+    expect(item).toMatchObject({ status: "overdue", remainingCents: 8_000 });
+
+    const cancelled = { ...partial, id: "cancelled", status: "cancelled" };
+    expect(
+      classifyObligations(
+        workspace({
+          expenseDefinitions: [definition] as never,
+          expenseEvents: [cancelled] as never,
+        }),
+        today,
+        30,
+      ).find((obligation) => obligation.date === "2026-10-10")?.status,
+    ).toBe("cancelled");
+  });
+
+  it("marks everyday spending unknown without history and varies dated horizons", () => {
+    const futureIncome = (id: string, date: string) => ({
+      id,
+      workspaceId: "workspace-1",
+      name: "Possible pay",
+      amountCents: 20_000,
+      expectedDate: date,
+      status: "expected",
+      provenance: "user-entered",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const result = analyzeFinancialWorkspace(
+      workspace({
+        assetAccounts: [chequing(1_000)],
+        incomeEvents: [
+          futureIncome("pay-45", "2026-12-03"),
+          futureIncome("pay-75", "2027-01-02"),
+        ] as never,
+      }),
+      today,
+    );
+    expect(result.forecasts[30].estimatedOutflowCents).toBeNull();
+    expect(result.forecasts[30].unknowns.join(" ")).toContain(
+      "completed-month history",
+    );
+    expect(result.forecasts[30].endCashCents).toBe(1_000);
+    expect(result.forecasts[60].endCashCents).toBe(21_000);
+    expect(result.forecasts[90].endCashCents).toBe(41_000);
+  });
+
+  it("detects a shortage before later scheduled income", () => {
+    const result = analyzeFinancialWorkspace(
+      workspace({
+        assetAccounts: [chequing(5_000)],
+        expenseDefinitions: [
+          {
+            ...bill("early", 10_000, 20),
+            bounds: { startDate: parseCalendarDate("2026-10-20") },
+          },
+        ] as never,
+        incomeEvents: [
+          {
+            id: "later-pay",
+            workspaceId: "workspace-1",
+            name: "Possible pay",
+            amountCents: 20_000,
+            expectedDate: "2026-10-21",
+            status: "expected",
+            provenance: "user-entered",
+            createdAt: now,
+            updatedAt: now,
+          },
+        ] as never,
+      }),
+      today,
+    );
+    expect(result.forecasts[30].shortageDate).toBe("2026-10-20");
   });
 });

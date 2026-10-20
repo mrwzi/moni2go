@@ -28,7 +28,7 @@ export function AccountRows({
   return (
     <ul className="account-list">
       {assets.map((account) => (
-        <li key={account.id}>
+        <li id={`account-${account.id}`} key={account.id}>
           <div className="account-row-copy">
             <strong>{account.name}</strong>
             {account.name.trim().toLocaleLowerCase() !==
@@ -52,7 +52,7 @@ export function AccountRows({
         </li>
       ))}
       {liabilities.map((account) => (
-        <li key={account.id}>
+        <li id={`account-${account.id}`} key={account.id}>
           <div className="account-row-copy">
             <strong>{account.name}</strong>
             {account.name.trim().toLocaleLowerCase() !==

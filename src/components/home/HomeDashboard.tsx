@@ -13,6 +13,8 @@ import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
 import {
   addCalendarDays,
   compareCalendarDates,
+  differenceInCalendarDays,
+  calendarDateParts,
   parseCalendarDate,
 } from "../../v2/domain/calendar";
 import {
@@ -29,6 +31,25 @@ function localToday(): CalendarDate {
   return parseCalendarDate(
     `${value.getFullYear().toString().padStart(4, "0")}-${(value.getMonth() + 1).toString().padStart(2, "0")}-${value.getDate().toString().padStart(2, "0")}`,
   );
+}
+
+function readableDate(date: CalendarDate): string {
+  const { year, month, day } = calendarDateParts(date);
+  return new Intl.DateTimeFormat("en-CA", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function dueLabel(today: CalendarDate, date: CalendarDate): string {
+  const days = differenceInCalendarDays(today, date);
+  if (days < 0) return "Overdue";
+  if (days === 0) return "Due today";
+  if (days === 1) return "Due tomorrow";
+  if (days <= 7) return `Due in ${days.toString()} days`;
+  return readableDate(date);
 }
 
 export function HomeDashboard() {
@@ -109,6 +130,7 @@ function HomeDashboardContent() {
   const insights = analyzeFinancialWorkspace(workspace, today);
   const { spending, recommendation } = insights;
   const forecast = insights.forecasts[forecastDays];
+  const hasSpendingPlan = spending.spendingPlanCents > 0;
   const comparisonTotal = Math.max(
     spending.spendingPlanCents,
     spending.spentThisMonthCents,
@@ -125,6 +147,16 @@ function HomeDashboardContent() {
         item.date !== null &&
         compareCalendarDates(item.date, obligationEnd) <= 0),
   );
+  const forecastsAreIdentical = [60, 90].every((days) => {
+    const item = insights.forecasts[days as 60 | 90];
+    const first = insights.forecasts[30];
+    return (
+      item.endCashCents === first.endCashCents &&
+      item.scheduledIncomeCents === first.scheduledIncomeCents &&
+      item.scheduledOutflowCents === first.scheduledOutflowCents &&
+      item.estimatedOutflowCents === first.estimatedOutflowCents
+    );
+  });
   return (
     <div>
       <div className="app-page-heading">
@@ -153,16 +185,15 @@ function HomeDashboardContent() {
         </div>
       </section>
       <section className="app-card home-next-step" aria-label="Money guidance">
-        <div className="home-section-heading">
-          <div>
-            <p className="eyebrow">Next useful step</p>
-            <h2 id="home-next-step-heading">{recommendation.title}</h2>
-          </div>
-          <Link href={recommendation.actionHref}>
-            {recommendation.actionLabel}
-          </Link>
-        </div>
+        <p className="eyebrow">Next useful step</p>
+        <h2 id="home-next-step-heading">{recommendation.title}</h2>
         <p className="home-next-step-summary">{recommendation.explanation}</p>
+        <Link
+          className="button button-primary home-next-step-action"
+          href={recommendation.actionHref}
+        >
+          {recommendation.actionLabel}
+        </Link>
       </section>
 
       <section
@@ -199,21 +230,38 @@ function HomeDashboardContent() {
             </strong>
           </div>
           <div>
-            <span>Scheduled income</span>
-            <strong>{formatCad(forecast.confirmedIncomeCents)}</strong>
+            <span>Expected income</span>
+            <strong>{formatCad(forecast.scheduledIncomeCents)}</strong>
           </div>
           <div>
             <span>Known payments</span>
-            <strong>{formatCad(forecast.confirmedOutflowCents)}</strong>
+            <strong>{formatCad(forecast.scheduledOutflowCents)}</strong>
           </div>
           <div>
             <span>Estimated everyday spending</span>
-            <strong>{formatCad(forecast.estimatedOutflowCents)}</strong>
+            <strong>
+              {forecast.estimatedOutflowCents === null
+                ? "Not enough history"
+                : formatCad(forecast.estimatedOutflowCents)}
+            </strong>
           </div>
         </div>
         {forecast.shortageDate && (
           <p className="outlook-warning" role="status">
-            Available cash may fall below $0 by {forecast.shortageDate}.
+            Available cash may fall below $0 by{" "}
+            {readableDate(forecast.shortageDate)}.
+          </p>
+        )}
+        {forecast.unknowns.length > 0 && (
+          <p className="outlook-data-warning" role="status">
+            This outlook excludes amounts that are not known yet, including{" "}
+            {forecast.unknowns[0]?.toLocaleLowerCase("en-CA")}
+          </p>
+        )}
+        {forecastsAreIdentical && (
+          <p className="outlook-same-note">
+            The periods match because no additional dated activity is saved
+            after 30 days.
           </p>
         )}
         <details className="outlook-details">
@@ -221,7 +269,7 @@ function HomeDashboardContent() {
           <p>
             Starts with spendable balances, then applies dated income, bills,
             required debt payments, and reliable completed-month spending
-            history in date order.
+            history in date order. Expected income is scheduled, not guaranteed.
           </p>
           {forecast.unknowns.length > 0 && (
             <ul>
@@ -246,11 +294,17 @@ function HomeDashboardContent() {
         </div>
         {spending.topCategories.length > 0 ? (
           <div className="home-spending-layout">
-            <div className="home-spending-donut">
+            <div
+              className={`home-spending-donut${hasSpendingPlan ? "" : " home-spending-donut-unplanned"}`}
+            >
               <svg
                 viewBox="0 0 120 120"
                 role="img"
-                aria-label={`${formatCad(spending.spentThisMonthCents)} recorded as spending this month and ${formatCad(Math.abs(spending.planDifferenceCents))} ${spending.planDifferenceCents < 0 ? "over" : "left in"} the monthly spending plan`}
+                aria-label={
+                  hasSpendingPlan
+                    ? `${formatCad(spending.spentThisMonthCents)} recorded as spending this month and ${formatCad(Math.abs(spending.planDifferenceCents))} ${spending.planDifferenceCents < 0 ? "over" : "left in"} the monthly spending plan`
+                    : `${formatCad(spending.spentThisMonthCents)} recorded as spending this month; no spending plan is saved`
+                }
               >
                 <circle
                   className="home-spending-track"
@@ -264,7 +318,7 @@ function HomeDashboardContent() {
                   cy="60"
                   r="48"
                   pathLength="100"
-                  strokeDasharray={`${spentShare.toFixed(2)} 100`}
+                  strokeDasharray={`${hasSpendingPlan ? spentShare.toFixed(2) : "0"} 100`}
                 />
               </svg>
               <div>
@@ -275,16 +329,20 @@ function HomeDashboardContent() {
             <div className="home-spending-breakdown">
               <div className="home-spending-remaining">
                 <span>
-                  {spending.planDifferenceCents < 0
-                    ? "Over spending plan"
-                    : "Left in spending plan"}
+                  {!hasSpendingPlan
+                    ? "No spending plan saved"
+                    : spending.planDifferenceCents < 0
+                      ? "Over spending plan"
+                      : "Left in spending plan"}
                 </span>
                 <strong
                   className={
                     spending.planDifferenceCents < 0 ? "money-negative" : ""
                   }
                 >
-                  {formatCad(Math.abs(spending.planDifferenceCents))}
+                  {hasSpendingPlan
+                    ? formatCad(Math.abs(spending.planDifferenceCents))
+                    : "—"}
                 </strong>
               </div>
               <ul>
@@ -314,7 +372,15 @@ function HomeDashboardContent() {
               <p className="eyebrow">Payment dates</p>
               <h2 id="home-due-heading">Required and upcoming</h2>
             </div>
-            <Link href="/accounts">Manage</Link>
+            <Link
+              href={
+                visibleObligations[0]?.kind === "debt-payment"
+                  ? `/accounts#account-${visibleObligations[0].sourceId}`
+                  : "/accounts#bills-commitments"
+              }
+            >
+              Manage
+            </Link>
           </div>
           <ul className="home-due-list">
             {visibleObligations.slice(0, 4).map((obligation) => (
@@ -325,14 +391,17 @@ function HomeDashboardContent() {
                     {obligation.kind === "debt-payment"
                       ? "Debt payment"
                       : "Bill"}{" "}
-                    · {obligation.date ?? "Date unknown"}
+                    ·{" "}
+                    {obligation.date
+                      ? `${dueLabel(today, obligation.date)} · ${readableDate(obligation.date)}`
+                      : "Date unknown"}
                   </small>
                 </span>
                 <span>
                   <strong>
-                    {obligation.amountCents === null
+                    {obligation.remainingCents === null
                       ? "Amount unknown"
-                      : formatCad(obligation.amountCents)}
+                      : formatCad(obligation.remainingCents)}
                   </strong>
                   <small
                     className={`priority priority-${obligation.status === "overdue" ? "required" : "flexible"}`}
@@ -341,7 +410,7 @@ function HomeDashboardContent() {
                       ? "Overdue"
                       : obligation.required
                         ? "Required"
-                        : "Upcoming"}
+                        : "Optional plan"}
                   </small>
                 </span>
               </li>

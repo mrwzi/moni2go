@@ -373,10 +373,15 @@ select {
 }
 
 .home-next-step-summary {
-  margin: 1rem 0 0;
+  margin: 0.55rem 0 0;
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.55;
+}
+
+.home-next-step-action {
+  width: fit-content;
+  margin-top: 0.85rem;
 }
 
 .home-outlook-card {
@@ -425,7 +430,7 @@ select {
 
 .outlook-summary > div {
   min-width: 0;
-  padding: 0.75rem;
+  padding: 0.6rem 0.65rem;
   border: 1px solid var(--line);
   border-radius: 0.8rem;
   background: var(--surface-soft);
@@ -444,9 +449,18 @@ select {
 }
 
 .outlook-summary strong {
-  margin-top: 0.35rem;
+  margin-top: 0.2rem;
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
+}
+
+.outlook-summary > div:first-child {
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 45%, var(--surface-soft));
+}
+
+.outlook-summary > div:first-child strong {
+  font-size: 1.2rem;
 }
 
 .money-negative,
@@ -462,6 +476,19 @@ select {
   background: color-mix(in srgb, var(--danger) 9%, transparent);
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.outlook-data-warning,
+.outlook-same-note {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.outlook-data-warning {
+  padding-left: 0.65rem;
+  border-left: 3px solid var(--warning, #c78b32);
 }
 
 .outlook-details {
@@ -502,6 +529,14 @@ select {
 
   .outlook-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .outlook-summary > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .home-next-step-action {
+    width: 100%;
   }
 }
 
@@ -4278,7 +4313,7 @@ main {
 
 .home-spending-donut {
   position: relative;
-  width: min(100%, 11rem);
+  width: min(100%, 9.5rem);
   margin-inline: auto;
   aspect-ratio: 1;
 }
@@ -4302,6 +4337,10 @@ main {
 .home-spending-value {
   stroke: var(--brand);
   stroke-linecap: round;
+}
+
+.home-spending-donut-unplanned .home-spending-track {
+  stroke-dasharray: 5 4;
 }
 
 .home-spending-donut > div {
@@ -4368,7 +4407,7 @@ main {
   }
 
   .home-spending-donut {
-    width: 9.5rem;
+    width: 7.5rem;
   }
 }
 
