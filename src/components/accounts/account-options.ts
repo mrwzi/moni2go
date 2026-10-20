@@ -42,9 +42,9 @@ export const groupLabels: Record<AccountGroupType, string> = {
 
 export const INCOME_LABELS = [
   "Paycheque",
+  "Benefits",
   "Gift",
   "Government payment",
-  "Refund",
   "Other income",
 ] as const;
 export type IncomeLabel = (typeof INCOME_LABELS)[number];

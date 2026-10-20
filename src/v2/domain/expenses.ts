@@ -49,6 +49,8 @@ export type DatedExpenseEvent = EntityMetadata &
     actualDate?: CalendarDate;
     accountId?: FinancialEntityId;
     relatedAccountId?: FinancialEntityId;
+    /** Portion of a debt payment known to reduce principal. Zero means unknown. */
+    principalAmountCents?: V2Cents;
     transactionType?: ExpenseTransactionType;
     note?: string;
     provenance: PersonalProvenance;

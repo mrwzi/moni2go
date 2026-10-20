@@ -366,7 +366,10 @@ export function classifyObligations(
       .filter(
         (event) => compareCalendarDates(eventDate(event), priorBoundary) > 0,
       )
-      .reduce((sum, event) => sum + event.amountCents, 0);
+      .reduce(
+        (sum, event) => sum + (event.principalAmountCents ?? event.amountCents),
+        0,
+      );
     let debtRemaining = Math.max(0, account.currentBalanceCents + paymentPool);
     let installmentOffset = 0;
     let nextPaymentDate = scheduleAnchor;

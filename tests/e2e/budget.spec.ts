@@ -144,10 +144,10 @@ test("shows current spending separately from completed-month averages", async ({
     ["180", 2],
     ["150", 1],
   ] as const) {
-    await page.getByRole("button", { name: "Record activity" }).click();
+    await page.getByRole("button", { name: "Record expense" }).click();
     await chooseMoneyOption(page, "What was it for?", "Groceries");
     await page.getByLabel("Amount").fill(amount);
-    await page.getByRole("button", { name: "Save purchase" }).click();
+    await page.getByRole("button", { name: "Save expense" }).click();
     const transaction = page
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
@@ -160,10 +160,10 @@ test("shows current spending separately from completed-month averages", async ({
     await dialog.getByRole("button", { name: "Save transaction" }).click();
   }
 
-  await page.getByRole("button", { name: "Record activity" }).click();
+  await page.getByRole("button", { name: "Record expense" }).click();
   await chooseMoneyOption(page, "What was it for?", "Groceries");
   await page.getByLabel("Amount").fill("75");
-  await page.getByRole("button", { name: "Save purchase" }).click();
+  await page.getByRole("button", { name: "Save expense" }).click();
 
   await page.goto("/plan");
   await page
@@ -206,14 +206,14 @@ test("shows current spending separately from completed-month averages", async ({
     ["135", 2],
     ["141", 1],
   ] as const) {
-    await page.getByRole("button", { name: "Record activity" }).click();
+    await page.getByRole("button", { name: "Record expense" }).click();
     await chooseMoneyOption(
       page,
       "What was it for?",
       "Restaurants / eating out",
     );
     await page.getByLabel("Amount").fill(amount);
-    await page.getByRole("button", { name: "Save purchase" }).click();
+    await page.getByRole("button", { name: "Save expense" }).click();
     const transaction = page
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
@@ -225,10 +225,10 @@ test("shows current spending separately from completed-month averages", async ({
       .fill(completedDate(monthsAgo));
     await dialog.getByRole("button", { name: "Save transaction" }).click();
   }
-  await page.getByRole("button", { name: "Record activity" }).click();
+  await page.getByRole("button", { name: "Record expense" }).click();
   await chooseMoneyOption(page, "What was it for?", "Restaurants / eating out");
   await page.getByLabel("Amount").fill("145");
-  await page.getByRole("button", { name: "Save purchase" }).click();
+  await page.getByRole("button", { name: "Save expense" }).click();
 
   await page.goto("/plan");
   const restaurants = page

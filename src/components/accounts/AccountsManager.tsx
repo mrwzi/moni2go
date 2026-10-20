@@ -201,7 +201,8 @@ export function AccountsManager() {
     );
     if (
       (kind === "income" && activeAssets.length === 0) ||
-      (kind === "spending" && activeAssets.length === 0 && !hasCreditAccount)
+      (kind === "expense" && activeAssets.length === 0 && !hasCreditAccount) ||
+      (kind === "move" && activeAssets.length === 0)
     ) {
       setMessage("Add an account before recording money in or money out.");
       return;
@@ -534,7 +535,7 @@ export function AccountsManager() {
     if (amount === null || amount <= 0)
       return "Enter an amount greater than zero.";
     const canUseLiability =
-      input.kind === "spending" &&
+      input.kind === "expense" &&
       (input.transactionType === "purchase" ||
         input.transactionType === "refund") &&
       liabilityAccount?.status === "active" &&
@@ -548,8 +549,8 @@ export function AccountsManager() {
         )
       : undefined;
     if (
-      input.kind === "spending" &&
-      input.transactionType === "transfer" &&
+      input.kind === "move" &&
+      input.destinationAccountId &&
       !input.transferToUntrackedAccount &&
       (destination?.status !== "active" || destination.id === assetAccount?.id)
     )
@@ -560,11 +561,29 @@ export function AccountsManager() {
         )
       : undefined;
     if (
-      input.kind === "spending" &&
+      input.kind === "move" &&
       input.transactionType === "credit-card-payment" &&
       debtAccount?.status !== "active"
     )
       return "Choose the account you paid.";
+    if (
+      input.kind === "move" &&
+      !input.destinationAccountId &&
+      !input.transferToUntrackedAccount &&
+      !input.debtAccountId
+    )
+      return "Choose where the money is going.";
+
+    const principalAmount = input.principalAmount
+      ? parseMoney(input.principalAmount, false)
+      : null;
+    if (
+      input.principalAmount &&
+      (principalAmount === null ||
+        principalAmount <= 0 ||
+        principalAmount > amount)
+    )
+      return "Principal must be greater than $0 and no more than the payment.";
 
     const now = new Date().toISOString();
     const today = localToday();
@@ -592,15 +611,24 @@ export function AccountsManager() {
             now,
           )
         : undefined;
-      const updatedDebtAccount = debtAccount
-        ? applyLiabilityAccountActivity(
-            debtAccount,
-            "decrease",
-            cents,
-            today,
-            now,
-          )
-        : undefined;
+      const debtReduction = debtAccount
+        ? debtAccount.type === "credit-card" ||
+          debtAccount.type === "line-of-credit"
+          ? cents
+          : principalAmount === null
+            ? null
+            : asV2Cents(principalAmount)
+        : null;
+      const updatedDebtAccount =
+        debtAccount && debtReduction !== null
+          ? applyLiabilityAccountActivity(
+              debtAccount,
+              "decrease",
+              debtReduction,
+              today,
+              now,
+            )
+          : undefined;
       const activityAccount = assetAccount ?? liabilityAccount;
       const relatedAccount = destination ?? debtAccount;
       const updatedDestination = destination
@@ -658,6 +686,13 @@ export function AccountsManager() {
                   ...(relatedAccount
                     ? { relatedAccountId: relatedAccount.id }
                     : {}),
+                  ...(debtAccount &&
+                  debtAccount.type !== "credit-card" &&
+                  debtAccount.type !== "line-of-credit"
+                    ? {
+                        principalAmountCents: debtReduction ?? asV2Cents(0),
+                      }
+                    : {}),
                   transactionType: input.transactionType,
                   ...(input.note ? { note: input.note } : {}),
                   name:
@@ -697,7 +732,9 @@ export function AccountsManager() {
                 ? `${formatCad(cents)} moved from ${accountName} to another account you own.`
                 : `${formatCad(cents)} moved from ${accountName} to ${destination?.name ?? "the destination account"}.`
               : input.transactionType === "credit-card-payment"
-                ? `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount?.name ?? "the debt account"}.`
+                ? debtAccount && debtReduction === null
+                  ? `${formatCad(cents)} payment recorded. Add the principal split when known to update ${debtAccount.name}.`
+                  : `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount?.name ?? "the debt account"}.`
                 : input.transactionType === "purchase"
                   ? `${formatCad(cents)} spending recorded from ${accountName}.`
                   : `${formatCad(cents)} contribution recorded from ${accountName}.`,
@@ -881,19 +918,30 @@ export function AccountsManager() {
           }}
         >
           <span aria-hidden="true">+</span>
-          <strong>Record income</strong>
-          <small>Pay, gift, benefit</small>
+          <strong>Add income</strong>
+          <small>Salary, benefit, gift</small>
         </button>
         <button
           className="quick-money-action"
           type="button"
           onClick={() => {
-            openActivity("spending");
+            openActivity("expense");
           }}
         >
           <span aria-hidden="true">−</span>
-          <strong>Record activity</strong>
-          <small>Spend, transfer, refund, or pay</small>
+          <strong>Record expense</strong>
+          <small>Purchase, bill, refund</small>
+        </button>
+        <button
+          className="quick-money-action quick-money-move"
+          type="button"
+          onClick={() => {
+            openActivity("move");
+          }}
+        >
+          <span aria-hidden="true">→</span>
+          <strong>Move money</strong>
+          <small>Transfer, save, or pay debt</small>
         </button>
       </section>
 

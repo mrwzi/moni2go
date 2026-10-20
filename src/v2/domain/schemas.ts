@@ -254,6 +254,7 @@ export const datedExpenseEventSchema = z
     actualDate: calendarDateSchema.optional(),
     accountId: entityIdSchema.optional(),
     relatedAccountId: entityIdSchema.optional(),
+    principalAmountCents: nonNegativeV2CentsSchema.optional(),
     transactionType: z.enum(EXPENSE_TRANSACTION_TYPES).optional(),
     note: z.string().trim().min(1).max(160).optional(),
   })

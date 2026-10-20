@@ -100,7 +100,7 @@ export function AccountBalanceDialog({
           <p className="balance-update-help">
             {isInvestmentAccount
               ? "Use this for a corrected statement balance or a market-value change."
-              : "Only use this when the balance shown here does not match your bank. For income, spending, transfers, refunds, or payments, use Record activity."}
+              : "Only use this when the balance shown here does not match your bank. Use Add income, Record expense, or Move money for normal activity."}
           </p>
           {isInvestmentAccount && (
             <MoneySelect

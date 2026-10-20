@@ -16,7 +16,7 @@ import {
 } from "./account-options";
 import { MoneySelect } from "./MoneySelect";
 
-export type QuickActivityKind = "income" | "spending";
+export type QuickActivityKind = "income" | "expense" | "move";
 export type QuickActivityInput = Readonly<{
   kind: QuickActivityKind;
   accountId: string;
@@ -28,44 +28,22 @@ export type QuickActivityInput = Readonly<{
   destinationAccountId?: string;
   transferToUntrackedAccount?: boolean;
   debtAccountId?: string;
+  principalAmount?: string;
 }>;
 
 const UNTRACKED_ACCOUNT_VALUE = "untracked-owned-account";
-
-const TRANSACTION_TYPE_OPTIONS = [
-  { value: "purchase", label: "Bought, paid, or sent money" },
-  { value: "refund", label: "Got money back (refund)" },
-  { value: "transfer", label: "Transferred between accounts I own" },
-  { value: "credit-card-payment", label: "Paid a credit card or loan" },
-  {
-    value: "savings-contribution",
-    label: "Added to savings or investments",
-  },
-] as const satisfies readonly {
-  value: ExpenseTransactionType;
-  label: string;
-}[];
-
-const TRANSACTION_TYPE_HELP: Readonly<Record<ExpenseTransactionType, string>> =
-  {
-    purchase:
-      "Use for purchases, bills, gifts, or money sent to someone. Counts as spending.",
-    refund: "Adds money back or reduces the amount owed on a credit card.",
-    transfer:
-      "For accounts you own. Moves the balance without counting it as spending.",
-    "credit-card-payment":
-      "Pays down a card or loan. It is not counted as another purchase.",
-    "savings-contribution":
-      "Tracks savings or investing separately from everyday spending.",
-  };
-
-const SUBMIT_LABELS: Readonly<Record<ExpenseTransactionType, string>> = {
-  purchase: "Save purchase",
-  refund: "Save refund",
-  transfer: "Save transfer",
-  "credit-card-payment": "Save payment",
-  "savings-contribution": "Save contribution",
-};
+const EXPENSE_OPTIONS = [
+  { value: "purchase", label: "Purchase or bill" },
+  { value: "refund", label: "Refund" },
+] as const;
+const INVESTMENT_TYPES = new Set<AssetAccount["type"]>([
+  "savings",
+  "tfsa",
+  "rrsp",
+  "fhsa",
+  "non-registered-investment",
+  "crypto",
+]);
 
 export function QuickActivityDialog({
   kind,
@@ -82,45 +60,55 @@ export function QuickActivityDialog({
   onClose: () => void;
   onSave: (input: QuickActivityInput) => Promise<string | null>;
 }>) {
+  const creditAccounts = liabilityAccounts.filter(
+    (account) =>
+      account.status === "active" &&
+      (account.type === "credit-card" || account.type === "line-of-credit"),
+  );
+  const activeDebts = liabilityAccounts.filter(
+    (account) => account.status === "active" && account.currentBalanceCents > 0,
+  );
+  const firstAsset =
+    accounts.find((account) => account.spendability === "spendable") ??
+    accounts[0];
   const [accountId, setAccountId] = useState(
-    accounts.find((account) => account.spendability === "spendable")?.id ??
-      accounts[0]?.id ??
-      (kind === "spending"
-        ? liabilityAccounts.find(
-            (account) =>
-              account.status === "active" &&
-              (account.type === "credit-card" ||
-                account.type === "line-of-credit"),
-          )?.id
-        : undefined) ??
+    firstAsset?.id ??
+      (kind === "expense" ? creditAccounts[0]?.id : undefined) ??
       "",
   );
   const [amount, setAmount] = useState("");
   const [incomeLabel, setIncomeLabel] = useState<IncomeLabel>("Paycheque");
   const [spendingCategory, setSpendingCategory] =
     useState<BudgetCategoryKey>("groceries");
-  const [transactionType, setTransactionType] =
-    useState<ExpenseTransactionType>("purchase");
-  const [destinationAccountId, setDestinationAccountId] = useState("");
-  const [transferToUntrackedAccount, setTransferToUntrackedAccount] =
-    useState(false);
-  const [debtAccountId, setDebtAccountId] = useState("");
+  const [expenseType, setExpenseType] = useState<"purchase" | "refund">(
+    "purchase",
+  );
+  const [destinationValue, setDestinationValue] = useState("");
+  const [principalAmount, setPrincipalAmount] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const activeDebtAccounts = liabilityAccounts.filter(
-    (account) => account.status === "active" && account.currentBalanceCents > 0,
+  const [pending, setPending] = useState(false);
+
+  const destinationAsset = accounts.find(
+    (account) => account.id === destinationValue,
   );
-  const creditAccounts = liabilityAccounts.filter(
-    (account) =>
-      account.status === "active" &&
-      (account.type === "credit-card" || account.type === "line-of-credit"),
+  const destinationDebt = activeDebts.find(
+    (account) => account.id === destinationValue,
   );
-  const allowCreditSource =
-    kind === "spending" &&
-    (transactionType === "purchase" || transactionType === "refund");
-  const availableDestinations = accounts.filter(
-    (account) => account.id !== accountId,
-  );
+  const isUntracked = destinationValue === UNTRACKED_ACCOUNT_VALUE;
+  const isInstallmentLoan =
+    destinationDebt !== undefined &&
+    destinationDebt.type !== "credit-card" &&
+    destinationDebt.type !== "line-of-credit";
+  const transactionType: ExpenseTransactionType =
+    kind === "expense"
+      ? expenseType
+      : destinationDebt
+        ? "credit-card-payment"
+        : destinationAsset && INVESTMENT_TYPES.has(destinationAsset.type)
+          ? "savings-contribution"
+          : "transfer";
+
   const duplicateNames = new Set(
     [...accounts, ...liabilityAccounts]
       .map((account) => account.name.trim().toLocaleLowerCase())
@@ -130,23 +118,52 @@ export function QuickActivityDialog({
       ),
   );
   const accountLabel = (account: AssetAccount | LiabilityAccount) => {
-    const repeated = duplicateNames.has(
-      account.name.trim().toLocaleLowerCase(),
-    );
     const provider = account.groupId
       ? accountGroups.find((group) => group.id === account.groupId)?.name
       : undefined;
-    return repeated && provider
+    return duplicateNames.has(account.name.trim().toLocaleLowerCase()) &&
+      provider
       ? `${provider} · ${account.name}`
       : account.name;
   };
+  const title =
+    kind === "income"
+      ? "Add income"
+      : kind === "expense"
+        ? "Record expense"
+        : "Move money";
+
+  async function submit() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    const result = await onSave({
+      kind,
+      accountId,
+      amount,
+      incomeLabel,
+      spendingCategory,
+      transactionType,
+      ...(note.trim() ? { note: note.trim() } : {}),
+      ...(destinationAsset
+        ? { destinationAccountId: destinationAsset.id }
+        : {}),
+      ...(isUntracked ? { transferToUntrackedAccount: true } : {}),
+      ...(destinationDebt ? { debtAccountId: destinationDebt.id } : {}),
+      ...(isInstallmentLoan && principalAmount.trim()
+        ? { principalAmount }
+        : {}),
+    });
+    setError(result);
+    if (result) setPending(false);
+  }
 
   return (
     <div
       className="modal-backdrop money-dialog-backdrop"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && !pending) onClose();
       }}
     >
       <section
@@ -158,14 +175,13 @@ export function QuickActivityDialog({
         <header>
           <div>
             <p className="eyebrow">Quick update</p>
-            <h2 id="quick-activity-heading">
-              {kind === "income" ? "Add money" : "Record activity"}
-            </h2>
+            <h2 id="quick-activity-heading">{title}</h2>
           </div>
           <button
             className="icon-button"
             type="button"
             aria-label="Close"
+            disabled={pending}
             onClick={onClose}
           >
             ×
@@ -175,33 +191,16 @@ export function QuickActivityDialog({
           className="account-form wizard-step"
           onSubmit={(event) => {
             event.preventDefault();
-            void onSave({
-              kind,
-              accountId,
-              amount,
-              incomeLabel,
-              spendingCategory,
-              transactionType,
-              ...(note.trim() ? { note: note.trim() } : {}),
-              ...(destinationAccountId ? { destinationAccountId } : {}),
-              ...(transferToUntrackedAccount
-                ? { transferToUntrackedAccount: true }
-                : {}),
-              ...(debtAccountId ? { debtAccountId } : {}),
-            }).then(setError);
+            void submit();
           }}
         >
           <MoneySelect
             label={
               kind === "income"
-                ? "Add money to"
-                : transactionType === "credit-card-payment"
-                  ? "Pay from"
-                  : transactionType === "transfer"
-                    ? "Move money from"
-                    : transactionType === "savings-contribution"
-                      ? "Money comes from"
-                      : "Account or card"
+                ? "Add to"
+                : kind === "move"
+                  ? "From"
+                  : "Account or card"
             }
             value={accountId}
             options={[
@@ -209,18 +208,23 @@ export function QuickActivityDialog({
                 value: account.id,
                 label: `${accountLabel(account)} · ${formatCad(account.currentValueCents)}`,
               })),
-              ...(allowCreditSource
+              ...(kind === "expense"
                 ? creditAccounts.map((account) => ({
                     value: account.id,
                     label: `${accountLabel(account)} · owed ${formatCad(account.currentBalanceCents)}`,
                   }))
                 : []),
             ]}
-            onChange={setAccountId}
+            onChange={(value) => {
+              setAccountId(value);
+              if (value === destinationValue) setDestinationValue("");
+              setError(null);
+            }}
           />
-          {kind === "income" ? (
+
+          {kind === "income" && (
             <MoneySelect
-              label="Where did it come from?"
+              label="Income type"
               value={incomeLabel}
               options={INCOME_LABELS.map((option) => ({
                 value: option,
@@ -228,125 +232,141 @@ export function QuickActivityDialog({
               }))}
               onChange={setIncomeLabel}
             />
-          ) : (
+          )}
+
+          {kind === "expense" && (
             <>
               <MoneySelect
-                label="What happened?"
-                value={transactionType}
-                options={TRANSACTION_TYPE_OPTIONS}
-                onChange={(nextType) => {
-                  setTransactionType(nextType);
-                  setAccountId(
-                    accounts.find(
-                      (account) => account.spendability === "spendable",
-                    )?.id ??
-                      accounts[0]?.id ??
-                      (nextType === "purchase" || nextType === "refund"
-                        ? creditAccounts[0]?.id
-                        : undefined) ??
-                      "",
-                  );
-                  setDebtAccountId(
-                    nextType === "credit-card-payment"
-                      ? (activeDebtAccounts[0]?.id ?? "")
-                      : "",
-                  );
-                  setDestinationAccountId("");
-                  setTransferToUntrackedAccount(false);
+                label="Expense type"
+                value={expenseType}
+                options={EXPENSE_OPTIONS}
+                onChange={(value) => {
+                  setExpenseType(value);
                   setError(null);
                 }}
               />
-              <p className="activity-explanation">
-                {TRANSACTION_TYPE_HELP[transactionType]}
-              </p>
-              {(transactionType === "purchase" ||
-                transactionType === "refund") && (
-                <MoneySelect
-                  label={
-                    transactionType === "refund"
-                      ? "What was refunded?"
-                      : "What was it for?"
-                  }
-                  value={spendingCategory}
-                  options={SPENDING_CATEGORIES.map((category) => ({
-                    value: category,
-                    label: BUDGET_CATEGORIES[category],
-                  }))}
-                  onChange={setSpendingCategory}
-                />
-              )}
-              {transactionType === "transfer" && (
-                <MoneySelect
-                  label="Where did it go?"
-                  value={
-                    transferToUntrackedAccount
-                      ? UNTRACKED_ACCOUNT_VALUE
-                      : destinationAccountId
-                  }
-                  options={[
-                    { value: "", label: "Choose where the money went" },
-                    ...availableDestinations.map((account) => ({
+              <MoneySelect
+                label={
+                  expenseType === "refund"
+                    ? "What was refunded?"
+                    : "What was it for?"
+                }
+                value={spendingCategory}
+                options={SPENDING_CATEGORIES.map((category) => ({
+                  value: category,
+                  label: BUDGET_CATEGORIES[category],
+                }))}
+                onChange={setSpendingCategory}
+              />
+            </>
+          )}
+
+          {kind === "move" && (
+            <>
+              <MoneySelect
+                label="To"
+                value={destinationValue}
+                options={[
+                  { value: "", label: "Choose destination" },
+                  ...accounts
+                    .filter((account) => account.id !== accountId)
+                    .map((account) => ({
                       value: account.id,
                       label: `${accountLabel(account)} · ${formatCad(account.currentValueCents)}`,
                     })),
-                    {
-                      value: UNTRACKED_ACCOUNT_VALUE,
-                      label: "Another account I own (not listed)",
-                    },
-                  ]}
-                  onChange={(nextDestination) => {
-                    const isUntracked =
-                      nextDestination === UNTRACKED_ACCOUNT_VALUE;
-                    setTransferToUntrackedAccount(isUntracked);
-                    setDestinationAccountId(isUntracked ? "" : nextDestination);
-                    setError(null);
-                  }}
-                  hint="Sent it to someone else? Use “Bought, paid, or sent money.”"
-                />
+                  ...activeDebts.map((account) => ({
+                    value: account.id,
+                    label: `${accountLabel(account)} · owed ${formatCad(account.currentBalanceCents)}`,
+                  })),
+                  {
+                    value: UNTRACKED_ACCOUNT_VALUE,
+                    label: "Another account I own (not tracked)",
+                  },
+                ]}
+                onChange={(value) => {
+                  setDestinationValue(value);
+                  setPrincipalAmount("");
+                  setError(null);
+                }}
+              />
+              {destinationValue && (
+                <p className="activity-explanation">
+                  {destinationDebt
+                    ? "Records a debt payment without counting it as new spending."
+                    : isUntracked
+                      ? "Only the source balance changes because the destination is not tracked."
+                      : destinationAsset &&
+                          INVESTMENT_TYPES.has(destinationAsset.type)
+                        ? "Moves money into savings or investments without counting it as spending."
+                        : "Updates both tracked account balances without creating income or spending."}
+                </p>
               )}
-              {transactionType === "credit-card-payment" && (
-                <MoneySelect
-                  label="Pay this account"
-                  value={debtAccountId}
-                  options={
-                    activeDebtAccounts.length === 0
-                      ? [
-                          {
-                            value: "",
-                            label: "No debt with a balance",
-                            disabled: true,
-                          },
-                        ]
-                      : activeDebtAccounts.map((account) => ({
-                          value: account.id,
-                          label: `${accountLabel(account)} · owed ${formatCad(account.currentBalanceCents)}`,
-                        }))
-                  }
-                  onChange={(nextDebtId) => {
-                    setDebtAccountId(nextDebtId);
-                    setError(null);
-                  }}
-                />
+              <label>
+                Amount
+                <span className="money-input">
+                  <span>$</span>
+                  <input
+                    value={amount}
+                    onChange={(event) => {
+                      setAmount(event.target.value);
+                      setError(null);
+                    }}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    autoFocus
+                  />
+                </span>
+              </label>
+              {isInstallmentLoan && (
+                <details className="optional-note">
+                  <summary>
+                    Add principal and interest split <span>(optional)</span>
+                  </summary>
+                  <label>
+                    Principal portion
+                    <span className="money-input">
+                      <span>$</span>
+                      <input
+                        aria-label="Principal portion"
+                        value={principalAmount}
+                        onChange={(event) => {
+                          setPrincipalAmount(event.target.value);
+                          setError(null);
+                        }}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                      />
+                    </span>
+                    <small>
+                      Only this amount reduces the loan balance. Leave blank
+                      when the split is unknown.
+                    </small>
+                  </label>
+                </details>
               )}
             </>
           )}
-          <label>
-            Amount
-            <span className="money-input">
-              <span>$</span>
-              <input
-                value={amount}
-                onChange={(event) => {
-                  setAmount(event.target.value);
-                  setError(null);
-                }}
-                inputMode="decimal"
-                placeholder="0.00"
-                autoFocus
-              />
-            </span>
-          </label>
-          {kind === "spending" && (
+
+          {kind !== "move" && (
+            <label>
+              Amount
+              <span className="money-input">
+                <span>$</span>
+                <input
+                  value={amount}
+                  onChange={(event) => {
+                    setAmount(event.target.value);
+                    setError(null);
+                  }}
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </span>
+            </label>
+          )}
+
+          {kind !== "income" && (
             <details className="optional-note">
               <summary>
                 Add a note <span>(optional)</span>
@@ -361,11 +381,9 @@ export function QuickActivityDialog({
                     setNote(event.target.value);
                   }}
                   placeholder={
-                    transactionType === "credit-card-payment"
-                      ? "For example, October card payment"
-                      : transactionType === "transfer"
-                        ? "For example, business bank"
-                        : "For example, Netflix or lunch"
+                    kind === "move"
+                      ? "For example, business account"
+                      : "For example, Netflix or lunch"
                   }
                 />
               </label>
@@ -379,8 +397,20 @@ export function QuickActivityDialog({
           <p className="cash-place-note activity-save-note">
             Updates moni2go only—not your bank.
           </p>
-          <button className="button button-primary" type="submit">
-            {kind === "income" ? "Add money" : SUBMIT_LABELS[transactionType]}
+          <button
+            className="button button-primary"
+            type="submit"
+            disabled={pending}
+          >
+            {pending
+              ? "Saving…"
+              : kind === "income"
+                ? "Add income"
+                : kind === "expense"
+                  ? expenseType === "refund"
+                    ? "Save refund"
+                    : "Save expense"
+                  : "Move money"}
           </button>
         </form>
       </section>
