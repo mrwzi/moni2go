@@ -108,12 +108,12 @@ test("allocates account money and keeps the review focused", async ({
 
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
-  await expect(nextSteps).toContainText("Keep $35.00 ready");
+  await expect(nextSteps).toContainText("Finish a payment setup");
   await expect(nextSteps).toContainText(
-    "Cover required payments first. Then use your monthly plan for the rest.",
+    "Credit card needs a payment date or amount before moni2go can forecast it reliably.",
   );
   await expect(
-    nextSteps.getByRole("link", { name: "Open plan" }),
+    nextSteps.getByRole("link", { name: "Add details" }),
   ).toBeVisible();
 });
 

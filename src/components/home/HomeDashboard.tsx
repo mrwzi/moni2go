@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
   deriveNetWorthCents,
-  deriveRequiredDebtPayments,
   deriveSpendableCashCents,
   deriveTotalOwnedCents,
   deriveTotalLiabilitiesCents,
@@ -12,11 +12,13 @@ import {
 import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
 import {
   addCalendarDays,
-  differenceInCalendarDays,
+  compareCalendarDates,
   parseCalendarDate,
 } from "../../v2/domain/calendar";
-import { expandRecurrence } from "../../v2/domain/recurrence";
-import { calculateCategorySpendingHistory } from "../../v2/domain/spending-history";
+import {
+  analyzeFinancialWorkspace,
+  type ForecastHorizonDays,
+} from "../../v2/domain/financial-insights";
 import type { CalendarDate } from "../../v2/domain/types";
 import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
 import { SignedInGate } from "../auth/SignedInGate";
@@ -27,13 +29,6 @@ function localToday(): CalendarDate {
   return parseCalendarDate(
     `${value.getFullYear().toString().padStart(4, "0")}-${(value.getMonth() + 1).toString().padStart(2, "0")}-${value.getDate().toString().padStart(2, "0")}`,
   );
-}
-
-function dueLabel(date: CalendarDate, today: CalendarDate): string {
-  const days = differenceInCalendarDays(today, date);
-  if (days === 0) return "Due today";
-  if (days === 1) return "Due tomorrow";
-  return `Due in ${days.toString()} days`;
 }
 
 export function HomeDashboard() {
@@ -48,6 +43,7 @@ export function HomeDashboard() {
 
 function HomeDashboardContent() {
   const { workspace, loading, error } = useFinancialWorkspace();
+  const [forecastDays, setForecastDays] = useState<ForecastHorizonDays>(30);
   if (loading) return <LoadingState label="Loading your financial picture…" />;
   if (error)
     return (
@@ -109,93 +105,26 @@ function HomeDashboardContent() {
   const assets = workspace.assetAccounts;
   const liabilities = workspace.liabilityAccounts;
   const spendableCashCents = deriveSpendableCashCents(assets);
-  const savedPlan = workspace.allocationRules.filter(
-    (rule) =>
-      rule.enabled &&
-      rule.category !== undefined &&
-      rule.strategy.kind === "fixed-amount" &&
-      rule.strategy.amountCents > 0,
-  );
-  const savedPlanTotal = savedPlan.reduce(
-    (total, rule) =>
-      total +
-      (rule.strategy.kind === "fixed-amount" ? rule.strategy.amountCents : 0),
-    0,
-  );
-  const spendingPlanTotal = savedPlan.reduce(
-    (total, rule) =>
-      total +
-      (rule.category !== "savings-goals" &&
-      rule.strategy.kind === "fixed-amount"
-        ? rule.strategy.amountCents
-        : 0),
-    0,
-  );
   const today = localToday();
-  const horizonEnd = addCalendarDays(today, 30);
-  const upcomingCommitments = workspace.expenseDefinitions
-    .flatMap((definition) => {
-      const occurrences = expandRecurrence({
-        recurrence: definition.recurrence,
-        bounds: definition.bounds,
-        horizonStart: today,
-        horizonEnd,
-      }).occurrences;
-      const nextDate = occurrences[0];
-      return nextDate
-        ? [{ definition, nextDate, occurrenceCount: occurrences.length }]
-        : [];
-    })
-    .sort((left, right) => {
-      const rank = { required: 0, flexible: 1, optional: 2 } as const;
-      return (
-        rank[left.definition.obligation] - rank[right.definition.obligation] ||
-        left.nextDate.localeCompare(right.nextDate)
-      );
-    });
-  const upcomingCommitmentTotal = upcomingCommitments.reduce(
-    (total, item) => total + item.definition.amountCents * item.occurrenceCount,
-    0,
+  const insights = analyzeFinancialWorkspace(workspace, today);
+  const { spending, recommendation } = insights;
+  const forecast = insights.forecasts[forecastDays];
+  const comparisonTotal = Math.max(
+    spending.spendingPlanCents,
+    spending.spentThisMonthCents,
   );
-  const requiredUpcomingCommitmentTotal = upcomingCommitments.reduce(
-    (total, item) =>
-      item.definition.obligation === "required"
-        ? total + item.definition.amountCents * item.occurrenceCount
-        : total,
-    0,
-  );
-  const requiredDebtPaymentTotal =
-    deriveRequiredDebtPayments(liabilities).totalCents;
-  const requiredPriorityTotal =
-    requiredUpcomingCommitmentTotal + requiredDebtPaymentTotal;
-  const spendingHistory = calculateCategorySpendingHistory(
-    workspace.expenseEvents,
-    today,
-  );
-  const currentSpending = Object.values(spendingHistory)
-    .filter(
-      (item) =>
-        item.spentThisMonthCents > 0 && item.category !== "savings-goals",
-    )
-    .sort(
-      (left, right) => right.spentThisMonthCents - left.spentThisMonthCents,
-    );
-  const spentThisMonth = currentSpending.reduce(
-    (total, item) => total + item.spentThisMonthCents,
-    0,
-  );
-  const comparisonTotal =
-    spendingPlanTotal > 0
-      ? Math.max(spendingPlanTotal, spentThisMonth)
-      : spentThisMonth + spendableCashCents;
   const spentShare =
     comparisonTotal > 0
-      ? Math.min(100, (spentThisMonth / comparisonTotal) * 100)
+      ? Math.min(100, (spending.spentThisMonthCents / comparisonTotal) * 100)
       : 0;
-  const remainingComparison =
-    spendingPlanTotal > 0
-      ? Math.max(0, spendingPlanTotal - spentThisMonth)
-      : spendableCashCents;
+  const obligationEnd = addCalendarDays(today, 30);
+  const visibleObligations = insights.obligations.filter(
+    (item) =>
+      item.status === "overdue" ||
+      (item.status === "upcoming" &&
+        item.date !== null &&
+        compareCalendarDates(item.date, obligationEnd) <= 0),
+  );
   return (
     <div>
       <div className="app-page-heading">
@@ -223,33 +152,87 @@ function HomeDashboardContent() {
           </strong>
         </div>
       </section>
-      {spendableCashCents > 0 && (
-        <section
-          className="app-card home-next-step"
-          aria-label="Money guidance"
-        >
-          <div className="home-section-heading">
-            <div>
-              <p className="eyebrow">Next step</p>
-              <h2 id="home-next-step-heading">
-                {requiredPriorityTotal > 0
-                  ? `Keep ${formatCad(requiredPriorityTotal)} ready`
-                  : savedPlan.length > 0
-                    ? `Monthly plan: ${formatCad(savedPlanTotal)}`
-                    : "Start a simple plan"}
-              </h2>
-            </div>
-            <Link href="/plan">Open plan</Link>
+      <section className="app-card home-next-step" aria-label="Money guidance">
+        <div className="home-section-heading">
+          <div>
+            <p className="eyebrow">Next useful step</p>
+            <h2 id="home-next-step-heading">{recommendation.title}</h2>
           </div>
-          <p className="home-next-step-summary">
-            {requiredPriorityTotal > 0
-              ? "Cover required payments first. Then use your monthly plan for the rest."
-              : savedPlan.length > 0
-                ? "Review it when your income or regular costs change."
-                : "Add your real bills and priorities. moni2go will show what remains without moving any money."}
+          <Link href={recommendation.actionHref}>
+            {recommendation.actionLabel}
+          </Link>
+        </div>
+        <p className="home-next-step-summary">{recommendation.explanation}</p>
+      </section>
+
+      <section
+        className="app-card home-outlook-card"
+        aria-labelledby="home-outlook-heading"
+      >
+        <div className="home-section-heading">
+          <div>
+            <p className="eyebrow">Looking ahead</p>
+            <h2 id="home-outlook-heading">Financial outlook</h2>
+          </div>
+          <div className="outlook-tabs" aria-label="Forecast period">
+            {([30, 60, 90] as const).map((days) => (
+              <button
+                key={days}
+                type="button"
+                aria-pressed={forecastDays === days}
+                onClick={() => {
+                  setForecastDays(days);
+                }}
+              >
+                {days} days
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="outlook-summary" aria-live="polite">
+          <div>
+            <span>Projected available</span>
+            <strong
+              className={forecast.endCashCents < 0 ? "money-negative" : ""}
+            >
+              {formatCad(forecast.endCashCents)}
+            </strong>
+          </div>
+          <div>
+            <span>Scheduled income</span>
+            <strong>{formatCad(forecast.confirmedIncomeCents)}</strong>
+          </div>
+          <div>
+            <span>Known payments</span>
+            <strong>{formatCad(forecast.confirmedOutflowCents)}</strong>
+          </div>
+          <div>
+            <span>Estimated everyday spending</span>
+            <strong>{formatCad(forecast.estimatedOutflowCents)}</strong>
+          </div>
+        </div>
+        {forecast.shortageDate && (
+          <p className="outlook-warning" role="status">
+            Available cash may fall below $0 by {forecast.shortageDate}.
           </p>
-        </section>
-      )}
+        )}
+        <details className="outlook-details">
+          <summary>How this estimate works</summary>
+          <p>
+            Starts with spendable balances, then applies dated income, bills,
+            required debt payments, and reliable completed-month spending
+            history in date order.
+          </p>
+          {forecast.unknowns.length > 0 && (
+            <ul>
+              {forecast.unknowns.slice(0, 3).map((unknown) => (
+                <li key={unknown}>{unknown}</li>
+              ))}
+            </ul>
+          )}
+          <p>Estimates are informational. moni2go never moves money.</p>
+        </details>
+      </section>
       <section
         className="app-card home-spending-card"
         aria-labelledby="home-spending-heading"
@@ -261,13 +244,13 @@ function HomeDashboardContent() {
           </div>
           <Link href="/accounts">View activity</Link>
         </div>
-        {currentSpending.length > 0 ? (
+        {spending.topCategories.length > 0 ? (
           <div className="home-spending-layout">
             <div className="home-spending-donut">
               <svg
                 viewBox="0 0 120 120"
                 role="img"
-                aria-label={`${formatCad(spentThisMonth)} spent this month and ${formatCad(remainingComparison)} ${spendingPlanTotal > 0 ? "left in the monthly spending plan" : "available now"}`}
+                aria-label={`${formatCad(spending.spentThisMonthCents)} recorded as spending this month and ${formatCad(Math.abs(spending.planDifferenceCents))} ${spending.planDifferenceCents < 0 ? "over" : "left in"} the monthly spending plan`}
               >
                 <circle
                   className="home-spending-track"
@@ -285,74 +268,80 @@ function HomeDashboardContent() {
                 />
               </svg>
               <div>
-                <strong>{formatCad(spentThisMonth)}</strong>
+                <strong>{formatCad(spending.spentThisMonthCents)}</strong>
                 <span>spent</span>
               </div>
             </div>
             <div className="home-spending-breakdown">
               <div className="home-spending-remaining">
                 <span>
-                  {spendingPlanTotal > 0
-                    ? "Left in spending plan"
-                    : "Available now"}
+                  {spending.planDifferenceCents < 0
+                    ? "Over spending plan"
+                    : "Left in spending plan"}
                 </span>
-                <strong>{formatCad(remainingComparison)}</strong>
+                <strong
+                  className={
+                    spending.planDifferenceCents < 0 ? "money-negative" : ""
+                  }
+                >
+                  {formatCad(Math.abs(spending.planDifferenceCents))}
+                </strong>
               </div>
               <ul>
-                {currentSpending.slice(0, 3).map((item) => (
+                {spending.topCategories.map((item) => (
                   <li key={item.category}>
                     <span>{BUDGET_CATEGORIES[item.category]}</span>
-                    <strong>{formatCad(item.spentThisMonthCents)}</strong>
+                    <strong>{formatCad(item.spentCents)}</strong>
                   </li>
                 ))}
               </ul>
-              {currentSpending.length > 3 && (
-                <small>
-                  +{(currentSpending.length - 3).toString()} more categories
-                </small>
-              )}
             </div>
           </div>
         ) : (
           <p className="empty-group-copy">
-            No spending recorded this month. New purchases will appear here.
+            No spending has been recorded in moni2go this month. This does not
+            mean no money was spent.
           </p>
         )}
       </section>
-      {upcomingCommitments.length > 0 && (
+      {visibleObligations.length > 0 && (
         <section
           className="app-card home-due-card"
           aria-labelledby="home-due-heading"
         >
           <div className="home-section-heading">
             <div>
-              <p className="eyebrow">Next 30 days</p>
-              <h2 id="home-due-heading">What needs attention</h2>
+              <p className="eyebrow">Payment dates</p>
+              <h2 id="home-due-heading">Required and upcoming</h2>
             </div>
             <Link href="/accounts">Manage</Link>
           </div>
-          <div className="home-plan-total">
-            <span>Expected commitments</span>
-            <strong>{formatCad(upcomingCommitmentTotal)}</strong>
-          </div>
           <ul className="home-due-list">
-            {upcomingCommitments.slice(0, 5).map(({ definition, nextDate }) => (
-              <li key={definition.id}>
+            {visibleObligations.slice(0, 4).map((obligation) => (
+              <li key={obligation.key}>
                 <span>
-                  <strong>{definition.name}</strong>
+                  <strong>{obligation.name}</strong>
                   <small>
-                    {BUDGET_CATEGORIES[definition.category]} ·{" "}
-                    {dueLabel(nextDate, today)}
+                    {obligation.kind === "debt-payment"
+                      ? "Debt payment"
+                      : "Bill"}{" "}
+                    · {obligation.date ?? "Date unknown"}
                   </small>
                 </span>
                 <span>
-                  <strong>{formatCad(definition.amountCents)}</strong>
+                  <strong>
+                    {obligation.amountCents === null
+                      ? "Amount unknown"
+                      : formatCad(obligation.amountCents)}
+                  </strong>
                   <small
-                    className={`priority priority-${definition.obligation}`}
+                    className={`priority priority-${obligation.status === "overdue" ? "required" : "flexible"}`}
                   >
-                    {definition.obligation === "required"
-                      ? "Pay first"
-                      : definition.obligation}
+                    {obligation.status === "overdue"
+                      ? "Overdue"
+                      : obligation.required
+                        ? "Required"
+                        : "Upcoming"}
                   </small>
                 </span>
               </li>

@@ -460,7 +460,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await expect(page.getByText("−$13.23")).toBeVisible();
   await expect(
     page.getByText(
-      "No spending recorded this month. New purchases will appear here.",
+      "No spending has been recorded in moni2go this month. This does not mean no money was spent.",
     ),
   ).toBeVisible();
 
@@ -621,8 +621,19 @@ test("records money in and money out against an existing account", async ({
   await expect(spendingChart).toContainText("Subscriptions");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toBeVisible();
-  await expect(nextSteps).toContainText("Start a simple plan");
-  await expect(nextSteps).toContainText("Add your real bills and priorities");
+  await expect(nextSteps).toContainText("Add expected income when you know it");
+  await expect(nextSteps).toContainText(
+    "future cash cannot include income until an amount and date are saved",
+  );
+  const outlook = page.getByRole("region", { name: "Financial outlook" });
+  await expect(outlook).toBeVisible();
+  await expect(
+    outlook.getByRole("button", { name: "30 days" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await outlook.getByRole("button", { name: "90 days" }).click();
+  await expect(
+    outlook.getByRole("button", { name: "90 days" }),
+  ).toHaveAttribute("aria-pressed", "true");
 });
 
 test("records credit-card purchases once and applies payments to both balances", async ({
@@ -701,11 +712,13 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
 
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "What needs attention" }),
+    page.getByRole("heading", { name: "Required and upcoming" }),
   ).toBeVisible();
   await expect(page.getByText("Family car loan")).toBeVisible();
-  await expect(page.getByText("Pay first")).toBeVisible();
-  await expect(page.getByText("Expected commitments")).toBeVisible();
+  await expect(page.getByText("Required", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Financial outlook" }),
+  ).toContainText("$425.00");
   await expect(page.getByText("These are in-app reminders.")).toBeVisible();
 
   await page.goto("/plan");
