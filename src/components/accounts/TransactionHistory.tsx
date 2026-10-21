@@ -361,6 +361,7 @@ export function TransactionHistory({
 
   return (
     <section
+      id="transaction-history"
       className="app-card transaction-history"
       aria-labelledby="transaction-history-heading"
     >

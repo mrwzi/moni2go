@@ -449,6 +449,94 @@ describe("financial insights", () => {
     });
   });
 
+  it("counts a full loan payment toward the installment but only principal toward the balance", () => {
+    const account = {
+      id: "loan-split",
+      workspaceId: "workspace-1",
+      name: "Personal loan",
+      type: "personal-loan",
+      currentBalanceCents: 93_000,
+      paymentRequirement: "required",
+      paymentFrequency: "monthly",
+      requiredPaymentCents: 10_000,
+      nextPaymentDate: "2026-10-10",
+      balanceAsOfDate: today,
+      includeInNetWorth: true,
+      status: "active",
+      provenance: "user-entered",
+      createdAt: now,
+      updatedAt: now,
+    } as const;
+    const payment = {
+      ...purchase("loan-payment", "2026-10-08", 10_000, "credit-card-payment"),
+      relatedAccountId: "loan-split",
+      principalAmountCents: 7_000,
+    };
+    const item = classifyObligations(
+      workspace({
+        liabilityAccounts: [account] as never,
+        expenseEvents: [payment] as never,
+      }),
+      today,
+      30,
+    ).find((obligation) => obligation.date === "2026-10-10");
+    expect(item).toMatchObject({
+      status: "paid",
+      amountCents: 10_000,
+      paidCents: 10_000,
+      remainingCents: 0,
+    });
+  });
+
+  it("applies early and late payments chronologically across installments", () => {
+    const account = {
+      id: "card-timing",
+      workspaceId: "workspace-1",
+      name: "Credit card",
+      type: "credit-card",
+      currentBalanceCents: 20_000,
+      paymentRequirement: "required",
+      paymentFrequency: "monthly",
+      requiredPaymentCents: 10_000,
+      nextPaymentDate: "2026-10-10",
+      balanceAsOfDate: today,
+      includeInNetWorth: true,
+      status: "active",
+      provenance: "user-entered",
+      createdAt: now,
+      updatedAt: now,
+    } as const;
+    const early = {
+      ...purchase("early", "2026-09-25", 6_000, "credit-card-payment"),
+      relatedAccountId: "card-timing",
+    };
+    const late = {
+      ...purchase("late", "2026-10-15", 9_000, "credit-card-payment"),
+      relatedAccountId: "card-timing",
+    };
+    const obligations = classifyObligations(
+      workspace({
+        liabilityAccounts: [account] as never,
+        expenseEvents: [early, late] as never,
+      }),
+      today,
+      45,
+    ).filter((item) => item.sourceId === "card-timing");
+    expect(
+      obligations.find((item) => item.date === "2026-10-10"),
+    ).toMatchObject({
+      status: "paid",
+      paidCents: 10_000,
+    });
+    expect(
+      obligations.find((item) => item.date === "2026-11-10"),
+    ).toMatchObject({
+      status: "upcoming",
+      paidCents: 5_000,
+      remainingCents: 5_000,
+    });
+  });
+
   it("deduplicates repeated IDs but preserves separate identical bills", () => {
     const first = bill("rent-a", 80_000, 25);
     const second = { ...first, id: "rent-b" };

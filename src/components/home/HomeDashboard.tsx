@@ -130,6 +130,12 @@ function HomeDashboardContent() {
   const { spending, recommendation } = insights;
   const forecast = insights.forecasts[forecastDays];
   const hasSpendingPlan = spending.spendingPlanCents > 0;
+  const isOverBudget = hasSpendingPlan && spending.planDifferenceCents < 0;
+  const budgetUsagePercent = hasSpendingPlan
+    ? Math.round(
+        (spending.spentThisMonthCents / spending.spendingPlanCents) * 100,
+      )
+    : null;
   const comparisonTotal = Math.max(
     spending.spendingPlanCents,
     spending.spentThisMonthCents,
@@ -139,12 +145,19 @@ function HomeDashboardContent() {
       ? Math.min(100, (spending.spentThisMonthCents / comparisonTotal) * 100)
       : 0;
   const obligationEnd = addCalendarDays(today, 30);
+  const recommendationObligation =
+    recommendation.priority === 1
+      ? insights.obligations.find(
+          (item) => item.required && item.status === "overdue",
+        )
+      : undefined;
   const visibleObligations = insights.obligations.filter(
     (item) =>
-      item.status === "overdue" ||
-      (item.status === "upcoming" &&
-        item.date !== null &&
-        compareCalendarDates(item.date, obligationEnd) <= 0),
+      item.key !== recommendationObligation?.key &&
+      (item.status === "overdue" ||
+        (item.status === "upcoming" &&
+          item.date !== null &&
+          compareCalendarDates(item.date, obligationEnd) <= 0)),
   );
   const forecastsAreIdentical = [60, 90].every((days) => {
     const item = insights.forecasts[days as 60 | 90];
@@ -177,7 +190,7 @@ function HomeDashboardContent() {
           <strong>{formatCad(deriveNetWorthCents(assets, liabilities))}</strong>
         </div>
         <div>
-          <span>Assets</span>
+          <span>Total owned</span>
           <strong>
             {formatCad(deriveTotalOwnedCents(assets, liabilities))}
           </strong>
@@ -193,10 +206,21 @@ function HomeDashboardContent() {
             {formatCad(recommendation.amountCents)}
           </strong>
         )}
-        <p className="home-next-step-summary">{recommendation.explanation}</p>
+        <p className="home-next-step-summary">
+          {recommendation.explanation}
+          {recommendationObligation?.date
+            ? ` Due ${readableDate(recommendationObligation.date)}.`
+            : ""}
+        </p>
         <Link
           className="button button-primary home-next-step-action"
-          href={recommendation.actionHref}
+          href={
+            recommendationObligation
+              ? recommendationObligation.kind === "debt-payment"
+                ? `/accounts#account-${recommendationObligation.sourceId}`
+                : "/accounts#bills-commitments"
+              : recommendation.actionHref
+          }
         >
           {recommendation.actionLabel}
         </Link>
@@ -228,7 +252,11 @@ function HomeDashboardContent() {
         </div>
         <div className="outlook-summary" aria-live="polite">
           <div className="outlook-primary">
-            <span>Projected available</span>
+            <span>
+              {forecast.estimatedOutflowCents === null
+                ? "Known projection"
+                : "Projected available"}
+            </span>
             <strong
               className={forecast.endCashCents < 0 ? "money-negative" : ""}
             >
@@ -237,8 +265,12 @@ function HomeDashboardContent() {
           </div>
           <div className="outlook-secondary">
             <div>
-              <span>Income</span>
-              <strong>{formatCad(forecast.scheduledIncomeCents)}</strong>
+              <span>Scheduled income</span>
+              <strong>
+                {forecast.scheduledIncomeCents === 0
+                  ? "None scheduled"
+                  : formatCad(forecast.scheduledIncomeCents)}
+              </strong>
             </div>
             <div>
               <span>Payments</span>
@@ -260,9 +292,12 @@ function HomeDashboardContent() {
           </p>
         )}
         {forecast.estimatedOutflowCents === null ? (
-          <p className="outlook-data-warning" role="status">
-            Spending estimate unavailable — not enough history.
-          </p>
+          <div className="outlook-data-warning" role="status">
+            <span>
+              Everyday spending is unknown and is not subtracted above.
+            </span>
+            <Link href="/accounts">Add bills or activity</Link>
+          </div>
         ) : forecast.unknowns.length > 0 ? (
           <p className="outlook-data-warning" role="status">
             Some future amounts are missing.
@@ -300,12 +335,12 @@ function HomeDashboardContent() {
             <p className="eyebrow">This month</p>
             <h2 id="home-spending-heading">Spending at a glance</h2>
           </div>
-          <Link href="/accounts">View activity</Link>
+          <Link href="/accounts#transaction-history">View activity</Link>
         </div>
         {spending.topCategories.length > 0 ? (
           <div className="home-spending-layout">
             <div
-              className={`home-spending-donut${hasSpendingPlan ? "" : " home-spending-donut-unplanned"}`}
+              className={`home-spending-donut${hasSpendingPlan ? "" : " home-spending-donut-unplanned"}${isOverBudget ? " home-spending-donut-over" : ""}`}
             >
               <svg
                 viewBox="0 0 120 120"
@@ -333,7 +368,11 @@ function HomeDashboardContent() {
               </svg>
               <div>
                 <strong>{formatCad(spending.spentThisMonthCents)}</strong>
-                <span>spent</span>
+                <span>
+                  {isOverBudget && budgetUsagePercent !== null
+                    ? `${budgetUsagePercent.toString()}% of budget`
+                    : "spent"}
+                </span>
               </div>
             </div>
             <div className="home-spending-breakdown">
@@ -363,6 +402,19 @@ function HomeDashboardContent() {
                   </li>
                 ))}
               </ul>
+              {spending.meaningfulOverages.length > 0 && (
+                <div
+                  className="home-category-warnings"
+                  aria-label="Categories over budget"
+                >
+                  {spending.meaningfulOverages.slice(0, 2).map((item) => (
+                    <p key={item.category}>
+                      <strong>{BUDGET_CATEGORIES[item.category]}</strong>
+                      <span>{formatCad(item.amountCents)} over</span>
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -398,7 +450,7 @@ function HomeDashboardContent() {
                   <strong>{obligation.name}</strong>
                   <small>
                     {obligation.date
-                      ? `${obligation.required ? "Required" : "Optional"} · ${dueLabel(today, obligation.date)}`
+                      ? `${obligation.required ? "Required" : "Optional"} · ${dueLabel(today, obligation.date)} · ${readableDate(obligation.date)}`
                       : "Date unknown"}
                   </small>
                 </span>
@@ -408,6 +460,15 @@ function HomeDashboardContent() {
                       ? "Amount unknown"
                       : formatCad(obligation.remainingCents)}
                   </strong>
+                  <small>
+                    {obligation.kind === "debt-payment"
+                      ? obligation.paidCents > 0
+                        ? `${formatCad(obligation.paidCents)} paid toward minimum`
+                        : "Minimum payment due"
+                      : obligation.paidCents > 0
+                        ? `${formatCad(obligation.paidCents)} paid toward bill`
+                        : "Bill amount due"}
+                  </small>
                 </span>
               </li>
             ))}
@@ -417,6 +478,10 @@ function HomeDashboardContent() {
             <p>
               These are in-app reminders. Email and phone notifications are not
               available yet.
+            </p>
+            <p>
+              For cards, the reminder uses the minimum payment you entered—not
+              the full balance. Statement balances are not stored separately.
             </p>
           </details>
         </section>

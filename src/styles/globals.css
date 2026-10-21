@@ -510,8 +510,18 @@ select {
 }
 
 .outlook-data-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding-left: 0.65rem;
   border-left: 3px solid var(--warning, #c78b32);
+}
+
+.outlook-data-warning a {
+  flex: 0 0 auto;
+  color: var(--brand);
+  font-weight: 750;
 }
 
 .outlook-details {
@@ -4459,6 +4469,15 @@ main {
   stroke-linecap: round;
 }
 
+.home-spending-donut-over .home-spending-value {
+  stroke: var(--danger);
+}
+
+.home-spending-donut-over > div span {
+  color: var(--danger);
+  font-weight: 750;
+}
+
 .home-spending-donut-unplanned .home-spending-track {
   stroke-dasharray: 5 4;
 }
@@ -4521,7 +4540,30 @@ main {
   gap: 1rem;
 }
 
+.home-category-warnings {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+.home-category-warnings p {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.78rem;
+}
+
 @media (max-width: 520px) {
+  .outlook-data-warning {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
   .home-spending-layout {
     align-items: start;
     grid-template-columns: 6.25rem minmax(0, 1fr);

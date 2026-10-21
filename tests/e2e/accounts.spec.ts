@@ -607,8 +607,12 @@ test("records money in and money out against an existing account", async ({
     outlook.getByRole("button", { name: "30 days" }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(outlook).toContainText(
-    "Spending estimate unavailable — not enough history.",
+    "Everyday spending is unknown and is not subtracted above.",
   );
+  await expect(outlook).toContainText("Known projection");
+  await expect(
+    outlook.getByRole("link", { name: "Add bills or activity" }),
+  ).toHaveAttribute("href", "/accounts");
   await expect(
     outlook.getByText(/The periods match because/),
   ).not.toBeVisible();
@@ -826,9 +830,10 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible();
-  await expect(page.getByText(longPaymentName)).toBeVisible();
-  await expect(page.getByText("$300.00").first()).toBeVisible();
-  await expect(page.getByText(/Required · (Overdue|Due)/)).toBeVisible();
+  const payments = page.getByRole("region", { name: "Payments" });
+  await expect(payments).toContainText(longPaymentName);
+  await expect(payments).toContainText("$300.00");
+  await expect(payments).toContainText(/[A-Z][a-z]{2} \d{1,2}, \d{4}/);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -837,7 +842,6 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
   await expect(
     page.getByRole("region", { name: "Financial outlook" }),
   ).toContainText("$300.00");
-  await expect(page.getByText("About reminders")).toBeVisible();
 
   await page.goto("/plan");
   await expect(

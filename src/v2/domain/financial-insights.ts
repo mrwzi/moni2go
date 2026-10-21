@@ -365,15 +365,29 @@ export function classifyObligations(
           : account.paymentFrequency === "semimonthly"
             ? addCalendarDays(scheduleAnchor, -16)
             : addCalendarMonths(scheduleAnchor, -1);
+    // The full cash payment satisfies the installment. Only the known
+    // principal portion reduces an installment-loan balance.
     let paymentPool = recordedPayments
       .filter(
         (event) => compareCalendarDates(eventDate(event), priorBoundary) > 0,
       )
+      .reduce((sum, event) => sum + event.amountCents, 0);
+    const restoredPrincipal = recordedPayments
+      .filter(
+        (event) => compareCalendarDates(eventDate(event), priorBoundary) > 0,
+      )
       .reduce(
-        (sum, event) => sum + (event.principalAmountCents ?? event.amountCents),
+        (sum, event) =>
+          sum +
+          (account.type === "credit-card" || account.type === "line-of-credit"
+            ? event.amountCents
+            : (event.principalAmountCents ?? 0)),
         0,
       );
-    let debtRemaining = Math.max(0, account.currentBalanceCents + paymentPool);
+    let debtRemaining = Math.max(
+      0,
+      account.currentBalanceCents + restoredPrincipal,
+    );
     let installmentOffset = 0;
     let nextPaymentDate = scheduleAnchor;
     while (
