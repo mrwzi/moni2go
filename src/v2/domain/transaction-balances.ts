@@ -53,7 +53,18 @@ function expenseEffects(
         : []),
     ];
   }
-  const principal = Number(event.principalAmountCents ?? event.amountCents);
+  const relatedDebt = event.relatedAccountId
+    ? workspace.liabilityAccounts.find(
+        (account) => account.id === event.relatedAccountId,
+      )
+    : undefined;
+  const principal = Number(
+    event.principalAmountCents ??
+      (relatedDebt?.type === "credit-card" ||
+      relatedDebt?.type === "line-of-credit"
+        ? event.amountCents
+        : 0),
+  );
   return [
     { accountId: event.accountId, accountKind: "asset", deltaCents: -amount },
     ...(event.relatedAccountId && principal > 0

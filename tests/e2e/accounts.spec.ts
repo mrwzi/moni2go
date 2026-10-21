@@ -175,12 +175,43 @@ test("keeps money dialogs consistent and shows only relevant activity fields", a
   await expect(page.getByRole("listbox")).toBeVisible();
   await expect(page.getByRole("option")).toHaveCount(3);
   const menuBox = await page.getByRole("listbox").boundingBox();
+  const typeBox = await typeSelector.boundingBox();
   if (!menuBox) throw new Error("Activity selector bounds are unavailable");
+  if (!typeBox) throw new Error("Activity trigger bounds are unavailable");
   expect(menuBox.width).toBeLessThanOrEqual(activityBox.width);
+  expect(Math.abs(menuBox.width - typeBox.width)).toBeLessThan(1);
+  expect(menuBox.y).toBeGreaterThanOrEqual(typeBox.y + typeBox.height - 1);
+  await page.keyboard.press("Escape");
+  for (let opening = 0; opening < 3; opening += 1) {
+    await typeSelector.click();
+    const repeatedBox = await page.getByRole("listbox").boundingBox();
+    if (!repeatedBox)
+      throw new Error("Repeated selector bounds are unavailable");
+    expect(Math.abs(repeatedBox.x - menuBox.x)).toBeLessThan(1);
+    expect(Math.abs(repeatedBox.y - menuBox.y)).toBeLessThan(1);
+    await page.keyboard.press("Escape");
+  }
+  await typeSelector.click();
   await page.getByRole("option", { name: "Refund", exact: true }).click();
   await expect(
     activity.getByRole("combobox", { name: "What was refunded?" }),
   ).toBeVisible();
+  const originalViewport = page.viewportSize();
+  if (!originalViewport) throw new Error("Viewport size is unavailable");
+  await page.setViewportSize({ width: originalViewport.width, height: 480 });
+  const categorySelector = activity.getByRole("combobox", {
+    name: "What was refunded?",
+  });
+  await categorySelector.click();
+  const upwardMenu = await page.getByRole("listbox").boundingBox();
+  const categoryBox = await categorySelector.boundingBox();
+  if (!upwardMenu || !categoryBox)
+    throw new Error("Upward selector bounds are unavailable");
+  expect(upwardMenu.y + upwardMenu.height).toBeLessThanOrEqual(
+    categoryBox.y + 1,
+  );
+  await page.keyboard.press("Escape");
+  await page.setViewportSize(originalViewport);
 
   await expect(activity.getByLabel("Note (optional)")).toBeHidden();
   await activity.getByText("Add a note").click();
@@ -803,9 +834,14 @@ test("uses a known loan principal split and leaves an unknown split unchanged", 
   await page.getByRole("button", { name: "Move money" }).click();
   let move = page.getByRole("dialog", { name: "Move money" });
   await chooseMoneyOption(page, "To", "Personal loan · owed $1,000.00");
-  await move.getByText("Add principal and interest split").click();
+  await chooseMoneyOption(
+    page,
+    "How much reduces the loan?",
+    "Enter principal and interest",
+  );
   await move.getByLabel("Principal portion").fill("70");
   await move.getByLabel("Amount").fill("100");
+  await expect(move).toContainText("Loan debt decreases by $70");
   await move.getByRole("button", { name: "Move money" }).click();
   await expect(
     page.locator(".account-list > li").filter({ hasText: "Personal loan" }),
@@ -815,13 +851,39 @@ test("uses a known loan principal split and leaves an unknown split unchanged", 
   move = page.getByRole("dialog", { name: "Move money" });
   await chooseMoneyOption(page, "To", "Personal loan · owed $930.00");
   await move.getByLabel("Amount").fill("50");
+  await expect(move).toContainText(
+    "Loan balance stays unchanged until you reconcile it.",
+  );
   await move.getByRole("button", { name: "Move money" }).click();
   await expect(
     page.locator(".account-list > li").filter({ hasText: "Personal loan" }),
   ).toContainText("Owed $930.00");
+  await expect(page.getByText(/principal allocation is unknown/)).toBeVisible();
+
+  const unknownPayment = page
+    .getByRole("region", { name: "Recent transactions" })
+    .getByRole("listitem")
+    .filter({ hasText: "$50.00" });
+  await expect(unknownPayment).toContainText(
+    "Loan bank · Chequing → Loan bank · Personal loan",
+  );
+  await expect(unknownPayment).toContainText("Principal allocation unknown");
+  await unknownPayment.getByRole("button", { name: /Edit/ }).click();
+  await chooseMoneyOption(
+    page,
+    "How much reduces the loan?",
+    "The full payment",
+  );
+  await page
+    .getByRole("dialog", { name: "Edit transaction" })
+    .getByRole("button", { name: "Save and adjust balances" })
+    .click();
   await expect(
-    page.getByText(/Add the principal split when known/),
-  ).toBeVisible();
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$350.00");
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Personal loan" }),
+  ).toContainText("Owed $880.00");
 });
 
 test("adds and prioritizes a recurring household bill", async ({ page }) => {

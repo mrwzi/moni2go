@@ -225,6 +225,125 @@ describe("transaction balance effects", () => {
     expect(debt(reversed, "loan")).toBe(20_000);
   });
 
+  it("never invents principal for an unknown legacy installment payment", () => {
+    const payment = event({
+      accountId: "cash" as never,
+      relatedAccountId: "loan" as never,
+      amountCents: 1_500 as never,
+      transactionType: "credit-card-payment",
+    });
+    const applied = applyExpenseBalanceEffect(
+      base,
+      payment,
+      "apply",
+      "2026-10-20" as never,
+      later,
+    );
+    expect(asset(applied, "cash")).toBe(8_500);
+    expect(debt(applied, "loan")).toBe(20_000);
+    const reversed = applyExpenseBalanceEffect(
+      applied,
+      payment,
+      "reverse",
+      "2026-10-20" as never,
+      later,
+    );
+    expect(asset(reversed, "cash")).toBe(10_000);
+    expect(debt(reversed, "loan")).toBe(20_000);
+  });
+
+  it("applies only newly confirmed principal when reconciling a payment", () => {
+    const unknown = event({
+      accountId: "cash" as never,
+      relatedAccountId: "loan" as never,
+      amountCents: 1_500 as never,
+      transactionType: "credit-card-payment",
+    });
+    const confirmed = { ...unknown, principalAmountCents: 1_200 as never };
+    const paid = applyExpenseBalanceEffect(
+      base,
+      unknown,
+      "apply",
+      "2026-10-20" as never,
+      later,
+    );
+    const reversedOld = applyExpenseBalanceEffect(
+      paid,
+      unknown,
+      "reverse",
+      "2026-10-20" as never,
+      later,
+    );
+    const reconciled = applyExpenseBalanceEffect(
+      reversedOld,
+      confirmed,
+      "apply",
+      "2026-10-20" as never,
+      later,
+    );
+    expect(asset(reconciled, "cash")).toBe(8_500);
+    expect(debt(reconciled, "loan")).toBe(18_800);
+  });
+
+  it("continues to treat a credit-card payment as full debt reduction", () => {
+    const payment = event({
+      accountId: "cash" as never,
+      relatedAccountId: "card" as never,
+      amountCents: 1_500 as never,
+      transactionType: "credit-card-payment",
+    });
+    const applied = applyExpenseBalanceEffect(
+      base,
+      payment,
+      "apply",
+      "2026-10-20" as never,
+      later,
+    );
+    expect(asset(applied, "cash")).toBe(8_500);
+    expect(debt(applied, "card")).toBe(3_500);
+  });
+
+  it.each([
+    ["entirely principal", 75_000, 134_314],
+    ["split principal and interest", 60_000, 149_314],
+    ["unknown allocation", undefined, 209_314],
+  ] as const)(
+    "records a $750 installment payment with %s safely",
+    (_label, principalAmountCents, expectedDebt) => {
+      const scenario = {
+        ...base,
+        assetAccounts: base.assetAccounts.map((account) =>
+          account.id === "cash"
+            ? { ...account, currentValueCents: 90_916 as never }
+            : account,
+        ),
+        liabilityAccounts: base.liabilityAccounts.map((account) =>
+          account.id === "loan"
+            ? { ...account, currentBalanceCents: 209_314 as never }
+            : account,
+        ),
+      };
+      const payment = event({
+        accountId: "cash" as never,
+        relatedAccountId: "loan" as never,
+        amountCents: 75_000 as never,
+        ...(principalAmountCents === undefined
+          ? {}
+          : { principalAmountCents: principalAmountCents as never }),
+        transactionType: "credit-card-payment",
+      });
+      const applied = applyExpenseBalanceEffect(
+        scenario,
+        payment,
+        "apply",
+        "2026-10-20" as never,
+        later,
+      );
+      expect(asset(applied, "cash")).toBe(15_916);
+      expect(debt(applied, "loan")).toBe(expectedDebt);
+    },
+  );
+
   it("applies and reverses recorded income without creating an expense", () => {
     const income = {
       id: "income-1",

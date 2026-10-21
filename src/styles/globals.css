@@ -908,7 +908,7 @@ select {
 
 .money-select-menu {
   display: grid;
-  z-index: 80;
+  z-index: 300;
   max-height: min(14rem, 35dvh);
   margin-top: 0;
   padding: 0.3rem;
@@ -919,6 +919,26 @@ select {
   box-shadow: 0 12px 30px rgb(0 0 0 / 18%);
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  animation: money-select-in 100ms ease-out;
+}
+
+@keyframes money-select-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.money-select-menu-up {
+  transform-origin: bottom;
+}
+
+.money-select-menu-down {
+  transform-origin: top;
 }
 
 .money-select-menu button {
@@ -953,6 +973,36 @@ select {
   margin-top: 0.3rem;
   color: var(--muted);
   font-weight: 400;
+}
+
+.loan-allocation-fields {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.loan-payment-preview {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.82rem;
+}
+
+.loan-payment-preview strong {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .money-select-menu {
+    animation: none;
+  }
+
+  .money-select-chevron {
+    transition: none;
+  }
 }
 
 .activity-explanation,

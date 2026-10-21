@@ -25,6 +25,7 @@ import type { CalendarDate, FinancialEntityId } from "../../v2/domain/types";
 import type { FinancialWorkspace } from "../../v2/domain/workspace";
 import { SPENDING_CATEGORIES } from "./account-options";
 import { MoneySelect } from "./MoneySelect";
+import type { LoanPrincipalAllocation } from "./QuickActivityDialog";
 
 const TYPE_LABELS: Record<ExpenseTransactionType, string> = {
   purchase: "Purchase",
@@ -67,6 +68,8 @@ export function TransactionHistory({
   const [accountId, setAccountId] = useState("");
   const [relatedAccountId, setRelatedAccountId] = useState("");
   const [principalAmount, setPrincipalAmount] = useState("");
+  const [loanPrincipalAllocation, setLoanPrincipalAllocation] =
+    useState<LoanPrincipalAllocation>("unknown");
   const [accountFilter, setAccountFilter] = useState("all");
   const [showAll, setShowAll] = useState(false);
   const [pending, setPending] = useState(false);
@@ -152,6 +155,27 @@ export function TransactionHistory({
         ? (activity.record.principalAmountCents / 100).toFixed(2)
         : "",
     );
+    if (activity.kind === "expense") {
+      const type = eventType(activity.record);
+      const debt = workspace.liabilityAccounts.find(
+        (account) => account.id === activity.record.relatedAccountId,
+      );
+      if (
+        type === "credit-card-payment" &&
+        debt &&
+        debt.type !== "credit-card" &&
+        debt.type !== "line-of-credit"
+      ) {
+        const principal = activity.record.principalAmountCents;
+        setLoanPrincipalAllocation(
+          principal === undefined || principal === 0
+            ? "unknown"
+            : principal === activity.record.amountCents
+              ? "all"
+              : "split",
+        );
+      } else setLoanPrincipalAllocation("unknown");
+    }
     setError(null);
   }
 
@@ -170,6 +194,26 @@ export function TransactionHistory({
       return;
     }
     const principal = principalAmount ? parseV2CadInput(principalAmount) : null;
+    const editedDebt =
+      editing.kind === "expense"
+        ? workspace.liabilityAccounts.find(
+            (account) => account.id === relatedAccountId,
+          )
+        : undefined;
+    const isInstallmentPayment =
+      editing.kind === "expense" &&
+      eventType(editing.record) === "credit-card-payment" &&
+      editedDebt !== undefined &&
+      editedDebt.type !== "credit-card" &&
+      editedDebt.type !== "line-of-credit";
+    if (
+      isInstallmentPayment &&
+      loanPrincipalAllocation === "split" &&
+      !principalAmount.trim()
+    ) {
+      setError("Enter the principal portion shown by your lender.");
+      return;
+    }
     if (
       principal &&
       (!principal.ok || principal.cents <= 0 || principal.cents > parsed.cents)
@@ -223,6 +267,16 @@ export function TransactionHistory({
         const editingRecord = { ...editing.record };
         delete editingRecord.relatedAccountId;
         delete editingRecord.note;
+        delete editingRecord.principalAmountCents;
+        const updatedPrincipal = isInstallmentPayment
+          ? loanPrincipalAllocation === "all"
+            ? parsed.cents
+            : loanPrincipalAllocation === "split" && principal?.ok
+              ? principal.cents
+              : undefined
+          : principal?.ok
+            ? principal.cents
+            : undefined;
         const updated: DatedExpenseEvent = {
           ...editingRecord,
           accountId: accountId as FinancialEntityId,
@@ -233,8 +287,8 @@ export function TransactionHistory({
           category,
           actualDate: parsedDate,
           dueDate: parsedDate,
-          ...(type === "credit-card-payment" && principal?.ok
-            ? { principalAmountCents: principal.cents }
+          ...(type === "credit-card-payment" && updatedPrincipal !== undefined
+            ? { principalAmountCents: updatedPrincipal }
             : {}),
           name:
             type === "purchase" || type === "refund"
@@ -374,6 +428,18 @@ export function TransactionHistory({
               label: accountName(account.id),
             }))
       : [];
+  const editingDebt =
+    editing?.kind === "expense"
+      ? workspace.liabilityAccounts.find(
+          (account) => account.id === relatedAccountId,
+        )
+      : undefined;
+  const editingInstallmentPayment =
+    editing?.kind === "expense" &&
+    eventType(editing.record) === "credit-card-payment" &&
+    editingDebt !== undefined &&
+    editingDebt.type !== "credit-card" &&
+    editingDebt.type !== "line-of-credit";
 
   return (
     <section
@@ -420,12 +486,29 @@ export function TransactionHistory({
                   {activity.kind === "expense" && activity.record.note && (
                     <span>{activity.record.note}</span>
                   )}
-                  <small>{accountName(activity.record.accountId)}</small>
+                  <small>
+                    {accountName(activity.record.accountId)}
+                    {activity.kind === "expense" &&
+                    activity.record.relatedAccountId
+                      ? ` → ${accountName(activity.record.relatedAccountId)}`
+                      : ""}
+                  </small>
                   <small>
                     {activityDate(activity)} ·{" "}
                     {activity.kind === "income"
                       ? "Income"
                       : TYPE_LABELS[eventType(activity.record)]}
+                    {activity.kind === "expense" &&
+                    eventType(activity.record) === "credit-card-payment" &&
+                    activity.record.principalAmountCents === undefined &&
+                    workspace.liabilityAccounts.some(
+                      (account) =>
+                        account.id === activity.record.relatedAccountId &&
+                        account.type !== "credit-card" &&
+                        account.type !== "line-of-credit",
+                    )
+                      ? " · Principal allocation unknown"
+                      : ""}
                   </small>
                 </div>
                 <div className="transaction-history-summary">
@@ -569,23 +652,43 @@ export function TransactionHistory({
                   />
                 </span>
               </label>
-              {editing.kind === "expense" &&
-                eventType(editing.record) === "credit-card-payment" &&
-                editing.record.principalAmountCents !== undefined && (
-                  <label>
-                    Principal portion
-                    <span className="money-input">
-                      <span>$</span>
-                      <input
-                        value={principalAmount}
-                        inputMode="decimal"
-                        onChange={(event) => {
-                          setPrincipalAmount(event.target.value);
-                        }}
-                      />
-                    </span>
-                  </label>
-                )}
+              {editingInstallmentPayment && (
+                <div className="loan-allocation-fields">
+                  <MoneySelect
+                    label="How much reduces the loan?"
+                    value={loanPrincipalAllocation}
+                    options={[
+                      { value: "all", label: "The full payment" },
+                      { value: "split", label: "Enter principal and interest" },
+                      { value: "unknown", label: "I do not know yet" },
+                    ]}
+                    onChange={(value) => {
+                      setLoanPrincipalAllocation(value);
+                      setPrincipalAmount("");
+                    }}
+                  />
+                  {loanPrincipalAllocation === "split" && (
+                    <label>
+                      Principal portion
+                      <span className="money-input">
+                        <span>$</span>
+                        <input
+                          value={principalAmount}
+                          inputMode="decimal"
+                          onChange={(event) => {
+                            setPrincipalAmount(event.target.value);
+                          }}
+                        />
+                      </span>
+                      <small>The rest is interest or fees.</small>
+                    </label>
+                  )}
+                  <p className="cash-place-note">
+                    Cash is not deducted again. Adjusting balances changes only
+                    the difference between the old and new principal.
+                  </p>
+                </div>
+              )}
               {editing.kind === "expense" && (
                 <label>
                   Note <small>(optional)</small>

@@ -25,6 +25,7 @@ import {
 import { MoneySelect } from "./MoneySelect";
 
 export type QuickActivityKind = "income" | "expense" | "move";
+export type LoanPrincipalAllocation = "all" | "split" | "unknown";
 export type QuickActivityInput = Readonly<{
   kind: QuickActivityKind;
   accountId: string;
@@ -37,6 +38,7 @@ export type QuickActivityInput = Readonly<{
   transferToUntrackedAccount?: boolean;
   debtAccountId?: string;
   principalAmount?: string;
+  loanPrincipalAllocation?: LoanPrincipalAllocation;
   definitionId?: string;
   personPaymentPurpose?: PersonPaymentPurpose;
   saveIncomeSchedule?: boolean;
@@ -111,6 +113,8 @@ export function QuickActivityDialog({
     useState<PersonPaymentPurpose>("gift");
   const [destinationValue, setDestinationValue] = useState("");
   const [principalAmount, setPrincipalAmount] = useState("");
+  const [loanPrincipalAllocation, setLoanPrincipalAllocation] =
+    useState<LoanPrincipalAllocation>("unknown");
   const [note, setNote] = useState("");
   const [definitionId, setDefinitionId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -179,8 +183,15 @@ export function QuickActivityDialog({
         : {}),
       ...(isUntracked ? { transferToUntrackedAccount: true } : {}),
       ...(destinationDebt ? { debtAccountId: destinationDebt.id } : {}),
-      ...(isInstallmentLoan && principalAmount.trim()
-        ? { principalAmount }
+      ...(isInstallmentLoan
+        ? {
+            loanPrincipalAllocation,
+            ...(loanPrincipalAllocation === "all"
+              ? { principalAmount: amount }
+              : loanPrincipalAllocation === "split" && principalAmount.trim()
+                ? { principalAmount }
+                : {}),
+          }
         : {}),
       ...(kind === "expense" && expenseType === "purchase" && definitionId
         ? { definitionId }
@@ -387,6 +398,7 @@ export function QuickActivityDialog({
                 onChange={(value) => {
                   setDestinationValue(value);
                   setPrincipalAmount("");
+                  setLoanPrincipalAllocation("unknown");
                   setError(null);
                 }}
               />
@@ -419,31 +431,53 @@ export function QuickActivityDialog({
                 </span>
               </label>
               {isInstallmentLoan && (
-                <details className="optional-note">
-                  <summary>
-                    Add principal and interest split <span>(optional)</span>
-                  </summary>
-                  <label>
-                    Principal portion
-                    <span className="money-input">
-                      <span>$</span>
-                      <input
-                        aria-label="Principal portion"
-                        value={principalAmount}
-                        onChange={(event) => {
-                          setPrincipalAmount(event.target.value);
-                          setError(null);
-                        }}
-                        inputMode="decimal"
-                        placeholder="0.00"
-                      />
+                <div className="loan-allocation-fields">
+                  <MoneySelect
+                    label="How much reduces the loan?"
+                    value={loanPrincipalAllocation}
+                    options={[
+                      { value: "all", label: "The full payment" },
+                      { value: "split", label: "Enter principal and interest" },
+                      { value: "unknown", label: "I do not know yet" },
+                    ]}
+                    onChange={(value) => {
+                      setLoanPrincipalAllocation(value);
+                      setPrincipalAmount("");
+                      setError(null);
+                    }}
+                  />
+                  {loanPrincipalAllocation === "split" && (
+                    <label>
+                      Principal portion
+                      <span className="money-input">
+                        <span>$</span>
+                        <input
+                          aria-label="Principal portion"
+                          value={principalAmount}
+                          onChange={(event) => {
+                            setPrincipalAmount(event.target.value);
+                            setError(null);
+                          }}
+                          inputMode="decimal"
+                          placeholder="0.00"
+                        />
+                      </span>
+                      <small>The rest is recorded as interest or fees.</small>
+                    </label>
+                  )}
+                  <div className="loan-payment-preview" role="status">
+                    <strong>Before you save</strong>
+                    <span>
+                      Cash decreases by {amount.trim() ? `$${amount}` : "$0.00"}
+                      .
                     </span>
-                    <small>
-                      Only this amount reduces the loan balance. Leave blank
-                      when the split is unknown.
-                    </small>
-                  </label>
-                </details>
+                    <span>
+                      {loanPrincipalAllocation === "unknown"
+                        ? "Loan balance stays unchanged until you reconcile it."
+                        : `Loan debt decreases by ${loanPrincipalAllocation === "all" ? (amount.trim() ? `$${amount}` : "$0.00") : principalAmount.trim() ? `$${principalAmount}` : "$0.00"}.`}
+                    </span>
+                  </div>
+                </div>
               )}
             </>
           )}
