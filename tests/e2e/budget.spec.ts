@@ -155,7 +155,7 @@ test("shows current spending separately from completed-month averages", async ({
     await dialog
       .getByLabel("Date", { exact: true })
       .fill(completedDate(monthsAgo));
-    await dialog.getByRole("button", { name: "Save transaction" }).click();
+    await dialog.getByRole("button", { name: "Save record only" }).click();
   }
 
   await page.getByRole("button", { name: "Record expense" }).click();
@@ -221,7 +221,7 @@ test("shows current spending separately from completed-month averages", async ({
     await dialog
       .getByLabel("Date", { exact: true })
       .fill(completedDate(monthsAgo));
-    await dialog.getByRole("button", { name: "Save transaction" }).click();
+    await dialog.getByRole("button", { name: "Save record only" }).click();
   }
   await page.getByRole("button", { name: "Record expense" }).click();
   await chooseMoneyOption(page, "What was it for?", "Restaurants / eating out");

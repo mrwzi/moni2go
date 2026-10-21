@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import type { AccountGroup } from "../../v2/domain/account-groups";
 import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
 import type {
   ExpenseDefinition,
   ExpenseTransactionType,
+  PersonPaymentPurpose,
 } from "../../v2/domain/expenses";
 import {
   BUDGET_CATEGORIES,
@@ -33,12 +34,19 @@ export type QuickActivityInput = Readonly<{
   debtAccountId?: string;
   principalAmount?: string;
   definitionId?: string;
+  personPaymentPurpose?: PersonPaymentPurpose;
 }>;
 
 const UNTRACKED_ACCOUNT_VALUE = "untracked-owned-account";
 const EXPENSE_OPTIONS = [
   { value: "purchase", label: "Purchase or bill" },
   { value: "refund", label: "Refund" },
+  { value: "person-payment", label: "Send money to someone" },
+] as const;
+const PERSON_PAYMENT_OPTIONS = [
+  { value: "gift", label: "Gift" },
+  { value: "pay-someone", label: "Pay someone" },
+  { value: "other", label: "Other" },
 ] as const;
 const INVESTMENT_TYPES = new Set<AssetAccount["type"]>([
   "savings",
@@ -86,15 +94,18 @@ export function QuickActivityDialog({
   const [incomeLabel, setIncomeLabel] = useState<IncomeLabel>("Paycheque");
   const [spendingCategory, setSpendingCategory] =
     useState<BudgetCategoryKey>("groceries");
-  const [expenseType, setExpenseType] = useState<"purchase" | "refund">(
-    "purchase",
-  );
+  const [expenseType, setExpenseType] = useState<
+    "purchase" | "refund" | "person-payment"
+  >("purchase");
+  const [personPaymentPurpose, setPersonPaymentPurpose] =
+    useState<PersonPaymentPurpose>("gift");
   const [destinationValue, setDestinationValue] = useState("");
   const [principalAmount, setPrincipalAmount] = useState("");
   const [note, setNote] = useState("");
   const [definitionId, setDefinitionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
 
   const destinationAsset = accounts.find(
     (account) => account.id === destinationValue,
@@ -141,7 +152,8 @@ export function QuickActivityDialog({
         : "Move money";
 
   async function submit() {
-    if (pending) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setPending(true);
     setError(null);
     const result = await onSave({
@@ -163,9 +175,15 @@ export function QuickActivityDialog({
       ...(kind === "expense" && expenseType === "purchase" && definitionId
         ? { definitionId }
         : {}),
+      ...(kind === "expense" && expenseType === "person-payment"
+        ? { personPaymentPurpose }
+        : {}),
     });
     setError(result);
-    if (result) setPending(false);
+    if (result) {
+      pendingRef.current = false;
+      setPending(false);
+    }
   }
 
   return (
@@ -218,7 +236,7 @@ export function QuickActivityDialog({
                 value: account.id,
                 label: `${accountLabel(account)} · ${formatCad(account.currentValueCents)}`,
               })),
-              ...(kind === "expense"
+              ...(kind === "expense" && expenseType !== "person-payment"
                 ? creditAccounts.map((account) => ({
                     value: account.id,
                     label: `${accountLabel(account)} · owed ${formatCad(account.currentBalanceCents)}`,
@@ -252,9 +270,30 @@ export function QuickActivityDialog({
                 options={EXPENSE_OPTIONS}
                 onChange={(value) => {
                   setExpenseType(value);
+                  if (
+                    value === "person-payment" &&
+                    liabilityAccounts.some(
+                      (account) => account.id === accountId,
+                    )
+                  )
+                    setAccountId(firstAsset?.id ?? "");
                   setError(null);
                 }}
               />
+              {expenseType === "person-payment" && (
+                <>
+                  <MoneySelect
+                    label="Purpose"
+                    value={personPaymentPurpose}
+                    options={PERSON_PAYMENT_OPTIONS}
+                    onChange={setPersonPaymentPurpose}
+                  />
+                  <p className="activity-explanation">
+                    Use this for money you do not expect back. moni2go does not
+                    currently track personal loans as money owed to you.
+                  </p>
+                </>
+              )}
               <MoneySelect
                 label={
                   expenseType === "refund"
@@ -418,7 +457,9 @@ export function QuickActivityDialog({
                 Add a note <span>(optional)</span>
               </summary>
               <label>
-                Note
+                {kind === "expense" && expenseType === "person-payment"
+                  ? "Recipient or note"
+                  : "Note"}
                 <input
                   aria-label="Note (optional)"
                   value={note}
@@ -429,7 +470,9 @@ export function QuickActivityDialog({
                   placeholder={
                     kind === "move"
                       ? "For example, business account"
-                      : "For example, Netflix or lunch"
+                      : expenseType === "person-payment"
+                        ? "For example, Alex or birthday gift"
+                        : "For example, Netflix or lunch"
                   }
                 />
               </label>
@@ -455,7 +498,9 @@ export function QuickActivityDialog({
                 : kind === "expense"
                   ? expenseType === "refund"
                     ? "Save refund"
-                    : "Save expense"
+                    : expenseType === "person-payment"
+                      ? "Record money sent"
+                      : "Save expense"
                   : "Move money"}
           </button>
         </form>

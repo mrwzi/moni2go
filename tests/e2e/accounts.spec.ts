@@ -95,7 +95,7 @@ test("records a transfer to an owned account that is not tracked", async ({
     page.getByText("$35.00 moved from Chequing to another account you own."),
   ).toBeVisible();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Chequing" }),
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
   ).toContainText("$66.00");
   const transactions = page.getByRole("region", {
     name: "Recent transactions",
@@ -112,7 +112,7 @@ test("records a transfer to an owned account that is not tracked", async ({
     .click();
   const editDialog = page.getByRole("dialog", { name: "Edit transaction" });
   await expect(
-    editDialog.getByText("Transfer between accounts."),
+    editDialog.getByRole("combobox", { name: "Account or card" }),
   ).toBeVisible();
   await expect(editDialog.getByLabel("What happened?")).toHaveCount(0);
   await expect(editDialog.getByLabel("Category")).toHaveCount(0);
@@ -173,7 +173,7 @@ test("keeps money dialogs consistent and shows only relevant activity fields", a
   });
   await typeSelector.click();
   await expect(page.getByRole("listbox")).toBeVisible();
-  await expect(page.getByRole("option")).toHaveCount(2);
+  await expect(page.getByRole("option")).toHaveCount(3);
   const menuBox = await page.getByRole("listbox").boundingBox();
   if (!menuBox) throw new Error("Activity selector bounds are unavailable");
   expect(menuBox.width).toBeLessThanOrEqual(activityBox.width);
@@ -340,7 +340,7 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
     page.getByText("$10.00 spending recorded from Credit card."),
   ).toBeVisible();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("Owed $10.00");
   await expect(page.getByText("No payment due recorded")).toBeVisible();
 
@@ -361,7 +361,7 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
     ),
   ).toBeVisible();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("$10.00 every month");
 
   await page.goto("/plan");
@@ -421,7 +421,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
 
   await expect(page.getByText("Debt updated to $13.23.")).toBeVisible();
   const creditCard = page
-    .getByRole("listitem")
+    .locator(".account-list > li")
     .filter({ hasText: "Credit card" });
   await expect(creditCard).toContainText("Owed $13.23");
   await expect(creditCard).toContainText("$13.23 every month");
@@ -442,7 +442,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await page.goto("/accounts");
   await page.reload();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("Owed $13.23");
 
   await page.getByRole("button", { name: "Record expense" }).click();
@@ -452,7 +452,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await activity.getByLabel("Amount").fill("2");
   await activity.getByRole("button", { name: "Save expense" }).click();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("Owed $15.23");
   await expect(
     page
@@ -462,7 +462,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
 
   await page.reload();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("Owed $15.23");
 });
 
@@ -584,8 +584,8 @@ test("records money in and money out against an existing account", async ({
   }
   const history = page.getByRole("region", { name: "Recent transactions" });
   await expect(history.getByRole("listitem")).toHaveCount(2);
-  await history.getByRole("button", { name: "Show all activity (3)" }).click();
-  await expect(history.getByRole("listitem")).toHaveCount(3);
+  await history.getByRole("button", { name: "Show all activity (4)" }).click();
+  await expect(history.getByRole("listitem")).toHaveCount(4);
   await expect(history.getByText("Weekly supermarket trip")).toBeVisible();
 
   await page.goto("/");
@@ -652,7 +652,7 @@ test("records credit-card purchases once and applies payments to both balances",
   await spendingDialog.getByLabel("Amount").fill("50");
   await spendingDialog.getByRole("button", { name: "Save expense" }).click();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("$470.00");
 
   await page.getByRole("button", { name: "Move money" }).click();
@@ -662,10 +662,10 @@ test("records credit-card purchases once and applies payments to both balances",
   await spendingDialog.getByRole("button", { name: "Move money" }).click();
 
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Chequing" }),
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
   ).toContainText("$500.00");
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Credit card" }),
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("Credit $30.00");
   const transactions = page.getByRole("region", {
     name: "Recent transactions",
@@ -702,7 +702,7 @@ test("moves money between tracked accounts and into savings without changing spe
   await move.getByRole("button", { name: "Move money" }).click();
 
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Chequing" }),
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
   ).toContainText("$425.00");
   await expect(
     page
@@ -750,7 +750,7 @@ test("uses a known loan principal split and leaves an unknown split unchanged", 
   await move.getByLabel("Amount").fill("100");
   await move.getByRole("button", { name: "Move money" }).click();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Personal loan" }),
+    page.locator(".account-list > li").filter({ hasText: "Personal loan" }),
   ).toContainText("Owed $930.00");
 
   await page.getByRole("button", { name: "Move money" }).click();
@@ -759,7 +759,7 @@ test("uses a known loan principal split and leaves an unknown split unchanged", 
   await move.getByLabel("Amount").fill("50");
   await move.getByRole("button", { name: "Move money" }).click();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Personal loan" }),
+    page.locator(".account-list > li").filter({ hasText: "Personal loan" }),
   ).toContainText("Owed $930.00");
   await expect(
     page.getByText(/Add the principal split when known/),
@@ -903,4 +903,53 @@ test("account form is usable without a pointer", async ({ page }) => {
   await page.getByRole("button", { name: "Save account" }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByText("Account saved locally.")).toBeVisible();
+});
+
+test("records, edits, and safely reverses money sent to someone", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("BMO");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("100");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Record expense" }).click();
+  const expense = page.getByRole("dialog", { name: "Record expense" });
+  await chooseMoneyOption(page, "Expense type", "Send money to someone");
+  await chooseMoneyOption(page, "Purpose", "Gift");
+  await chooseMoneyOption(page, "What was it for?", "Other");
+  await expense.getByLabel("Amount").fill("25");
+  await expense.getByText("Add a note").click();
+  await expense.getByLabel("Note (optional)").fill("Alex birthday");
+  await expense.getByRole("button", { name: "Record money sent" }).click();
+
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$75.00");
+  const history = page.getByRole("region", { name: "Recent transactions" });
+  const row = history.getByRole("listitem").filter({ hasText: "Gift sent" });
+  await expect(row).toContainText("BMO · Chequing");
+  await row.getByRole("button", { name: "Edit Gift sent transaction" }).click();
+
+  const edit = page.getByRole("dialog", { name: "Edit transaction" });
+  await edit.getByLabel("Amount").fill("15");
+  await edit.getByRole("button", { name: "Save and adjust balances" }).click();
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$85.00");
+
+  await history
+    .getByRole("button", { name: "Delete Gift sent transaction" })
+    .click();
+  const remove = page.getByRole("alertdialog", { name: "Delete transaction?" });
+  await remove
+    .getByRole("button", { name: "Undo transaction and restore balances" })
+    .click();
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$100.00");
+  await expect(history.getByText("Gift sent")).toHaveCount(0);
 });

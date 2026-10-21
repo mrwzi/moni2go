@@ -1,6 +1,7 @@
 import type { Recurrence, RecurrenceBounds } from "./recurrence";
 import type {
   CalendarDate,
+  FinancialEntityId,
   EntityMetadata,
   FinancialEventStatus,
   HistoricalIncomeRecordId,
@@ -25,6 +26,8 @@ export type HistoricalIncomeRecord = EntityMetadata &
     id: HistoricalIncomeRecordId;
     workspaceId: WorkspaceId;
     sourceId?: IncomeSourceId;
+    /** Asset account that received this income, when it was recorded in-app. */
+    accountId?: FinancialEntityId;
     name: string;
     amountCents: V2Cents;
     receivedDate: CalendarDate;

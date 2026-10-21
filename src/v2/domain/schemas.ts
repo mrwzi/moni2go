@@ -212,6 +212,7 @@ export const historicalIncomeRecordSchema = z
   .object({
     ...commonEntity,
     sourceId: entityIdSchema.optional(),
+    accountId: entityIdSchema.optional(),
     name: z.string().trim().min(1).max(120),
     amountCents: nonNegativeV2CentsSchema,
     receivedDate: calendarDateSchema,
@@ -257,6 +258,7 @@ export const datedExpenseEventSchema = z
     relatedAccountId: entityIdSchema.optional(),
     principalAmountCents: nonNegativeV2CentsSchema.optional(),
     transactionType: z.enum(EXPENSE_TRANSACTION_TYPES).optional(),
+    personPaymentPurpose: z.enum(["gift", "pay-someone", "other"]).optional(),
     note: z.string().trim().min(1).max(160).optional(),
   })
   .strict();

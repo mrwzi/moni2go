@@ -898,8 +898,9 @@ select {
 
 .money-select-menu {
   display: grid;
+  z-index: 80;
   max-height: min(14rem, 35dvh);
-  margin-top: 0.35rem;
+  margin-top: 0;
   padding: 0.3rem;
   gap: 0.2rem;
   border: 1px solid var(--line);
@@ -4564,6 +4565,25 @@ main {
   font-size: 0.88rem;
 }
 
+.transaction-history-heading {
+  align-items: end;
+  gap: 1rem;
+}
+
+.transaction-history-heading .money-select {
+  width: min(18rem, 42vw);
+}
+
+.transaction-balance-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.transaction-delete-dialog {
+  max-width: 30rem;
+}
+
 .transaction-history-list {
   display: grid;
   margin: 0;
@@ -4686,6 +4706,19 @@ main {
 }
 
 @media (max-width: 560px) {
+  .transaction-history-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .transaction-history-heading .money-select {
+    width: 100%;
+  }
+
+  .transaction-balance-actions {
+    grid-template-columns: 1fr;
+  }
+
   .transaction-history-list > li {
     align-items: flex-start;
     gap: 0.75rem;

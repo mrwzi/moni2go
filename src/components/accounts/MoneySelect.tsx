@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 export type MoneySelectOption<T extends string> = Readonly<{
   value: T;
@@ -22,6 +29,8 @@ export function MoneySelect<T extends string>({
   hint?: string;
 }>) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>();
+  const [placement, setPlacement] = useState<"up" | "down">("down");
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -30,16 +39,53 @@ export function MoneySelect<T extends string>({
   const selected =
     options.find((option) => option.value === value) ?? options[0];
 
+  const positionMenu = useCallback(() => {
+    const trigger = buttonRef.current?.getBoundingClientRect();
+    if (!trigger) return;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const form = rootRef.current?.closest("form");
+    const submit = form?.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    const submitRect = submit?.getBoundingClientRect();
+    const lowerBoundary =
+      submitRect && submitRect.top > trigger.bottom
+        ? Math.min(viewportHeight - 12, submitRect.top - 8)
+        : viewportHeight - 12;
+    const below = Math.max(72, lowerBoundary - trigger.bottom - 6);
+    const above = Math.max(72, trigger.top - 12);
+    const nextPlacement = below < 160 && above > below ? "up" : "down";
+    const available = nextPlacement === "up" ? above : below;
+    setPlacement(nextPlacement);
+    setMenuStyle({
+      position: "fixed",
+      left: trigger.left,
+      width: trigger.width,
+      maxHeight: Math.min(224, available),
+      ...(nextPlacement === "up"
+        ? { bottom: viewportHeight - trigger.top + 6, top: "auto" }
+        : { top: trigger.bottom + 6, bottom: "auto" }),
+    });
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+    positionMenu();
+    const viewport = window.visualViewport;
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
+    viewport?.addEventListener("resize", positionMenu);
     const close = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", close);
     return () => {
       document.removeEventListener("mousedown", close);
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
+      viewport?.removeEventListener("resize", positionMenu);
     };
-  }, [open]);
+  }, [open, positionMenu]);
 
   useEffect(() => {
     if (!open) return;
@@ -85,13 +131,18 @@ export function MoneySelect<T extends string>({
       {open && (
         <div
           ref={menuRef}
-          className="money-select-menu"
+          className={`money-select-menu money-select-menu-${placement}`}
+          style={menuStyle}
           id={listboxId}
           role="listbox"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               setOpen(false);
               buttonRef.current?.focus();
+              return;
+            }
+            if (event.key === "Tab") {
+              setOpen(false);
               return;
             }
             if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;

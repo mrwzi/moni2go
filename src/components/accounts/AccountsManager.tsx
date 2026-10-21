@@ -703,6 +703,7 @@ export function AccountsManager() {
                   id: crypto.randomUUID() as HistoricalIncomeRecordId,
                   workspaceId: workspace.id,
                   name: input.incomeLabel,
+                  ...(assetAccount ? { accountId: assetAccount.id } : {}),
                   amountCents: cents,
                   receivedDate: today,
                   provenance: "user-entered" as const,
@@ -729,6 +730,9 @@ export function AccountsManager() {
                       }
                     : {}),
                   transactionType: input.transactionType,
+                  ...(input.personPaymentPurpose
+                    ? { personPaymentPurpose: input.personPaymentPurpose }
+                    : {}),
                   ...(billDefinition
                     ? { definitionId: billDefinition.id }
                     : {}),
@@ -743,7 +747,13 @@ export function AccountsManager() {
                         ? "Card or loan payment"
                         : input.transactionType === "savings-contribution"
                           ? "Savings or investment contribution"
-                          : `${input.transactionType === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[spendingCategory]}`,
+                          : input.transactionType === "person-payment"
+                            ? input.personPaymentPurpose === "gift"
+                              ? "Gift sent"
+                              : input.personPaymentPurpose === "pay-someone"
+                                ? "Payment sent"
+                                : "Money sent"
+                            : `${input.transactionType === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[spendingCategory]}`,
                   amountCents: cents,
                   category: billDefinition?.category ?? spendingCategory,
                   nature: billDefinition?.nature ?? ("variable" as const),
