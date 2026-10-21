@@ -1083,6 +1083,41 @@ select {
   background: var(--surface-raised);
 }
 
+.expected-income-card > summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.expected-income-card > p {
+  margin: 0.65rem 0;
+  color: var(--muted);
+}
+
+.expected-income-card ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.expected-income-card li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.expected-income-card li > span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.expected-income-card li > span:last-child {
+  justify-items: end;
+}
+
 .action-menu {
   position: relative;
 }

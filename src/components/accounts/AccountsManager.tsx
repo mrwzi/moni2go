@@ -926,6 +926,23 @@ export function AccountsManager() {
     }
   }
 
+  async function removeIncomeSchedule(id: IncomeSourceId) {
+    const current = activeWorkspace;
+    const source = current.incomeSources.find((item) => item.id === id);
+    if (!source) return;
+    const now = new Date().toISOString();
+    try {
+      await save({
+        ...current,
+        updatedAt: now,
+        incomeSources: current.incomeSources.filter((item) => item.id !== id),
+      });
+      setMessage(`${source.name} future schedule removed.`);
+    } catch {
+      setMessage("The future income schedule could not be removed.");
+    }
+  }
+
   async function remove(id: string, accountKind: "asset" | "liability") {
     if (!workspace) return;
     const now = new Date().toISOString();
@@ -1217,6 +1234,40 @@ export function AccountsManager() {
         <p className="save-message" role="status">
           {message}
         </p>
+      )}
+
+      {workspace && workspace.incomeSources.length > 0 && (
+        <details className="app-card expected-income-card">
+          <summary>Expected income</summary>
+          <p>
+            Future dates used by forecasts. Income received is recorded
+            separately in transaction history.
+          </p>
+          <ul>
+            {workspace.incomeSources.map((source) => (
+              <li key={source.id}>
+                <span>
+                  <strong>{source.name}</strong>
+                  <small>Starts {source.bounds.startDate}</small>
+                </span>
+                <span>
+                  <strong>
+                    {source.defaultAmountCents === undefined
+                      ? "Amount unknown"
+                      : formatCad(source.defaultAmountCents)}
+                  </strong>
+                  <button
+                    className="danger-link"
+                    type="button"
+                    onClick={() => void removeIncomeSchedule(source.id)}
+                  >
+                    Remove schedule
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
       {workspace && <TransactionHistory workspace={workspace} save={save} />}

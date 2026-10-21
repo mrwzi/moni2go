@@ -588,6 +588,15 @@ test("records received income once and optionally schedules future paydays", asy
   await expect(
     page.getByRole("region", { name: "Financial outlook" }),
   ).toContainText("$500.00");
+  await page.goto("/accounts");
+  await page.getByText("Expected income").click();
+  await page.getByRole("button", { name: "Remove schedule" }).click();
+  await expect(
+    page.getByText("Paycheque future schedule removed."),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Expected income")).toHaveCount(0);
+  await expect(page.getByText("$600.00").first()).toBeVisible();
 });
 
 test("records money in and money out against an existing account", async ({
