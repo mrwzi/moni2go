@@ -5,6 +5,7 @@ import { useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
   deriveNetWorthCents,
+  deriveInvestmentAssetsCents,
   deriveSpendableCashCents,
   deriveTotalOwnedCents,
   deriveTotalLiabilitiesCents,
@@ -190,12 +191,25 @@ function HomeDashboardContent() {
           <strong>{formatCad(deriveNetWorthCents(assets, liabilities))}</strong>
         </div>
         <div>
-          <span>Total owned</span>
-          <strong>
-            {formatCad(deriveTotalOwnedCents(assets, liabilities))}
-          </strong>
+          <span>Spent this month</span>
+          <strong>{formatCad(spending.spentThisMonthCents)}</strong>
         </div>
       </section>
+      <details className="account-more-totals home-asset-details">
+        <summary>Asset details</summary>
+        <section className="account-totals" aria-label="Asset details">
+          <div>
+            <span>Investments &amp; crypto</span>
+            <strong>{formatCad(deriveInvestmentAssetsCents(assets))}</strong>
+          </div>
+          <div>
+            <span>Total owned</span>
+            <strong>
+              {formatCad(deriveTotalOwnedCents(assets, liabilities))}
+            </strong>
+          </div>
+        </section>
+      </details>
       <section className="app-card home-next-step" aria-label="Money guidance">
         <p className="eyebrow">Next useful step</p>
         <h2 id="home-next-step-heading">{recommendation.title}</h2>

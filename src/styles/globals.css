@@ -1067,6 +1067,22 @@ select {
   white-space: nowrap;
 }
 
+.account-collapse-button {
+  width: 2.25rem;
+  min-width: 2.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.account-collapse-button:hover,
+.account-collapse-button:focus-visible {
+  color: var(--accent);
+  background: var(--surface-raised);
+}
+
 .action-menu {
   position: relative;
 }

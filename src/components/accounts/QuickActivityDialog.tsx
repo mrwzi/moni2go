@@ -3,7 +3,11 @@
 import { useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import type { AccountGroup } from "../../v2/domain/account-groups";
-import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
+import {
+  isSpendableCashAccount,
+  type AssetAccount,
+  type LiabilityAccount,
+} from "../../v2/domain/accounts";
 import type {
   ExpenseDefinition,
   ExpenseTransactionType,
@@ -35,6 +39,9 @@ export type QuickActivityInput = Readonly<{
   principalAmount?: string;
   definitionId?: string;
   personPaymentPurpose?: PersonPaymentPurpose;
+  saveIncomeSchedule?: boolean;
+  incomeFrequency?: "weekly" | "biweekly" | "monthly";
+  nextIncomeDate?: string;
 }>;
 
 const UNTRACKED_ACCOUNT_VALUE = "untracked-owned-account";
@@ -82,9 +89,7 @@ export function QuickActivityDialog({
   const activeDebts = liabilityAccounts.filter(
     (account) => account.status === "active" && account.currentBalanceCents > 0,
   );
-  const firstAsset =
-    accounts.find((account) => account.spendability === "spendable") ??
-    accounts[0];
+  const firstAsset = accounts.find(isSpendableCashAccount) ?? accounts[0];
   const [accountId, setAccountId] = useState(
     firstAsset?.id ??
       (kind === "expense" ? creditAccounts[0]?.id : undefined) ??
@@ -92,6 +97,11 @@ export function QuickActivityDialog({
   );
   const [amount, setAmount] = useState("");
   const [incomeLabel, setIncomeLabel] = useState<IncomeLabel>("Paycheque");
+  const [saveIncomeSchedule, setSaveIncomeSchedule] = useState(false);
+  const [incomeFrequency, setIncomeFrequency] = useState<
+    "weekly" | "biweekly" | "monthly"
+  >("biweekly");
+  const [nextIncomeDate, setNextIncomeDate] = useState("");
   const [spendingCategory, setSpendingCategory] =
     useState<BudgetCategoryKey>("groceries");
   const [expenseType, setExpenseType] = useState<
@@ -178,6 +188,9 @@ export function QuickActivityDialog({
       ...(kind === "expense" && expenseType === "person-payment"
         ? { personPaymentPurpose }
         : {}),
+      ...(kind === "income" && saveIncomeSchedule
+        ? { saveIncomeSchedule, incomeFrequency, nextIncomeDate }
+        : {}),
     });
     setError(result);
     if (result) {
@@ -251,15 +264,18 @@ export function QuickActivityDialog({
           />
 
           {kind === "income" && (
-            <MoneySelect
-              label="Income type"
-              value={incomeLabel}
-              options={INCOME_LABELS.map((option) => ({
-                value: option,
-                label: option,
-              }))}
-              onChange={setIncomeLabel}
-            />
+            <>
+              <MoneySelect
+                label="Income type"
+                value={incomeLabel}
+                options={INCOME_LABELS.map((option) => ({
+                  value: option,
+                  label: option,
+                }))}
+                onChange={setIncomeLabel}
+                hint="Enter the amount that actually reached your account. moni2go does not calculate taxes."
+              />
+            </>
           )}
 
           {kind === "expense" && (
@@ -449,6 +465,54 @@ export function QuickActivityDialog({
                 />
               </span>
             </label>
+          )}
+
+          {kind === "income" && (
+            <details className="optional-note income-schedule-fields">
+              <summary>
+                Future paydays <span>(optional)</span>
+              </summary>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={saveIncomeSchedule}
+                  onChange={(event) => {
+                    setSaveIncomeSchedule(event.target.checked);
+                    setError(null);
+                  }}
+                />
+                Save a recurring payday schedule
+              </label>
+              {saveIncomeSchedule && (
+                <>
+                  <MoneySelect
+                    label="How often?"
+                    value={incomeFrequency}
+                    options={[
+                      { value: "weekly", label: "Every week" },
+                      { value: "biweekly", label: "Every 2 weeks" },
+                      { value: "monthly", label: "Every month" },
+                    ]}
+                    onChange={setIncomeFrequency}
+                  />
+                  <label>
+                    Next expected payday
+                    <input
+                      type="date"
+                      value={nextIncomeDate}
+                      onChange={(event) => {
+                        setNextIncomeDate(event.target.value);
+                        setError(null);
+                      }}
+                    />
+                  </label>
+                  <small>
+                    Only future dates are forecast. This paycheque is recorded
+                    once as income received.
+                  </small>
+                </>
+              )}
+            </details>
           )}
 
           {kind !== "income" && (

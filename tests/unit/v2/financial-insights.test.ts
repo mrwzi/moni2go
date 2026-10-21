@@ -389,6 +389,33 @@ describe("financial insights", () => {
     );
   });
 
+  it("does not present cash as covered when everyday spending is unknown", () => {
+    const data = analyzeFinancialWorkspace(
+      workspace({
+        assetAccounts: [chequing(500_000)],
+        incomeSources: [
+          {
+            id: "income-1",
+            workspaceId: "workspace-1",
+            name: "Known pay",
+            defaultAmountCents: 100_000,
+            recurrence: { kind: "monthly", nominalDay: 30 },
+            bounds: { startDate: "2026-10-30" },
+            provenance: "user-entered",
+            createdAt: now,
+            updatedAt: now,
+          },
+        ] as never,
+      }),
+      today,
+    );
+    expect(data.forecasts[30].estimatedOutflowCents).toBeNull();
+    expect(data.recommendation).toMatchObject({
+      title: "Complete your forecast",
+      amountCents: null,
+    });
+  });
+
   it("keeps a missed recurring occurrence overdue", () => {
     const result = classifyObligations(
       workspace({ expenseDefinitions: [bill("rent", 100_000, 10)] as never }),

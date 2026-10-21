@@ -6,7 +6,10 @@ import {
   BUDGET_CATEGORIES,
   type BudgetCategoryKey,
 } from "../../v2/domain/budget-categories";
-import { parseCalendarDate } from "../../v2/domain/calendar";
+import {
+  compareCalendarDates,
+  parseCalendarDate,
+} from "../../v2/domain/calendar";
 import type {
   DatedExpenseEvent,
   ExpenseTransactionType,
@@ -37,7 +40,7 @@ type Activity =
 type BalanceChoice = "balances" | "record-only";
 const eventType = (event: DatedExpenseEvent): ExpenseTransactionType =>
   event.transactionType ?? "purchase";
-const activityDate = (activity: Activity): string =>
+const activityDate = (activity: Activity): CalendarDate =>
   activity.kind === "income"
     ? activity.record.receivedDate
     : (activity.record.actualDate ?? activity.record.dueDate);
@@ -111,13 +114,24 @@ export function TransactionHistory({
   )
     return null;
 
+  const isLegacyUnlinkedIncome = (activity: Activity) =>
+    activity.kind === "income" && !activity.record.accountId;
   const hasLaterAccountChanges = (activity: Activity) =>
     affectedTransactionAccountIds(activity.record).some((id) => {
       const account = [
         ...workspace.assetAccounts,
         ...workspace.liabilityAccounts,
       ].find((candidate) => candidate.id === id);
-      return Boolean(account && account.updatedAt > activity.record.updatedAt);
+      if (!account) return false;
+      const balanceDate =
+        "valueAsOfDate" in account
+          ? account.valueAsOfDate
+          : account.balanceAsOfDate;
+      return (
+        compareCalendarDates(balanceDate, activityDate(activity)) > 0 ||
+        (balanceDate === activityDate(activity) &&
+          account.updatedAt > activity.record.updatedAt)
+      );
     });
   function startEdit(activity: Activity) {
     setEditing(activity);
@@ -179,7 +193,9 @@ export function TransactionHistory({
           updatedAt: now,
         };
         let next = workspace;
-        if (choice === "balances") {
+        // Legacy income without an account link may already be reflected in a
+        // manually entered balance. Linking it must never credit the account.
+        if (choice === "balances" && editing.record.accountId) {
           next = applyIncomeBalanceEffect(
             next,
             editing.record,
@@ -582,34 +598,52 @@ export function TransactionHistory({
                   />
                 </label>
               )}
-              {hasLaterAccountChanges(editing) && (
+              {isLegacyUnlinkedIncome(editing) ? (
+                <p className="form-warning">
+                  This older income has no account link. Linking it will update
+                  the record only and will not add the income again.
+                </p>
+              ) : hasLaterAccountChanges(editing) ? (
                 <p className="form-warning">
                   This account changed after this transaction. Choose “record
                   only” if you manually corrected its balance.
                 </p>
-              )}
+              ) : null}
               {error && (
                 <p className="form-error" role="alert">
                   {error}
                 </p>
               )}
               <div className="transaction-balance-actions">
-                <button
-                  className="button button-primary"
-                  type="button"
-                  disabled={pending}
-                  onClick={() => void saveEdit("balances")}
-                >
-                  Save and adjust balances
-                </button>
-                <button
-                  className="button button-secondary"
-                  type="button"
-                  disabled={pending}
-                  onClick={() => void saveEdit("record-only")}
-                >
-                  Save record only
-                </button>
+                {isLegacyUnlinkedIncome(editing) ? (
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={pending}
+                    onClick={() => void saveEdit("record-only")}
+                  >
+                    Link income record
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      disabled={pending}
+                      onClick={() => void saveEdit("balances")}
+                    >
+                      Save and adjust balances
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      disabled={pending}
+                      onClick={() => void saveEdit("record-only")}
+                    >
+                      Save record only
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </section>

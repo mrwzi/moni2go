@@ -5,6 +5,7 @@ import {
   DEFAULT_STALE_ACCOUNT_DAYS,
   deriveNetWorthCents,
   deriveLiabilityCreditsCents,
+  deriveInvestmentAssetsCents,
   deriveSpendableCashCents,
   deriveTotalAssetsCents,
   deriveTotalLiabilitiesCents,
@@ -236,6 +237,27 @@ describe("manual financial accounts", () => {
     ];
     expect(deriveSpendableCashCents(accounts)).toBe(142_000);
     expect(deriveTotalAssetsCents(accounts)).toBe(642_000);
+  });
+
+  it("never treats legacy crypto or investment flags as available cash", () => {
+    const accounts = [
+      typedAsset(),
+      typedAsset({
+        id: "legacy-crypto",
+        type: "crypto",
+        spendability: "spendable",
+        currentValueCents: 310_600,
+      }),
+      typedAsset({
+        id: "legacy-investment",
+        type: "non-registered-investment",
+        spendability: "spendable",
+        currentValueCents: 13_900,
+      }),
+    ];
+    expect(deriveSpendableCashCents(accounts)).toBe(142_000);
+    expect(deriveInvestmentAssetsCents(accounts)).toBe(324_500);
+    expect(deriveTotalAssetsCents(accounts)).toBe(466_500);
   });
 
   it("applies manual money-in and money-out activity in exact cents", () => {

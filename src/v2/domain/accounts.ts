@@ -111,15 +111,44 @@ export function monthlyEquivalentDebtPayment(
 const sum = (values: readonly V2Cents[]): V2Cents =>
   values.reduce((total, value) => addCents(total, value), asV2Cents(0));
 
+const NON_SPENDABLE_ASSET_TYPES = new Set<AssetAccountType>([
+  "tfsa",
+  "rrsp",
+  "fhsa",
+  "non-registered-investment",
+  "crypto",
+]);
+
+export function isSpendableCashAccount(account: AssetAccount): boolean {
+  return (
+    account.status === "active" &&
+    account.spendability === "spendable" &&
+    !NON_SPENDABLE_ASSET_TYPES.has(account.type)
+  );
+}
+
+export function isInvestmentAssetAccount(account: AssetAccount): boolean {
+  return (
+    account.status === "active" && NON_SPENDABLE_ASSET_TYPES.has(account.type)
+  );
+}
+
 export function deriveSpendableCashCents(
   accounts: readonly AssetAccount[],
 ): V2Cents {
   return sum(
     accounts
-      .filter(
-        (account) =>
-          account.status === "active" && account.spendability === "spendable",
-      )
+      .filter(isSpendableCashAccount)
+      .map((account) => account.currentValueCents),
+  );
+}
+
+export function deriveInvestmentAssetsCents(
+  accounts: readonly AssetAccount[],
+): V2Cents {
+  return sum(
+    accounts
+      .filter(isInvestmentAssetAccount)
       .map((account) => account.currentValueCents),
   );
 }

@@ -13,6 +13,7 @@ import {
   applyAssetAccountActivity,
   applyLiabilityAccountActivity,
   deriveNetWorthCents,
+  deriveInvestmentAssetsCents,
   deriveSpendableCashCents,
   deriveTotalOwnedCents,
   deriveTotalLiabilitiesCents,
@@ -26,14 +27,20 @@ import {
   type Spendability,
 } from "../../v2/domain/accounts";
 import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
-import { parseCalendarDate } from "../../v2/domain/calendar";
+import {
+  calendarDateParts,
+  isoWeekday,
+  parseCalendarDate,
+} from "../../v2/domain/calendar";
 import { classifyObligations } from "../../v2/domain/financial-insights";
 import { MAX_V2_CENTS, asV2Cents } from "../../v2/domain/money";
 import type {
   AccountGroupId,
   AssetAccountId,
+  CalendarDate,
   ExpenseEventId,
   HistoricalIncomeRecordId,
+  IncomeSourceId,
   LiabilityAccountId,
 } from "../../v2/domain/types";
 import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
@@ -82,6 +89,18 @@ const paymentFrequencyLabels: Record<DebtPaymentFrequency, string> = {
   semimonthly: "Twice a month",
   monthly: "Every month",
 };
+
+function defaultSpendability(type: AssetAccountType): Spendability {
+  return [
+    "tfsa",
+    "rrsp",
+    "fhsa",
+    "non-registered-investment",
+    "crypto",
+  ].includes(type)
+    ? "non-cash"
+    : "spendable";
+}
 
 function providerNameLabel(type: AccountGroupType): string {
   if (type === "bank") return "Bank name";
@@ -180,6 +199,9 @@ export function AccountsManager() {
   const [balanceUpdateAssetId, setBalanceUpdateAssetId] = useState<
     string | null
   >(null);
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const handledDebtEditIntent = useRef(false);
   const assets = workspace?.assetAccounts ?? [];
   const liabilities = workspace?.liabilityAccounts ?? [];
@@ -222,12 +244,15 @@ export function AccountsManager() {
     } else if (type === "crypto-platform") {
       setKind("asset");
       setAssetType("crypto");
+      setSpendability("non-cash");
     } else if (type === "investment-platform") {
       setKind("asset");
       setAssetType("tfsa");
+      setSpendability("non-cash");
     } else if (type === "bank") {
       setKind("asset");
       setAssetType("chequing");
+      setSpendability("spendable");
     }
   }
 
@@ -539,6 +564,25 @@ export function AccountsManager() {
     );
     if (amount === null || amount <= 0)
       return "Enter an amount greater than zero.";
+    let nextIncomeDate: CalendarDate | undefined;
+    if (input.kind === "income" && input.saveIncomeSchedule) {
+      try {
+        nextIncomeDate = parseCalendarDate(input.nextIncomeDate ?? "");
+      } catch {
+        return "Choose a valid next payday.";
+      }
+      if (nextIncomeDate <= today)
+        return "The next payday must be after the income received today.";
+      if (
+        workspace.incomeSources.some(
+          (source) =>
+            source.name === input.incomeLabel &&
+            source.defaultAmountCents === asV2Cents(amount) &&
+            source.bounds.startDate === nextIncomeDate,
+        )
+      )
+        return "This future payday schedule is already saved.";
+    }
     const canUseLiability =
       input.kind === "expense" &&
       (input.transactionType === "purchase" ||
@@ -711,6 +755,39 @@ export function AccountsManager() {
                   updatedAt: now,
                 },
               ],
+              incomeSources:
+                input.saveIncomeSchedule && nextIncomeDate
+                  ? [
+                      ...workspace.incomeSources,
+                      {
+                        id: crypto.randomUUID() as IncomeSourceId,
+                        workspaceId: workspace.id,
+                        name: input.incomeLabel,
+                        defaultAmountCents: cents,
+                        recurrence:
+                          input.incomeFrequency === "weekly"
+                            ? {
+                                kind: "weekly" as const,
+                                intervalWeeks: 1,
+                                weekday: isoWeekday(nextIncomeDate),
+                              }
+                            : input.incomeFrequency === "monthly"
+                              ? {
+                                  kind: "monthly" as const,
+                                  nominalDay:
+                                    calendarDateParts(nextIncomeDate).day,
+                                }
+                              : {
+                                  kind: "biweekly" as const,
+                                  anchorDate: nextIncomeDate,
+                                },
+                        bounds: { startDate: nextIncomeDate },
+                        provenance: "user-entered" as const,
+                        createdAt: now,
+                        updatedAt: now,
+                      },
+                    ]
+                  : workspace.incomeSources,
             }
           : {
               expenseEvents: [
@@ -926,7 +1003,7 @@ export function AccountsManager() {
         <>
           <section className="account-totals" aria-label="Account totals">
             <div>
-              <span>Spendable</span>
+              <span>Available cash</span>
               <strong>{formatCad(deriveSpendableCashCents(assets))}</strong>
             </div>
             <div>
@@ -949,7 +1026,13 @@ export function AccountsManager() {
                 </strong>
               </div>
               <div>
-                <span>Assets</span>
+                <span>Investments &amp; crypto</span>
+                <strong>
+                  {formatCad(deriveInvestmentAssetsCents(assets))}
+                </strong>
+              </div>
+              <div>
+                <span>Total owned</span>
                 <strong>
                   {formatCad(deriveTotalOwnedCents(assets, liabilities))}
                 </strong>
@@ -1042,6 +1125,7 @@ export function AccountsManager() {
           const groupLiabilities = liabilities.filter(
             (account) => account.groupId === group.id,
           );
+          const collapsed = collapsedGroupIds.has(group.id);
           return (
             <section className="account-group-card" key={group.id}>
               <header>
@@ -1052,6 +1136,22 @@ export function AccountsManager() {
                   </p>
                 </div>
                 <div className="account-group-actions">
+                  <button
+                    className="account-collapse-button"
+                    type="button"
+                    aria-expanded={!collapsed}
+                    aria-label={`${collapsed ? "Show" : "Hide"} accounts for ${group.name}`}
+                    onClick={() => {
+                      setCollapsedGroupIds((current) => {
+                        const next = new Set(current);
+                        if (next.has(group.id)) next.delete(group.id);
+                        else next.add(group.id);
+                        return next;
+                      });
+                    }}
+                  >
+                    <span aria-hidden="true">{collapsed ? "▸" : "▾"}</span>
+                  </button>
                   <button
                     className="add-account-button"
                     type="button"
@@ -1070,15 +1170,17 @@ export function AccountsManager() {
                   />
                 </div>
               </header>
-              <AccountRows
-                assets={groupAssets}
-                liabilities={groupLiabilities}
-                onRemove={remove}
-                onUpdateAsset={(account) => {
-                  setBalanceUpdateAssetId(account.id);
-                }}
-                onEditLiability={editLiability}
-              />
+              {!collapsed && (
+                <AccountRows
+                  assets={groupAssets}
+                  liabilities={groupLiabilities}
+                  onRemove={remove}
+                  onUpdateAsset={(account) => {
+                    setBalanceUpdateAssetId(account.id);
+                  }}
+                  onEditLiability={editLiability}
+                />
+              )}
             </section>
           );
         })}
@@ -1290,9 +1392,12 @@ export function AccountsManager() {
                       aria-label="Account type"
                       value={kind === "asset" ? assetType : liabilityType}
                       onChange={(event) => {
-                        if (kind === "asset")
-                          setAssetType(event.target.value as AssetAccountType);
-                        else
+                        if (kind === "asset") {
+                          const nextType = event.target
+                            .value as AssetAccountType;
+                          setAssetType(nextType);
+                          setSpendability(defaultSpendability(nextType));
+                        } else
                           setLiabilityType(
                             event.target.value as LiabilityAccountType,
                           );

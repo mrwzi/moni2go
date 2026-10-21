@@ -521,6 +521,13 @@ test("adds and completely removes a crypto provider", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "MEXC" })).toBeVisible();
   await expect(page.getByText("Crypto exchange or wallet")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Account totals" }),
+  ).toContainText("$0.00");
+  await page.getByText("More totals").click();
+  await expect(
+    page.getByRole("region", { name: "More account totals" }),
+  ).toContainText("$144.47");
   const cryptoMenu = page.getByLabel("More actions for Crypto");
   await cryptoMenu.click();
   await expect(
@@ -543,6 +550,44 @@ test("adds and completely removes a crypto provider", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "MEXC" })).toHaveCount(0);
   await expect(page.getByText("MEXC removed.")).toBeVisible();
+});
+
+test("records received income once and optionally schedules future paydays", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Income bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("100");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Add income" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add income" });
+  await expect(dialog).toContainText(
+    "amount that actually reached your account",
+  );
+  await dialog.getByLabel("Amount").fill("500");
+  await dialog.getByText("Future paydays").click();
+  await dialog.getByLabel("Save a recurring payday schedule").check();
+  await chooseMoneyOption(page, "How often?", "Every month");
+  const nextPayday = await page.evaluate(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return `${date.getFullYear().toString()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+  });
+  await dialog.getByLabel("Next expected payday").fill(nextPayday);
+  await dialog.getByRole("button", { name: "Add income" }).click();
+
+  await expect(page.getByText("$500.00 added to Chequing.")).toBeVisible();
+  await expect(page.getByText("$600.00").first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("$600.00").first()).toBeVisible();
+  await page.goto("/");
+  await expect(
+    page.getByRole("region", { name: "Financial outlook" }),
+  ).toContainText("$500.00");
 });
 
 test("records money in and money out against an existing account", async ({

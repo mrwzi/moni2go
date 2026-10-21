@@ -869,6 +869,16 @@ function chooseRecommendation(
       actionHref: "/accounts",
     };
   }
+  if (forecast.estimatedOutflowCents === null) {
+    return {
+      priority: 6,
+      title: "Complete your forecast",
+      amountCents: null,
+      explanation: "Add regular bills or more spending history.",
+      actionLabel: "Add missing activity",
+      actionHref: "/accounts",
+    };
+  }
   return {
     priority: 5,
     title: "Your next 30 days look covered",
