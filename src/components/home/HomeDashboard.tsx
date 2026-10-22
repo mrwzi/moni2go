@@ -382,31 +382,24 @@ function HomeDashboardContent() {
               </svg>
               <div>
                 <strong>{formatCad(spending.spentThisMonthCents)}</strong>
-                <span>
-                  {isOverBudget && budgetUsagePercent !== null
-                    ? `${budgetUsagePercent.toString()}% of budget`
-                    : "spent"}
-                </span>
               </div>
             </div>
             <div className="home-spending-breakdown">
-              <div className="home-spending-remaining">
-                <span>
-                  {!hasSpendingPlan
-                    ? "No budget"
-                    : spending.planDifferenceCents < 0
-                      ? "Over budget"
-                      : "Budget left"}
-                </span>
-                <strong
-                  className={
-                    spending.planDifferenceCents < 0 ? "money-negative" : ""
-                  }
-                >
-                  {hasSpendingPlan
-                    ? formatCad(Math.abs(spending.planDifferenceCents))
-                    : "—"}
-                </strong>
+              <div className="home-spending-budget-summary">
+                <div>
+                  <span>Overall monthly budget</span>
+                  <strong className={isOverBudget ? "money-negative" : ""}>
+                    {budgetUsagePercent === null
+                      ? "Not set"
+                      : `${budgetUsagePercent.toString()}% used`}
+                  </strong>
+                </div>
+                {hasSpendingPlan && (
+                  <p className={isOverBudget ? "money-negative" : ""}>
+                    {formatCad(Math.abs(spending.planDifferenceCents))} overall
+                    {isOverBudget ? " over" : " left"}
+                  </p>
+                )}
               </div>
               <ul>
                 {spending.topCategories.map((item) => (
@@ -421,6 +414,7 @@ function HomeDashboardContent() {
                   className="home-category-warnings"
                   aria-label="Categories over budget"
                 >
+                  <small>Category overages</small>
                   {spending.meaningfulOverages.slice(0, 2).map((item) => (
                     <p key={item.category}>
                       <strong>{BUDGET_CATEGORIES[item.category]}</strong>

@@ -886,6 +886,61 @@ test("reduces cash and tracked loan debt with one simple payment", async ({
   ).toContainText("Owed $860.00");
 });
 
+test("home spending and outlook stay readable from 320px through desktop", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Responsive bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("500");
+  await page.getByRole("button", { name: "Save account" }).click();
+  await page.getByRole("button", { name: "Record expense" }).click();
+  const expense = page.getByRole("dialog", { name: "Record expense" });
+  await chooseMoneyOption(page, "What was it for?", "Restaurants / eating out");
+  await expense.getByLabel("Amount").fill("25");
+  await expense.getByRole("button", { name: "Save", exact: true }).click();
+  await page.goto("/");
+
+  for (const width of [320, 360, 375, 390, 430, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const donut = page.locator(".home-spending-donut");
+    const amount = donut.getByText("$25.00", { exact: true });
+    const breakdown = page.locator(".home-spending-breakdown");
+    await expect(amount).toBeVisible();
+    await expect(
+      page.getByText("Restaurants / eating out", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("None scheduled", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/% of budget/)).toHaveCount(0);
+    const [donutBox, amountBox, breakdownBox] = await Promise.all([
+      donut.boundingBox(),
+      amount.boundingBox(),
+      breakdown.boundingBox(),
+    ]);
+    if (!donutBox || !amountBox || !breakdownBox)
+      throw new Error(
+        `Home layout bounds unavailable at ${width.toString()}px`,
+      );
+    expect(amountBox.x).toBeGreaterThan(donutBox.x + 8);
+    expect(amountBox.x + amountBox.width).toBeLessThan(
+      donutBox.x + donutBox.width - 8,
+    );
+    if (width <= 520)
+      expect(breakdownBox.y).toBeGreaterThanOrEqual(
+        donutBox.y + donutBox.height - 1,
+      );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+});
+
 test("adds and prioritizes a recurring household bill", async ({ page }) => {
   const longPaymentName =
     "Family transportation loan with an unusually long account name";

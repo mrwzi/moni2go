@@ -468,6 +468,7 @@ select {
   margin-top: 0.2rem;
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .outlook-primary {
@@ -4574,11 +4575,6 @@ main {
   stroke: var(--danger);
 }
 
-.home-spending-donut-over > div span {
-  color: var(--danger);
-  font-weight: 750;
-}
-
 .home-spending-donut-unplanned .home-spending-track {
   stroke-dasharray: 5 4;
 }
@@ -4591,8 +4587,7 @@ main {
   text-align: center;
 }
 
-.home-spending-donut strong,
-.home-spending-donut span {
+.home-spending-donut strong {
   display: block;
 }
 
@@ -4601,8 +4596,7 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
-.home-spending-donut span,
-.home-spending-remaining span,
+.home-spending-budget-summary span,
 .home-spending-breakdown small {
   color: var(--muted);
   font-size: 0.78rem;
@@ -4614,19 +4608,30 @@ main {
   gap: 0.4rem;
 }
 
-.home-spending-remaining {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
+.home-spending-budget-summary {
+  display: grid;
+  gap: 0.25rem;
   padding-bottom: 0.55rem;
   border-bottom: 1px solid var(--line);
 }
 
-.home-spending-remaining strong,
+.home-spending-budget-summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.home-spending-budget-summary strong,
 .home-spending-breakdown li strong {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.home-spending-budget-summary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .home-spending-breakdown ul {
@@ -4639,6 +4644,12 @@ main {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.home-spending-breakdown li span,
+.home-category-warnings p strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .home-category-warnings {
@@ -4658,6 +4669,11 @@ main {
   font-size: 0.78rem;
 }
 
+.home-category-warnings > small {
+  color: var(--muted);
+  font-weight: 750;
+}
+
 @media (max-width: 520px) {
   .outlook-data-warning {
     align-items: flex-start;
@@ -4666,12 +4682,11 @@ main {
   }
 
   .home-spending-layout {
-    align-items: start;
-    grid-template-columns: 6.25rem minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .home-spending-donut {
-    width: 6.25rem;
+    width: 7rem;
   }
 
   .home-spending-donut strong {
@@ -4682,19 +4697,27 @@ main {
     font-size: 0.82rem;
   }
 
-  .home-spending-remaining {
-    display: grid;
-    gap: 0.1rem;
-  }
-}
-
-@media (max-width: 350px) {
   .outlook-secondary {
     grid-template-columns: 1fr;
   }
 
-  .home-spending-layout {
-    grid-template-columns: 1fr;
+  .outlook-secondary > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .outlook-secondary strong {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 350px) {
+  .home-spending-budget-summary > div,
+  .home-spending-breakdown li,
+  .home-category-warnings p {
+    gap: 0.5rem;
   }
 }
 

@@ -239,4 +239,17 @@ test("shows current spending separately from completed-month averages", async ({
   await expect(guidance).toContainText(
     "Restaurants / eating out: $145.00 spent of $100.00 planned.",
   );
+  await page.goto("/");
+  const donut = page.locator(".home-spending-donut");
+  await expect(donut).toContainText("$220.00");
+  await expect(donut.getByText(/%/)).toHaveCount(0);
+  await expect(page.locator(".home-spending-budget-summary")).toContainText(
+    "110% used",
+  );
+  await expect(page.locator(".home-spending-budget-summary")).toContainText(
+    "$20.00 overall over",
+  );
+  await expect(page.locator(".home-category-warnings")).toContainText(
+    "Category overages",
+  );
 });
