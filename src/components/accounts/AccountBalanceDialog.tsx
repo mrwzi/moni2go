@@ -149,7 +149,7 @@ export function AccountBalanceDialog({
             aria-busy={pending}
           >
             {pending && <span className="button-spinner" aria-hidden="true" />}
-            <span>{pending ? "Saving…" : "Save corrected balance"}</span>
+            <span>{pending ? "Saving…" : "Save"}</span>
           </button>
         </form>
       </section>

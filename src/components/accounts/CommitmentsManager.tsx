@@ -624,11 +624,7 @@ export function CommitmentsManager({
                   type="submit"
                   disabled={pending}
                 >
-                  {pending
-                    ? "Saving…"
-                    : editingId
-                      ? "Save changes"
-                      : "Save bill"}
+                  {pending ? "Saving…" : "Save"}
                 </button>
               </div>
             </form>

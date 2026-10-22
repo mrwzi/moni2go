@@ -617,6 +617,15 @@ export function AccountsManager() {
       return "Choose the account you paid.";
     if (
       input.kind === "move" &&
+      input.transactionType === "credit-card-payment" &&
+      debtAccount &&
+      debtAccount.type !== "credit-card" &&
+      debtAccount.type !== "line-of-credit" &&
+      amount > debtAccount.currentBalanceCents
+    )
+      return `Enter no more than the ${formatCad(debtAccount.currentBalanceCents)} currently tracked for this loan.`;
+    if (
+      input.kind === "move" &&
       !input.destinationAccountId &&
       !input.transferToUntrackedAccount &&
       !input.debtAccountId
@@ -654,22 +663,6 @@ export function AccountsManager() {
     )
       return `Enter no more than the ${formatCad(billObligation.remainingCents)} still due.`;
 
-    const principalAmount = input.principalAmount
-      ? parseMoney(input.principalAmount, false)
-      : null;
-    if (
-      input.loanPrincipalAllocation === "split" &&
-      !input.principalAmount?.trim()
-    )
-      return "Enter the principal portion shown by your lender.";
-    if (
-      input.principalAmount &&
-      (principalAmount === null ||
-        principalAmount <= 0 ||
-        principalAmount > amount)
-    )
-      return "Principal must be greater than $0 and no more than the payment.";
-
     const now = new Date().toISOString();
     const cents = asV2Cents(amount);
     try {
@@ -695,14 +688,7 @@ export function AccountsManager() {
             now,
           )
         : undefined;
-      const debtReduction = debtAccount
-        ? debtAccount.type === "credit-card" ||
-          debtAccount.type === "line-of-credit"
-          ? cents
-          : principalAmount === null
-            ? null
-            : asV2Cents(principalAmount)
-        : null;
+      const debtReduction = debtAccount ? cents : null;
       const updatedDebtAccount =
         debtAccount && debtReduction !== null
           ? applyLiabilityAccountActivity(
@@ -865,9 +851,7 @@ export function AccountsManager() {
                 ? `${formatCad(cents)} moved from ${accountName} to another account you own.`
                 : `${formatCad(cents)} moved from ${accountName} to ${destination?.name ?? "the destination account"}.`
               : input.transactionType === "credit-card-payment"
-                ? debtAccount && debtReduction === null
-                  ? `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount.name}. Its balance was not changed because the principal allocation is unknown.`
-                  : `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount?.name ?? "the debt account"}.`
+                ? `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount?.name ?? "the debt account"}. Both tracked balances were updated.`
                 : input.transactionType === "purchase"
                   ? `${formatCad(cents)} spending recorded from ${accountName}.`
                   : `${formatCad(cents)} contribution recorded from ${accountName}.`,

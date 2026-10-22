@@ -145,7 +145,7 @@ test("shows current spending separately from completed-month averages", async ({
     await page.getByRole("button", { name: "Record expense" }).click();
     await chooseMoneyOption(page, "What was it for?", "Groceries");
     await page.getByLabel("Amount").fill(amount);
-    await page.getByRole("button", { name: "Save expense" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     const transaction = page
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
@@ -155,13 +155,13 @@ test("shows current spending separately from completed-month averages", async ({
     await dialog
       .getByLabel("Date", { exact: true })
       .fill(completedDate(monthsAgo));
-    await dialog.getByRole("button", { name: "Save record only" }).click();
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
   }
 
   await page.getByRole("button", { name: "Record expense" }).click();
   await chooseMoneyOption(page, "What was it for?", "Groceries");
   await page.getByLabel("Amount").fill("75");
-  await page.getByRole("button", { name: "Save expense" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
 
   await page.goto("/plan");
   await page
@@ -211,7 +211,7 @@ test("shows current spending separately from completed-month averages", async ({
       "Restaurants / eating out",
     );
     await page.getByLabel("Amount").fill(amount);
-    await page.getByRole("button", { name: "Save expense" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     const transaction = page
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
@@ -221,12 +221,12 @@ test("shows current spending separately from completed-month averages", async ({
     await dialog
       .getByLabel("Date", { exact: true })
       .fill(completedDate(monthsAgo));
-    await dialog.getByRole("button", { name: "Save record only" }).click();
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
   }
   await page.getByRole("button", { name: "Record expense" }).click();
   await chooseMoneyOption(page, "What was it for?", "Restaurants / eating out");
   await page.getByLabel("Amount").fill("145");
-  await page.getByRole("button", { name: "Save expense" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
 
   await page.goto("/plan");
   const restaurants = page

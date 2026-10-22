@@ -15,7 +15,7 @@ import type {
   ExpenseTransactionType,
 } from "../../v2/domain/expenses";
 import type { HistoricalIncomeRecord } from "../../v2/domain/income";
-import { parseV2CadInput } from "../../v2/domain/money";
+import { asV2Cents, parseV2CadInput } from "../../v2/domain/money";
 import {
   affectedTransactionAccountIds,
   applyExpenseBalanceEffect,
@@ -25,7 +25,6 @@ import type { CalendarDate, FinancialEntityId } from "../../v2/domain/types";
 import type { FinancialWorkspace } from "../../v2/domain/workspace";
 import { SPENDING_CATEGORIES } from "./account-options";
 import { MoneySelect } from "./MoneySelect";
-import type { LoanPrincipalAllocation } from "./QuickActivityDialog";
 
 const TYPE_LABELS: Record<ExpenseTransactionType, string> = {
   purchase: "Purchase",
@@ -67,9 +66,6 @@ export function TransactionHistory({
   const [note, setNote] = useState("");
   const [accountId, setAccountId] = useState("");
   const [relatedAccountId, setRelatedAccountId] = useState("");
-  const [principalAmount, setPrincipalAmount] = useState("");
-  const [loanPrincipalAllocation, setLoanPrincipalAllocation] =
-    useState<LoanPrincipalAllocation>("unknown");
   const [accountFilter, setAccountFilter] = useState("all");
   const [showAll, setShowAll] = useState(false);
   const [pending, setPending] = useState(false);
@@ -150,36 +146,10 @@ export function TransactionHistory({
         ? (activity.record.relatedAccountId ?? "")
         : "",
     );
-    setPrincipalAmount(
-      activity.kind === "expense" && activity.record.principalAmountCents
-        ? (activity.record.principalAmountCents / 100).toFixed(2)
-        : "",
-    );
-    if (activity.kind === "expense") {
-      const type = eventType(activity.record);
-      const debt = workspace.liabilityAccounts.find(
-        (account) => account.id === activity.record.relatedAccountId,
-      );
-      if (
-        type === "credit-card-payment" &&
-        debt &&
-        debt.type !== "credit-card" &&
-        debt.type !== "line-of-credit"
-      ) {
-        const principal = activity.record.principalAmountCents;
-        setLoanPrincipalAllocation(
-          principal === undefined || principal === 0
-            ? "unknown"
-            : principal === activity.record.amountCents
-              ? "all"
-              : "split",
-        );
-      } else setLoanPrincipalAllocation("unknown");
-    }
     setError(null);
   }
 
-  async function saveEdit(choice: BalanceChoice) {
+  async function saveEdit() {
     if (!editing || pendingRef.current) return;
     const parsed = parseV2CadInput(amount);
     let parsedDate;
@@ -193,7 +163,6 @@ export function TransactionHistory({
       setError("Choose an account and enter an amount greater than $0.");
       return;
     }
-    const principal = principalAmount ? parseV2CadInput(principalAmount) : null;
     const editedDebt =
       editing.kind === "expense"
         ? workspace.liabilityAccounts.find(
@@ -206,23 +175,23 @@ export function TransactionHistory({
       editedDebt !== undefined &&
       editedDebt.type !== "credit-card" &&
       editedDebt.type !== "line-of-credit";
-    if (
+    const legacyUnknownLoanPayment =
       isInstallmentPayment &&
-      loanPrincipalAllocation === "split" &&
-      !principalAmount.trim()
-    ) {
-      setError("Enter the principal portion shown by your lender.");
-      return;
-    }
-    if (
-      principal &&
-      (!principal.ok || principal.cents <= 0 || principal.cents > parsed.cents)
-    ) {
+      (!editing.record.principalAmountCents ||
+        editing.record.principalAmountCents === 0);
+    if (!isLegacyUnlinkedIncome(editing) && hasLaterAccountChanges(editing)) {
       setError(
-        "Principal must be greater than $0 and no more than the payment.",
+        "This account was corrected after the transaction, so moni2go cannot safely change its balance. Correct the balance separately instead.",
       );
       return;
     }
+    if (
+      legacyUnknownLoanPayment &&
+      !window.confirm(
+        `Apply this recorded payment to the tracked loan balance? Cash will not be deducted again. The loan will decrease by ${formatCad(parsed.cents)}.`,
+      )
+    )
+      return;
     pendingRef.current = true;
     setPending(true);
     setError(null);
@@ -239,7 +208,7 @@ export function TransactionHistory({
         let next = workspace;
         // Legacy income without an account link may already be reflected in a
         // manually entered balance. Linking it must never credit the account.
-        if (choice === "balances" && editing.record.accountId) {
+        if (editing.record.accountId) {
           next = applyIncomeBalanceEffect(
             next,
             editing.record,
@@ -268,15 +237,22 @@ export function TransactionHistory({
         delete editingRecord.relatedAccountId;
         delete editingRecord.note;
         delete editingRecord.principalAmountCents;
+        const oldPrincipal = Number(
+          editing.record.principalAmountCents ?? editing.record.amountCents,
+        );
         const updatedPrincipal = isInstallmentPayment
-          ? loanPrincipalAllocation === "all"
+          ? legacyUnknownLoanPayment
             ? parsed.cents
-            : loanPrincipalAllocation === "split" && principal?.ok
-              ? principal.cents
-              : undefined
-          : principal?.ok
-            ? principal.cents
-            : undefined;
+            : asV2Cents(
+                Math.max(
+                  0,
+                  Math.min(
+                    parsed.cents,
+                    oldPrincipal + parsed.cents - editing.record.amountCents,
+                  ),
+                ),
+              )
+          : undefined;
         const updated: DatedExpenseEvent = {
           ...editingRecord,
           accountId: accountId as FinancialEntityId,
@@ -297,23 +273,20 @@ export function TransactionHistory({
           ...(note.trim() ? { note: note.trim() } : {}),
           updatedAt: now,
         };
-        let next = workspace;
-        if (choice === "balances") {
-          next = applyExpenseBalanceEffect(
-            next,
-            editing.record,
-            "reverse",
-            localToday(),
-            now,
-          );
-          next = applyExpenseBalanceEffect(
-            next,
-            updated,
-            "apply",
-            localToday(),
-            now,
-          );
-        }
+        let next = applyExpenseBalanceEffect(
+          workspace,
+          editing.record,
+          "reverse",
+          localToday(),
+          now,
+        );
+        next = applyExpenseBalanceEffect(
+          next,
+          updated,
+          "apply",
+          localToday(),
+          now,
+        );
         await save({
           ...next,
           updatedAt: now,
@@ -428,19 +401,6 @@ export function TransactionHistory({
               label: accountName(account.id),
             }))
       : [];
-  const editingDebt =
-    editing?.kind === "expense"
-      ? workspace.liabilityAccounts.find(
-          (account) => account.id === relatedAccountId,
-        )
-      : undefined;
-  const editingInstallmentPayment =
-    editing?.kind === "expense" &&
-    eventType(editing.record) === "credit-card-payment" &&
-    editingDebt !== undefined &&
-    editingDebt.type !== "credit-card" &&
-    editingDebt.type !== "line-of-credit";
-
   return (
     <section
       id="transaction-history"
@@ -468,8 +428,7 @@ export function TransactionHistory({
         />
       </div>
       <p className="transaction-history-note">
-        Edit the record alone, or also correct the account balances when it is
-        safe.
+        Safe edits update the transaction and affected balances once.
       </p>
       {activities.length === 0 ? (
         <p className="empty-state">No activity for this account.</p>
@@ -507,7 +466,7 @@ export function TransactionHistory({
                         account.type !== "credit-card" &&
                         account.type !== "line-of-credit",
                     )
-                      ? " · Principal allocation unknown"
+                      ? " · Debt balance not applied—edit to apply"
                       : ""}
                   </small>
                 </div>
@@ -590,6 +549,7 @@ export function TransactionHistory({
               className="account-form wizard-step"
               onSubmit={(event) => {
                 event.preventDefault();
+                void saveEdit();
               }}
             >
               <MoneySelect
@@ -652,54 +612,23 @@ export function TransactionHistory({
                   />
                 </span>
               </label>
-              {editingInstallmentPayment && (
-                <div className="loan-allocation-fields">
-                  <MoneySelect
-                    label="How much reduces the loan?"
-                    value={loanPrincipalAllocation}
-                    options={[
-                      { value: "all", label: "The full payment" },
-                      { value: "split", label: "Enter principal and interest" },
-                      { value: "unknown", label: "I do not know yet" },
-                    ]}
-                    onChange={(value) => {
-                      setLoanPrincipalAllocation(value);
-                      setPrincipalAmount("");
-                    }}
-                  />
-                  {loanPrincipalAllocation === "split" && (
-                    <label>
-                      Principal portion
-                      <span className="money-input">
-                        <span>$</span>
-                        <input
-                          value={principalAmount}
-                          inputMode="decimal"
-                          onChange={(event) => {
-                            setPrincipalAmount(event.target.value);
-                          }}
-                        />
-                      </span>
-                      <small>The rest is interest or fees.</small>
-                    </label>
-                  )}
-                  <p className="cash-place-note">
-                    Cash is not deducted again. Adjusting balances changes only
-                    the difference between the old and new principal.
-                  </p>
-                </div>
-              )}
               {editing.kind === "expense" && (
-                <label>
-                  Note <small>(optional)</small>
-                  <input
-                    value={note}
-                    maxLength={160}
-                    onChange={(event) => {
-                      setNote(event.target.value);
-                    }}
-                  />
-                </label>
+                <details className="optional-note">
+                  <summary>
+                    Add a note <span>(optional)</span>
+                  </summary>
+                  <label>
+                    Note
+                    <input
+                      aria-label="Note (optional)"
+                      value={note}
+                      maxLength={160}
+                      onChange={(event) => {
+                        setNote(event.target.value);
+                      }}
+                    />
+                  </label>
+                </details>
               )}
               {isLegacyUnlinkedIncome(editing) ? (
                 <p className="form-warning">
@@ -708,8 +637,9 @@ export function TransactionHistory({
                 </p>
               ) : hasLaterAccountChanges(editing) ? (
                 <p className="form-warning">
-                  This account changed after this transaction. Choose “record
-                  only” if you manually corrected its balance.
+                  This account was corrected after this transaction. Its balance
+                  cannot be safely changed from here; use Correct balance
+                  instead.
                 </p>
               ) : null}
               {error && (
@@ -717,37 +647,13 @@ export function TransactionHistory({
                   {error}
                 </p>
               )}
-              <div className="transaction-balance-actions">
-                {isLegacyUnlinkedIncome(editing) ? (
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    disabled={pending}
-                    onClick={() => void saveEdit("record-only")}
-                  >
-                    Link income record
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      className="button button-primary"
-                      type="button"
-                      disabled={pending}
-                      onClick={() => void saveEdit("balances")}
-                    >
-                      Save and adjust balances
-                    </button>
-                    <button
-                      className="button button-secondary"
-                      type="button"
-                      disabled={pending}
-                      onClick={() => void saveEdit("record-only")}
-                    >
-                      Save record only
-                    </button>
-                  </>
-                )}
-              </div>
+              <button
+                className="button button-primary"
+                type="submit"
+                disabled={pending || hasLaterAccountChanges(editing)}
+              >
+                {pending ? "Saving…" : "Save"}
+              </button>
             </form>
           </section>
         </div>
