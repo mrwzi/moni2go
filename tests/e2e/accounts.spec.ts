@@ -28,6 +28,12 @@ test("adds manual assets and liabilities and derives the home totals", async ({
   await page.getByLabel("Current value").fill("1420.25");
   await page.getByRole("button", { name: "Save account" }).click();
   await expect(page.getByText("Account saved locally.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /accounts for Example Bank/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Everyday chequing", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("$1,420.25").first()).toBeVisible();
 
   await page.getByRole("button", { name: "+ Account" }).click();

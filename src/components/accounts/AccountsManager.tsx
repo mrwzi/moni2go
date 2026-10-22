@@ -199,9 +199,6 @@ export function AccountsManager() {
   const [balanceUpdateAssetId, setBalanceUpdateAssetId] = useState<
     string | null
   >(null);
-  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(
-    () => new Set(),
-  );
   const handledDebtEditIntent = useRef(false);
   const assets = workspace?.assetAccounts ?? [];
   const liabilities = workspace?.liabilityAccounts ?? [];
@@ -1132,7 +1129,6 @@ export function AccountsManager() {
           const groupLiabilities = liabilities.filter(
             (account) => account.groupId === group.id,
           );
-          const collapsed = collapsedGroupIds.has(group.id);
           return (
             <section className="account-group-card" key={group.id}>
               <header>
@@ -1143,22 +1139,6 @@ export function AccountsManager() {
                   </p>
                 </div>
                 <div className="account-group-actions">
-                  <button
-                    className="account-collapse-button"
-                    type="button"
-                    aria-expanded={!collapsed}
-                    aria-label={`${collapsed ? "Show" : "Hide"} accounts for ${group.name}`}
-                    onClick={() => {
-                      setCollapsedGroupIds((current) => {
-                        const next = new Set(current);
-                        if (next.has(group.id)) next.delete(group.id);
-                        else next.add(group.id);
-                        return next;
-                      });
-                    }}
-                  >
-                    <span aria-hidden="true">{collapsed ? "▸" : "▾"}</span>
-                  </button>
                   <button
                     className="add-account-button"
                     type="button"
@@ -1177,17 +1157,15 @@ export function AccountsManager() {
                   />
                 </div>
               </header>
-              {!collapsed && (
-                <AccountRows
-                  assets={groupAssets}
-                  liabilities={groupLiabilities}
-                  onRemove={remove}
-                  onUpdateAsset={(account) => {
-                    setBalanceUpdateAssetId(account.id);
-                  }}
-                  onEditLiability={editLiability}
-                />
-              )}
+              <AccountRows
+                assets={groupAssets}
+                liabilities={groupLiabilities}
+                onRemove={remove}
+                onUpdateAsset={(account) => {
+                  setBalanceUpdateAssetId(account.id);
+                }}
+                onEditLiability={editLiability}
+              />
             </section>
           );
         })}
