@@ -93,6 +93,7 @@ function createMigratedWorkspace(
     debts: [],
     goals: [],
     sinkingFunds: [],
+    balanceCorrections: [],
     context: {
       country: "CA",
       preferences: {

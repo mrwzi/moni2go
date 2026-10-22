@@ -23,6 +23,7 @@ export type GoalId = Brand<string, "GoalId">;
 export type SinkingFundId = Brand<string, "SinkingFundId">;
 export type FinancialEventId = Brand<string, "FinancialEventId">;
 export type AllocationLinkId = Brand<string, "AllocationLinkId">;
+export type BalanceCorrectionId = Brand<string, "BalanceCorrectionId">;
 
 export type FinancialEntityId =
   | AssetAccountId
@@ -34,7 +35,8 @@ export type FinancialEntityId =
   | ExpenseEventId
   | DebtId
   | GoalId
-  | SinkingFundId;
+  | SinkingFundId
+  | BalanceCorrectionId;
 
 export type PersonalProvenance =
   "user-entered" | "synthetic-demo" | "legacy-v1" | "imported-local";

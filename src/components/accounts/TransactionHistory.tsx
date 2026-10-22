@@ -6,10 +6,8 @@ import {
   BUDGET_CATEGORIES,
   type BudgetCategoryKey,
 } from "../../v2/domain/budget-categories";
-import {
-  compareCalendarDates,
-  parseCalendarDate,
-} from "../../v2/domain/calendar";
+import { parseCalendarDate } from "../../v2/domain/calendar";
+import { hasBalanceCorrectionAfterActivity } from "../../v2/domain/balance-corrections";
 import type {
   DatedExpenseEvent,
   ExpenseTransactionType,
@@ -116,22 +114,12 @@ export function TransactionHistory({
   const isLegacyUnlinkedIncome = (activity: Activity) =>
     activity.kind === "income" && !activity.record.accountId;
   const hasLaterAccountChanges = (activity: Activity) =>
-    affectedTransactionAccountIds(activity.record).some((id) => {
-      const account = [
-        ...workspace.assetAccounts,
-        ...workspace.liabilityAccounts,
-      ].find((candidate) => candidate.id === id);
-      if (!account) return false;
-      const balanceDate =
-        "valueAsOfDate" in account
-          ? account.valueAsOfDate
-          : account.balanceAsOfDate;
-      return (
-        compareCalendarDates(balanceDate, activityDate(activity)) > 0 ||
-        (balanceDate === activityDate(activity) &&
-          account.updatedAt > activity.record.updatedAt)
-      );
-    });
+    hasBalanceCorrectionAfterActivity(
+      workspace.balanceCorrections,
+      affectedTransactionAccountIds(activity.record),
+      activityDate(activity),
+      activity.record.updatedAt,
+    );
   function startEdit(activity: Activity) {
     setEditing(activity);
     setAmount((activity.record.amountCents / 100).toFixed(2));
@@ -308,6 +296,12 @@ export function TransactionHistory({
 
   async function removeTransaction(choice: BalanceChoice) {
     if (!deleting || pendingRef.current) return;
+    if (choice === "balances" && hasLaterAccountChanges(deleting)) {
+      setError(
+        "This account was corrected after the transaction. Delete the record only, or correct the balance separately.",
+      );
+      return;
+    }
     pendingRef.current = true;
     setPending(true);
     setError(null);
@@ -697,8 +691,8 @@ export function TransactionHistory({
               </p>
               {hasLaterAccountChanges(deleting) && (
                 <p className="form-warning">
-                  This account changed after the transaction. Review the current
-                  balance before restoring it.
+                  This account was corrected after the transaction. Its current
+                  balance is protected.
                 </p>
               )}
               {error && (
@@ -709,7 +703,7 @@ export function TransactionHistory({
               <button
                 className="button button-primary"
                 type="button"
-                disabled={pending}
+                disabled={pending || hasLaterAccountChanges(deleting)}
                 onClick={() => void removeTransaction("balances")}
               >
                 Undo transaction and restore balances

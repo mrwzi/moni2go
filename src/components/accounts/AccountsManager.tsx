@@ -37,6 +37,7 @@ import { MAX_V2_CENTS, asV2Cents } from "../../v2/domain/money";
 import type {
   AccountGroupId,
   AssetAccountId,
+  BalanceCorrectionId,
   CalendarDate,
   ExpenseEventId,
   HistoricalIncomeRecordId,
@@ -405,6 +406,16 @@ export function AccountsManager() {
     const current = activeWorkspace;
     const now = new Date().toISOString();
     if (editingLiabilityId) {
+      const existingLiability = current.liabilityAccounts.find(
+        (account) => account.id === editingLiabilityId,
+      );
+      if (!existingLiability) {
+        setMessage("That debt account could not be found.");
+        return;
+      }
+      const correctedBalance = asV2Cents(value);
+      const balanceChanged =
+        existingLiability.currentBalanceCents !== correctedBalance;
       const next = {
         ...current,
         updatedAt: now,
@@ -422,7 +433,7 @@ export function AccountsManager() {
             ...withoutPayment,
             name,
             type: liabilityType,
-            currentBalanceCents: asV2Cents(value),
+            currentBalanceCents: correctedBalance,
             paymentRequirement,
             ...(needsMonthlyPayment
               ? {
@@ -441,6 +452,22 @@ export function AccountsManager() {
             updatedAt: now,
           } satisfies LiabilityAccount;
         }),
+        balanceCorrections: balanceChanged
+          ? [
+              ...(current.balanceCorrections ?? []),
+              {
+                id: crypto.randomUUID() as BalanceCorrectionId,
+                workspaceId: current.id,
+                accountId: existingLiability.id,
+                correctionDate: localToday(),
+                previousBalanceCents: existingLiability.currentBalanceCents,
+                correctedBalanceCents: correctedBalance,
+                provenance: "user-entered" as const,
+                createdAt: now,
+                updatedAt: now,
+              },
+            ]
+          : (current.balanceCorrections ?? []),
       };
       try {
         await save(next);
@@ -892,6 +919,8 @@ export function AccountsManager() {
               today,
               now,
             );
+      const balanceChanged =
+        updatedAccount.currentValueCents !== account.currentValueCents;
       await save({
         ...workspace,
         updatedAt: now,
@@ -899,6 +928,22 @@ export function AccountsManager() {
         assetAccounts: workspace.assetAccounts.map((candidate) =>
           candidate.id === account.id ? updatedAccount : candidate,
         ),
+        balanceCorrections: balanceChanged
+          ? [
+              ...(workspace.balanceCorrections ?? []),
+              {
+                id: crypto.randomUUID() as BalanceCorrectionId,
+                workspaceId: workspace.id,
+                accountId: account.id,
+                correctionDate: today,
+                previousBalanceCents: account.currentValueCents,
+                correctedBalanceCents: updatedAccount.currentValueCents,
+                provenance: "user-entered" as const,
+                createdAt: now,
+                updatedAt: now,
+              },
+            ]
+          : (workspace.balanceCorrections ?? []),
       });
       const reasonLabel = BALANCE_UPDATE_REASONS.find(
         (option) => option.value === input.reason,

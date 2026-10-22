@@ -331,6 +331,15 @@ export const sinkingFundSchema = z
     linkedExpenseEventId: entityIdSchema.optional(),
   })
   .strict();
+export const balanceCorrectionSchema = z
+  .object({
+    ...commonEntity,
+    accountId: entityIdSchema,
+    correctionDate: calendarDateSchema,
+    previousBalanceCents: v2CentsSchema,
+    correctedBalanceCents: v2CentsSchema,
+  })
+  .strict();
 export const financialEventSchema = z
   .object({
     id: entityIdSchema,
@@ -417,6 +426,7 @@ export const financialWorkspaceSchema = z
     debts: z.array(debtSchema),
     goals: z.array(financialGoalSchema),
     sinkingFunds: z.array(sinkingFundSchema),
+    balanceCorrections: z.array(balanceCorrectionSchema).default([]),
     context: z
       .object({
         country: z.literal("CA"),
@@ -465,6 +475,7 @@ export const financialWorkspaceSchema = z
       workspace.debts,
       workspace.goals,
       workspace.sinkingFunds,
+      workspace.balanceCorrections,
     ] as const;
     const seenIds = new Set<string>();
     for (const collection of collections) {

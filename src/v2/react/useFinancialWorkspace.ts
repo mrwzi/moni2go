@@ -44,6 +44,7 @@ function newWorkspace(): FinancialWorkspace {
     debts: [],
     goals: [],
     sinkingFunds: [],
+    balanceCorrections: [],
     context: {
       country: "CA",
       preferences: {

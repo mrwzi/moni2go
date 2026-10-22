@@ -138,6 +138,39 @@ function workspace(id = "workspace-1"): FinancialWorkspace {
   }) as unknown as FinancialWorkspace;
 }
 
+it("persists explicit balance-correction history through IndexedDB", async () => {
+  const source = workspace("workspace-correction");
+  const correctionAccount = source.assetAccounts.at(0);
+  if (!correctionAccount) throw new Error("Test account is missing.");
+  const withCorrection: FinancialWorkspace = {
+    ...source,
+    balanceCorrections: [
+      {
+        id: "correction-1" as never,
+        workspaceId: source.id,
+        accountId: correctionAccount.id,
+        correctionDate: "2026-09-24" as never,
+        previousBalanceCents: 10_000 as never,
+        correctedBalanceCents: 9_000 as never,
+        provenance: "user-entered",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
+  };
+  const factory = new IDBFactory();
+  const connection = await openNorthCentsDatabase({ indexedDB: factory });
+  const repository = new WorkspaceRepository(connection);
+
+  await repository.createWorkspace(withCorrection);
+  const restored = await repository.getWorkspace(withCorrection.id);
+
+  expect(restored.balanceCorrections).toEqual(
+    withCorrection.balanceCorrections,
+  );
+  connection.close();
+});
+
 function memoryStorage(initial?: string) {
   const values = new Map<string, string>();
   if (initial !== undefined) values.set(BASELINE_STORAGE_KEY, initial);

@@ -11,6 +11,7 @@ import type {
 } from "./income";
 import type { LegacyV1BaselineSnapshot } from "./legacy";
 import type { SinkingFund } from "./sinking-funds";
+import type { BalanceCorrection } from "./balance-corrections";
 import type {
   CalendarDate,
   EntityMetadata,
@@ -65,6 +66,7 @@ export type FinancialWorkspace = EntityMetadata &
     debts: readonly Debt[];
     goals: readonly FinancialGoal[];
     sinkingFunds: readonly SinkingFund[];
+    balanceCorrections?: readonly BalanceCorrection[];
     context: UserContext;
     legacyV1Snapshot?: LegacyV1BaselineSnapshot;
   }>;

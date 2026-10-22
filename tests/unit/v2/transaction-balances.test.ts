@@ -124,6 +124,80 @@ const debt = (workspace: FinancialWorkspace, id: string) =>
     ?.currentBalanceCents;
 
 describe("transaction balance effects", () => {
+  it("edits a $750 loan payment once after a separate same-day $90 card payment", () => {
+    const starting = {
+      ...base,
+      assetAccounts: base.assetAccounts.map((account) =>
+        account.id === "cash"
+          ? { ...account, currentValueCents: 300_000 as never }
+          : account,
+      ),
+      liabilityAccounts: base.liabilityAccounts.map((account) =>
+        account.id === "loan"
+          ? { ...account, currentBalanceCents: 209_314 as never }
+          : account.id === "card"
+            ? { ...account, currentBalanceCents: 20_000 as never }
+            : account,
+      ),
+    };
+    const loanPayment = event({
+      id: "loan-payment" as never,
+      accountId: "cash" as never,
+      relatedAccountId: "loan" as never,
+      amountCents: 75_000 as never,
+      principalAmountCents: 75_000 as never,
+      transactionType: "credit-card-payment",
+    });
+    const cardPayment = event({
+      id: "card-payment" as never,
+      accountId: "cash" as never,
+      relatedAccountId: "card" as never,
+      amountCents: 9_000 as never,
+      transactionType: "credit-card-payment",
+      updatedAt: later,
+    });
+    const afterBoth = applyExpenseBalanceEffect(
+      applyExpenseBalanceEffect(
+        starting,
+        loanPayment,
+        "apply",
+        "2026-10-20" as never,
+        later,
+      ),
+      cardPayment,
+      "apply",
+      "2026-10-20" as never,
+      later,
+    );
+    const editedLoanPayment = {
+      ...loanPayment,
+      amountCents: 70_000 as never,
+      principalAmountCents: 70_000 as never,
+      updatedAt: "2026-10-20T14:00:00.000Z",
+    };
+    const afterEdit = applyExpenseBalanceEffect(
+      applyExpenseBalanceEffect(
+        afterBoth,
+        loanPayment,
+        "reverse",
+        "2026-10-20" as never,
+        later,
+      ),
+      editedLoanPayment,
+      "apply",
+      "2026-10-20" as never,
+      later,
+    );
+
+    expect(asset(afterBoth, "cash")).toBe(216_000);
+    expect(debt(afterBoth, "loan")).toBe(134_314);
+    expect(debt(afterBoth, "card")).toBe(11_000);
+    expect(asset(afterEdit, "cash")).toBe(221_000);
+    expect(debt(afterEdit, "loan")).toBe(139_314);
+    expect(debt(afterEdit, "card")).toBe(11_000);
+    expect(editedLoanPayment.id).toBe(loanPayment.id);
+  });
+
   it("applies and exactly reverses purchases, refunds, and person payments", () => {
     for (const transactionType of ["purchase", "person-payment"] as const) {
       const record = event({ accountId: "cash" as never, transactionType });

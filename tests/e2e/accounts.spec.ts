@@ -1134,3 +1134,86 @@ test("records, edits, and safely reverses money sent to someone", async ({
   ).toContainText("$100.00");
   await expect(history.getByText("Gift sent")).toHaveCount(0);
 });
+
+test("edits an older loan payment after normal same-day activity but protects a later correction", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("BMO");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("3000");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "+ Account" }).click();
+  await page.getByRole("button", { name: "Money I owe" }).click();
+  await page
+    .getByLabel("Account type", { exact: true })
+    .selectOption("credit-card");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current amount owed").fill("200");
+  await page.getByLabel("Required payment amount").fill("25");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("What are you adding?").selectOption("other");
+  await page.getByLabel("Provider or place name").fill("UW");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Money I owe" }).click();
+  await page
+    .getByLabel("Account type", { exact: true })
+    .selectOption("student-loan");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current amount owed").fill("2093.14");
+  await page.getByLabel("Payment schedule").selectOption("flexible");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Move money" }).click();
+  let move = page.getByRole("dialog", { name: "Move money" });
+  await chooseMoneyOption(page, "To", "Student loan · owed $2,093.14");
+  await move.getByLabel("Amount").fill("750");
+  await move.getByRole("button", { name: "Save", exact: true }).click();
+
+  await page.getByRole("button", { name: "Move money" }).click();
+  move = page.getByRole("dialog", { name: "Move money" });
+  await chooseMoneyOption(page, "To", "Credit card · owed $200.00");
+  await move.getByLabel("Amount").fill("90");
+  await move.getByRole("button", { name: "Save", exact: true }).click();
+
+  const history = page.getByRole("region", { name: "Recent transactions" });
+  const loanPayment = history
+    .getByRole("listitem")
+    .filter({ hasText: "BMO · Chequing → UW · Student loan" });
+  await loanPayment
+    .getByRole("button", { name: "Edit Card or loan payment transaction" })
+    .click();
+  let edit = page.getByRole("dialog", { name: "Edit transaction" });
+  await expect(edit.getByRole("button", { name: "Save" })).toBeEnabled();
+  await edit.getByLabel("Amount").fill("700");
+  await edit.getByRole("button", { name: "Save", exact: true }).click();
+
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$2,210.00");
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Student loan" }),
+  ).toContainText("Owed $1,393.14");
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
+  ).toContainText("Owed $110.00");
+
+  await openBalanceUpdate(page, "Chequing");
+  const correction = page.getByRole("dialog", { name: "Correct balance" });
+  await correction.getByLabel("New current balance").fill("2200");
+  await correction.getByRole("button", { name: "Save", exact: true }).click();
+
+  await loanPayment
+    .getByRole("button", { name: "Edit Card or loan payment transaction" })
+    .click();
+  edit = page.getByRole("dialog", { name: "Edit transaction" });
+  await expect(edit).toContainText(
+    "This account was corrected after this transaction",
+  );
+  await expect(edit.getByRole("button", { name: "Save" })).toBeDisabled();
+});
