@@ -112,6 +112,21 @@ describe("signed-in workspace synchronization", () => {
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
   });
 
+  it("does not recreate a missing cloud copy from an older local workspace", async () => {
+    await seed(makeWorkspace("older-local-workspace"), user.id);
+    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue(null);
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.workspace?.id).toBe("older-local-workspace");
+    expect(result.current.cloudSyncPaused).toBe(true);
+    expect(result.current.syncMessage).toContain("No cloud copy was found");
+    expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
+  });
+
   it("keeps local changes when both the cloud revision and local workspace changed", async () => {
     const local = makeWorkspace("owned-workspace", "2026-10-23T12:10:00.000Z");
     await seed(local, user.id);

@@ -123,31 +123,18 @@ export function useFinancialWorkspace() {
         if (local && !cloud) {
           await repository.setActiveWorkspace(local.id, ownerId);
           setWorkspace(local);
-          const syncMeta = await repository.getCloudSyncMeta(ownerId, local.id);
-          if (deletion || syncMeta) {
-            setCloudSyncPaused(true);
-            setCloudSyncState("local-only");
-            setSyncMessage(
-              deletion
-                ? "Saved on this device. Cloud sync is paused after cloud deletion."
-                : "Saved on this device. The cloud copy is missing, so sync is paused.",
+          if (!deletion)
+            await repository.markCloudDeleted(
+              ownerId,
+              new Date().toISOString(),
             );
-            return;
-          }
-          const version = await saveWorkspaceToCloud(
-            client,
-            ownerId,
-            local,
-            null,
+          setCloudSyncPaused(true);
+          setCloudSyncState("local-only");
+          setSyncMessage(
+            deletion
+              ? "Saved on this device. Cloud sync is paused after cloud deletion."
+              : "No cloud copy was found. Your workspace remains on this device until you resume cloud sync.",
           );
-          await repository.setCloudSyncMeta({
-            ownerId,
-            workspaceId: local.id,
-            cloudVersion: version,
-            syncedWorkspaceUpdatedAt: local.updatedAt,
-          });
-          setSyncMessage("Your workspace is synced to your account.");
-          setCloudSyncState("synced");
           return;
         }
 
