@@ -23,12 +23,14 @@ export function MoneySelect<T extends string>({
   options,
   onChange,
   hint,
+  placeholder = "Choose an option",
 }: Readonly<{
   label: string;
   value: T;
   options: readonly MoneySelectOption<T>[];
   onChange: (value: T) => void;
   hint?: string;
+  placeholder?: string;
 }>) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({
@@ -40,8 +42,7 @@ export function MoneySelect<T extends string>({
   const menuRef = useRef<HTMLDivElement>(null);
   const labelId = useId();
   const listboxId = useId();
-  const selected =
-    options.find((option) => option.value === value) ?? options[0];
+  const selected = options.find((option) => option.value === value);
 
   const positionMenu = useCallback(() => {
     const trigger = buttonRef.current?.getBoundingClientRect();
@@ -165,7 +166,7 @@ export function MoneySelect<T extends string>({
           }
         }}
       >
-        <span>{selected?.label ?? "Choose an option"}</span>
+        <span>{selected?.label ?? placeholder}</span>
         <span className="money-select-chevron" aria-hidden="true">
           ▾
         </span>

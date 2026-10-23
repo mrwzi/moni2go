@@ -3,11 +3,7 @@
 import { useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import type { AccountGroup } from "../../v2/domain/account-groups";
-import {
-  isSpendableCashAccount,
-  type AssetAccount,
-  type LiabilityAccount,
-} from "../../v2/domain/accounts";
+import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
 import type {
   ExpenseDefinition,
   ExpenseTransactionType,
@@ -88,12 +84,7 @@ export function QuickActivityDialog({
   const activeDebts = liabilityAccounts.filter(
     (account) => account.status === "active" && account.currentBalanceCents > 0,
   );
-  const firstAsset = accounts.find(isSpendableCashAccount) ?? accounts[0];
-  const [accountId, setAccountId] = useState(
-    firstAsset?.id ??
-      (kind === "expense" ? creditAccounts[0]?.id : undefined) ??
-      "",
-  );
+  const [accountId, setAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [incomeLabel, setIncomeLabel] = useState<IncomeLabel>("Paycheque");
   const [saveIncomeSchedule, setSaveIncomeSchedule] = useState(false);
@@ -235,6 +226,9 @@ export function QuickActivityDialog({
                   : "Account or card"
             }
             value={accountId}
+            placeholder={
+              kind === "move" ? "Select source account" : "Select an account"
+            }
             options={[
               ...accounts.map((account) => ({
                 value: account.id,
@@ -283,7 +277,7 @@ export function QuickActivityDialog({
                       (account) => account.id === accountId,
                     )
                   )
-                    setAccountId(firstAsset?.id ?? "");
+                    setAccountId("");
                   setError(null);
                 }}
               />
@@ -358,8 +352,8 @@ export function QuickActivityDialog({
               <MoneySelect
                 label="To"
                 value={destinationValue}
+                placeholder="Select destination account"
                 options={[
-                  { value: "", label: "Choose destination" },
                   ...accounts
                     .filter((account) => account.id !== accountId)
                     .map((account) => ({

@@ -7,6 +7,7 @@ import {
   type BudgetCategoryKey,
 } from "../../v2/domain/budget-categories";
 import { parseCalendarDate } from "../../v2/domain/calendar";
+import { compareActivityNewestFirst } from "../../v2/domain/activity-order";
 import { hasBalanceCorrectionAfterActivity } from "../../v2/domain/balance-corrections";
 import type { BalanceCorrection } from "../../v2/domain/balance-corrections";
 import type {
@@ -118,7 +119,22 @@ export function TransactionHistory({
           ),
       )
       .sort((left, right) =>
-        activityDate(right).localeCompare(activityDate(left)),
+        compareActivityNewestFirst(
+          {
+            id: left.record.id,
+            activityDate: activityDate(left),
+            activityKind: left.kind,
+            createdAt: left.record.createdAt,
+            updatedAt: left.record.updatedAt,
+          },
+          {
+            id: right.record.id,
+            activityDate: activityDate(right),
+            activityKind: right.kind,
+            createdAt: right.record.createdAt,
+            updatedAt: right.record.updatedAt,
+          },
+        ),
       );
   }, [
     workspace.expenseEvents,

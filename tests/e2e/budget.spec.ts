@@ -5,6 +5,11 @@ async function chooseMoneyOption(page: Page, label: string, option: string) {
   await page.getByRole("option", { name: option, exact: true }).click();
 }
 
+async function chooseFirstMoneyOption(page: Page, label: string) {
+  await page.getByRole("combobox", { name: label }).click();
+  await page.getByRole("option").first().click();
+}
+
 test("allocates account money and keeps the review focused", async ({
   page,
 }) => {
@@ -143,6 +148,7 @@ test("shows current spending separately from completed-month averages", async ({
     ["150", 1],
   ] as const) {
     await page.getByRole("button", { name: "Record expense" }).click();
+    await chooseFirstMoneyOption(page, "Account or card");
     await chooseMoneyOption(page, "What was it for?", "Groceries");
     await page.getByLabel("Amount").fill(amount);
     await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -159,6 +165,7 @@ test("shows current spending separately from completed-month averages", async ({
   }
 
   await page.getByRole("button", { name: "Record expense" }).click();
+  await chooseFirstMoneyOption(page, "Account or card");
   await chooseMoneyOption(page, "What was it for?", "Groceries");
   await page.getByLabel("Amount").fill("75");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -205,6 +212,7 @@ test("shows current spending separately from completed-month averages", async ({
     ["141", 1],
   ] as const) {
     await page.getByRole("button", { name: "Record expense" }).click();
+    await chooseFirstMoneyOption(page, "Account or card");
     await chooseMoneyOption(
       page,
       "What was it for?",
@@ -224,6 +232,7 @@ test("shows current spending separately from completed-month averages", async ({
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
   }
   await page.getByRole("button", { name: "Record expense" }).click();
+  await chooseFirstMoneyOption(page, "Account or card");
   await chooseMoneyOption(page, "What was it for?", "Restaurants / eating out");
   await page.getByLabel("Amount").fill("145");
   await page.getByRole("button", { name: "Save", exact: true }).click();

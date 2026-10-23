@@ -614,8 +614,14 @@ export function AccountsManager() {
       liabilityAccount?.status === "active" &&
       (liabilityAccount.type === "credit-card" ||
         liabilityAccount.type === "line-of-credit");
+    if (!input.accountId)
+      return input.kind === "move"
+        ? "Select a source account."
+        : "Select an account.";
     if (assetAccount?.status !== "active" && !canUseLiability)
-      return "Choose an active account.";
+      return input.kind === "move"
+        ? "Select an active source account."
+        : "Select an active account.";
     const destination = input.destinationAccountId
       ? workspace.assetAccounts.find(
           (candidate) => candidate.id === input.destinationAccountId,
@@ -654,7 +660,7 @@ export function AccountsManager() {
       !input.transferToUntrackedAccount &&
       !input.debtAccountId
     )
-      return "Choose where the money is going.";
+      return "Select a destination account.";
 
     const billDefinition = input.definitionId
       ? workspace.expenseDefinitions.find(
@@ -864,21 +870,41 @@ export function AccountsManager() {
       };
       await save(next);
       setActivityKind(null);
-      const accountName = activityAccount?.name ?? "account";
+      const savedAccountLabel = (account: AssetAccount | LiabilityAccount) => {
+        const sameNameCount = [
+          ...workspace.assetAccounts,
+          ...workspace.liabilityAccounts,
+        ].filter(
+          (candidate) =>
+            candidate.name.trim().toLocaleLowerCase() ===
+            account.name.trim().toLocaleLowerCase(),
+        ).length;
+        const provider = account.groupId
+          ? workspace.accountGroups.find(
+              (group) => group.id === account.groupId,
+            )?.name
+          : undefined;
+        return sameNameCount > 1 && provider
+          ? `${provider} · ${account.name}`
+          : account.name;
+      };
+      const savedAccountName = activityAccount
+        ? savedAccountLabel(activityAccount)
+        : "account";
       setMessage(
         input.kind === "income"
-          ? `${formatCad(cents)} added to ${accountName}.`
+          ? `${formatCad(cents)} added to ${savedAccountName}.`
           : input.transactionType === "refund"
-            ? `${formatCad(cents)} refund recorded for ${accountName}.`
+            ? `${formatCad(cents)} refund recorded for ${savedAccountName}.`
             : input.transactionType === "transfer"
               ? input.transferToUntrackedAccount
-                ? `${formatCad(cents)} moved from ${accountName} to another account you own.`
-                : `${formatCad(cents)} moved from ${accountName} to ${destination?.name ?? "the destination account"}.`
+                ? `${formatCad(cents)} moved from ${savedAccountName} to another account you own.`
+                : `${formatCad(cents)} moved from ${savedAccountName} to ${destination ? savedAccountLabel(destination) : "the destination account"}.`
               : input.transactionType === "credit-card-payment"
-                ? `${formatCad(cents)} payment recorded from ${accountName} to ${debtAccount?.name ?? "the debt account"}. Both tracked balances were updated.`
+                ? `${formatCad(cents)} payment recorded from ${savedAccountName} to ${debtAccount ? savedAccountLabel(debtAccount) : "the debt account"}. Both tracked balances were updated.`
                 : input.transactionType === "purchase"
-                  ? `${formatCad(cents)} spending recorded from ${accountName}.`
-                  : `${formatCad(cents)} contribution recorded from ${accountName}.`,
+                  ? `${formatCad(cents)} spending recorded from ${savedAccountName}.`
+                  : `${formatCad(cents)} contribution recorded from ${savedAccountName}.`,
       );
       return null;
     } catch {
