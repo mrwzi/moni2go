@@ -6,9 +6,13 @@ import { NorthCentsStorageError } from "./storage-errors";
 import {
   ACTIVE_WORKSPACE_META_KEY,
   activeWorkspaceMetaKey,
+  cloudDeletionMetaKey,
+  cloudSyncMetaKey,
   META_STORE,
   WORKSPACES_STORE,
   type ActiveWorkspaceMeta,
+  type CloudDeletionMeta,
+  type CloudSyncMeta,
   type WorkspaceMetadata,
 } from "./types";
 
@@ -217,6 +221,90 @@ export class WorkspaceRepository {
         transaction
           .objectStore(META_STORE)
           .delete(activeWorkspaceMetaKey(ownerId)),
+      );
+    });
+  }
+
+  async getCloudSyncMeta(
+    ownerId: string,
+    workspaceId: string,
+  ): Promise<CloudSyncMeta | null> {
+    const raw = (await this.connection.read(META_STORE, (transaction) =>
+      requestToPromise(
+        transaction
+          .objectStore(META_STORE)
+          .get(cloudSyncMetaKey(ownerId, workspaceId)),
+      ),
+    )) as CloudSyncMeta | undefined;
+    return raw ?? null;
+  }
+
+  async setCloudSyncMeta(meta: Omit<CloudSyncMeta, "key">): Promise<void> {
+    const record: CloudSyncMeta = {
+      ...meta,
+      key: cloudSyncMetaKey(meta.ownerId, meta.workspaceId),
+    };
+    await this.connection.write(META_STORE, async (transaction) => {
+      await requestToPromise(transaction.objectStore(META_STORE).put(record));
+    });
+  }
+
+  async clearCloudSyncMeta(
+    ownerId: string,
+    workspaceId: string,
+  ): Promise<void> {
+    await this.connection.write(META_STORE, async (transaction) => {
+      await requestToPromise(
+        transaction
+          .objectStore(META_STORE)
+          .delete(cloudSyncMetaKey(ownerId, workspaceId)),
+      );
+    });
+  }
+
+  async clearCloudSyncMetaForOwner(ownerId: string): Promise<void> {
+    await this.connection.write(META_STORE, async (transaction) => {
+      const store = transaction.objectStore(META_STORE);
+      const records = (await requestToPromise(
+        store.getAll(),
+      )) as (Partial<CloudSyncMeta> & { key?: string })[];
+      for (const record of records)
+        if (
+          record.ownerId === ownerId &&
+          record.key?.startsWith(`cloud-sync:${ownerId}:`)
+        )
+          await requestToPromise(store.delete(record.key));
+    });
+  }
+
+  async getCloudDeletionMeta(
+    ownerId: string,
+  ): Promise<CloudDeletionMeta | null> {
+    const raw = (await this.connection.read(META_STORE, (transaction) =>
+      requestToPromise(
+        transaction.objectStore(META_STORE).get(cloudDeletionMetaKey(ownerId)),
+      ),
+    )) as CloudDeletionMeta | undefined;
+    return raw ?? null;
+  }
+
+  async markCloudDeleted(ownerId: string, deletedAt: string): Promise<void> {
+    const record: CloudDeletionMeta = {
+      key: cloudDeletionMetaKey(ownerId),
+      ownerId,
+      deletedAt,
+    };
+    await this.connection.write(META_STORE, async (transaction) => {
+      await requestToPromise(transaction.objectStore(META_STORE).put(record));
+    });
+  }
+
+  async clearCloudDeleted(ownerId: string): Promise<void> {
+    await this.connection.write(META_STORE, async (transaction) => {
+      await requestToPromise(
+        transaction
+          .objectStore(META_STORE)
+          .delete(cloudDeletionMetaKey(ownerId)),
       );
     });
   }

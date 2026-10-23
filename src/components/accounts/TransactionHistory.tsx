@@ -8,6 +8,7 @@ import {
 } from "../../v2/domain/budget-categories";
 import { parseCalendarDate } from "../../v2/domain/calendar";
 import { hasBalanceCorrectionAfterActivity } from "../../v2/domain/balance-corrections";
+import type { BalanceCorrection } from "../../v2/domain/balance-corrections";
 import type {
   DatedExpenseEvent,
   ExpenseTransactionType,
@@ -32,16 +33,27 @@ const TYPE_LABELS: Record<ExpenseTransactionType, string> = {
   "credit-card-payment": "Card or loan payment",
   "savings-contribution": "Savings or investment deposit",
 };
-type Activity =
+type TransactionActivity =
   | Readonly<{ kind: "expense"; record: DatedExpenseEvent }>
   | Readonly<{ kind: "income"; record: HistoricalIncomeRecord }>;
+type Activity =
+  | TransactionActivity
+  | Readonly<{ kind: "correction"; record: BalanceCorrection }>;
 type BalanceChoice = "balances" | "record-only";
 const eventType = (event: DatedExpenseEvent): ExpenseTransactionType =>
   event.transactionType ?? "purchase";
 const activityDate = (activity: Activity): CalendarDate =>
-  activity.kind === "income"
-    ? activity.record.receivedDate
-    : (activity.record.actualDate ?? activity.record.dueDate);
+  activity.kind === "correction"
+    ? activity.record.correctionDate
+    : activity.kind === "income"
+      ? activity.record.receivedDate
+      : (activity.record.actualDate ?? activity.record.dueDate);
+const activityAccountIds = (
+  activity: Activity,
+): readonly FinancialEntityId[] =>
+  activity.kind === "correction"
+    ? [activity.record.accountId]
+    : affectedTransactionAccountIds(activity.record);
 const localToday = (): CalendarDate => {
   const now = new Date();
   return parseCalendarDate(
@@ -56,8 +68,8 @@ export function TransactionHistory({
   workspace: FinancialWorkspace;
   save: (workspace: FinancialWorkspace) => Promise<void>;
 }>) {
-  const [editing, setEditing] = useState<Activity | null>(null);
-  const [deleting, setDeleting] = useState<Activity | null>(null);
+  const [editing, setEditing] = useState<TransactionActivity | null>(null);
+  const [deleting, setDeleting] = useState<TransactionActivity | null>(null);
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
   const [category, setCategory] = useState<BudgetCategoryKey>("groceries");
@@ -92,35 +104,45 @@ export function TransactionHistory({
         kind: "income",
         record,
       })),
+      ...(workspace.balanceCorrections ?? []).map((record): Activity => ({
+        kind: "correction",
+        record,
+      })),
     ];
     return combined
       .filter(
         (activity) =>
           accountFilter === "all" ||
-          affectedTransactionAccountIds(activity.record).includes(
+          activityAccountIds(activity).includes(
             accountFilter as FinancialEntityId,
           ),
       )
       .sort((left, right) =>
         activityDate(right).localeCompare(activityDate(left)),
       );
-  }, [workspace.expenseEvents, workspace.historicalIncome, accountFilter]);
+  }, [
+    workspace.expenseEvents,
+    workspace.historicalIncome,
+    workspace.balanceCorrections,
+    accountFilter,
+  ]);
   if (
     workspace.expenseEvents.every((event) => event.status !== "actual") &&
-    workspace.historicalIncome.length === 0
+    workspace.historicalIncome.length === 0 &&
+    (workspace.balanceCorrections?.length ?? 0) === 0
   )
     return null;
 
-  const isLegacyUnlinkedIncome = (activity: Activity) =>
+  const isLegacyUnlinkedIncome = (activity: TransactionActivity) =>
     activity.kind === "income" && !activity.record.accountId;
-  const hasLaterAccountChanges = (activity: Activity) =>
+  const hasLaterAccountChanges = (activity: TransactionActivity) =>
     hasBalanceCorrectionAfterActivity(
       workspace.balanceCorrections,
       affectedTransactionAccountIds(activity.record),
       activityDate(activity),
       activity.record.updatedAt,
     );
-  function startEdit(activity: Activity) {
+  function startEdit(activity: TransactionActivity) {
     setEditing(activity);
     setAmount((activity.record.amountCents / 100).toFixed(2));
     setDate(activityDate(activity));
@@ -422,13 +444,42 @@ export function TransactionHistory({
         />
       </div>
       <p className="transaction-history-note">
-        Safe edits update the transaction and affected balances once.
+        Transactions can be edited safely. Balance corrections are shown for
+        reference and are not income or spending.
       </p>
       {activities.length === 0 ? (
         <p className="empty-state">No activity for this account.</p>
       ) : (
         <ul className="transaction-history-list">
           {activities.slice(0, showAll ? 50 : 2).map((activity) => {
+            if (activity.kind === "correction") {
+              const difference =
+                activity.record.correctedBalanceCents -
+                activity.record.previousBalanceCents;
+              return (
+                <li key={`correction-${activity.record.id}`}>
+                  <div className="transaction-history-details">
+                    <strong>
+                      {accountName(activity.record.accountId)} balance corrected
+                    </strong>
+                    <small>
+                      {activity.record.correctionDate} · Balance correction
+                    </small>
+                    <small>Not income or spending</small>
+                  </div>
+                  <div className="transaction-history-summary">
+                    <strong className="transaction-history-amount">
+                      {formatCad(activity.record.previousBalanceCents)} →{" "}
+                      {formatCad(activity.record.correctedBalanceCents)}
+                    </strong>
+                    <small>
+                      {difference > 0 ? "+" : ""}
+                      {formatCad(asV2Cents(difference))}
+                    </small>
+                  </div>
+                </li>
+              );
+            }
             const isRefund =
               activity.kind === "expense" &&
               eventType(activity.record) === "refund";

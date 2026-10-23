@@ -19,6 +19,10 @@ export const activeWorkspaceMetaKey = (ownerId?: string) =>
     : ACTIVE_WORKSPACE_META_KEY;
 export const V1_MIGRATION_META_KEY = "migration:v1-baseline";
 export const PERSISTENCE_SCHEMA_META_KEY = "persistence-schema";
+export const cloudSyncMetaKey = (ownerId: string, workspaceId: string) =>
+  `cloud-sync:${ownerId}:${workspaceId}`;
+export const cloudDeletionMetaKey = (ownerId: string) =>
+  `cloud-sync-deleted:${ownerId}`;
 
 export type WorkspaceMetadata = Readonly<{
   id: WorkspaceId;
@@ -46,5 +50,23 @@ export type PersistenceSchemaMeta = Readonly<{
   workspaceSchemaVersion: 2;
 }>;
 
+export type CloudSyncMeta = Readonly<{
+  key: string;
+  ownerId: string;
+  workspaceId: string;
+  cloudVersion: string;
+  syncedWorkspaceUpdatedAt: string;
+}>;
+
+export type CloudDeletionMeta = Readonly<{
+  key: string;
+  ownerId: string;
+  deletedAt: string;
+}>;
+
 export type MetaRecord =
-  ActiveWorkspaceMeta | V1MigrationMeta | PersistenceSchemaMeta;
+  | ActiveWorkspaceMeta
+  | V1MigrationMeta
+  | PersistenceSchemaMeta
+  | CloudSyncMeta
+  | CloudDeletionMeta;

@@ -6,6 +6,7 @@ import { useAuthUser } from "../../lib/supabase/use-auth-user";
 import {
   exportWorkspace,
   importWorkspace,
+  parseWorkspaceExport,
   openMoni2GoDatabase,
   WorkspaceRepository,
 } from "../../v2/storage";
@@ -67,20 +68,40 @@ export function LocalWorkspaceTransfer() {
     setMessage(null);
     try {
       const serialized = await file.text();
+      const envelope = await parseWorkspaceExport(serialized);
       const database = await openMoni2GoDatabase();
       try {
         const repository = new WorkspaceRepository(database);
-        const workspace = await importWorkspace(repository, serialized);
+        const collision = await repository.workspaceExists(
+          envelope.workspace.id,
+        );
+        if (
+          collision &&
+          !window.confirm(
+            "This backup matches a workspace already on this device. Replace the local workspace with the verified backup? The existing workspace will be kept if restoration fails.",
+          )
+        ) {
+          setMessageKind("success");
+          setMessage(
+            "Restore cancelled. Your existing workspace was not changed.",
+          );
+          return;
+        }
+        const workspace = await importWorkspace(repository, serialized, {
+          onCollision: collision ? "replace" : "reject",
+        });
         await repository.setActiveWorkspace(workspace.id, ownerId);
       } finally {
         database.close();
       }
       setMessageKind("success");
-      setMessage("Backup imported. Open Home or Accounts to view your data.");
+      setMessage(
+        "Backup verified and restored. Open Home or Accounts to view it.",
+      );
     } catch {
       setMessageKind("error");
       setMessage(
-        "The backup could not be imported. It may be invalid or already exist on this address.",
+        "The backup could not be restored. Your existing workspace was not changed.",
       );
     } finally {
       if (inputRef.current) inputRef.current.value = "";

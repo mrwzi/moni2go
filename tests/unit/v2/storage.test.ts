@@ -239,6 +239,47 @@ describe("IndexedDB database and workspace repository", () => {
     connection.close();
   });
 
+  it("persists cloud revision and deletion markers per signed-in owner", async () => {
+    const connection = await openNorthCentsDatabase({ indexedDB: factory });
+    const repository = new WorkspaceRepository(connection);
+    await repository.setCloudSyncMeta({
+      ownerId: "user-a",
+      workspaceId: "workspace-1",
+      cloudVersion: "2026-10-23T10:00:00.000Z",
+      syncedWorkspaceUpdatedAt: now,
+    });
+    await repository.setCloudSyncMeta({
+      ownerId: "user-a",
+      workspaceId: "workspace-2",
+      cloudVersion: "2026-10-23T10:01:00.000Z",
+      syncedWorkspaceUpdatedAt: now,
+    });
+    expect(
+      await repository.getCloudSyncMeta("user-a", "workspace-1"),
+    ).toMatchObject({
+      ownerId: "user-a",
+      cloudVersion: "2026-10-23T10:00:00.000Z",
+    });
+    expect(
+      await repository.getCloudSyncMeta("user-b", "workspace-1"),
+    ).toBeNull();
+
+    await repository.markCloudDeleted("user-a", "2026-10-23T11:00:00.000Z");
+    expect(await repository.getCloudDeletionMeta("user-a")).toMatchObject({
+      ownerId: "user-a",
+    });
+    await repository.clearCloudDeleted("user-a");
+    await repository.clearCloudSyncMetaForOwner("user-a");
+    expect(await repository.getCloudDeletionMeta("user-a")).toBeNull();
+    expect(
+      await repository.getCloudSyncMeta("user-a", "workspace-1"),
+    ).toBeNull();
+    expect(
+      await repository.getCloudSyncMeta("user-a", "workspace-2"),
+    ).toBeNull();
+    connection.close();
+  });
+
   it("round-trips complete asset-account data without a consolidated field", async () => {
     const connection = await openNorthCentsDatabase({ indexedDB: factory });
     const repository = new WorkspaceRepository(connection);
@@ -659,6 +700,29 @@ describe("local export and import", () => {
     },
   );
 
+  it("restores a valid pre-correction-history backup and initializes its history safely", async () => {
+    const serialized = await exportWorkspace(workspace(), {
+      exportedAt: now,
+      applicationVersion: "0.1.0",
+    });
+    const envelope = JSON.parse(serialized) as {
+      workspace: Record<string, unknown>;
+      integrity: { digest: string };
+    };
+    delete envelope.workspace.balanceCorrections;
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(JSON.stringify(envelope.workspace)),
+    );
+    envelope.integrity.digest = Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+
+    const parsed = await parseWorkspaceExport(JSON.stringify(envelope));
+
+    expect(parsed.workspace.balanceCorrections).toEqual([]);
+  });
+
   it("imports valid data and rejects collisions without overwrite", async () => {
     const original = workspace();
     const serialized = await exportWorkspace(original, {
@@ -675,6 +739,55 @@ describe("local export and import", () => {
       "workspace-id-collision",
     );
     expect(await repository.listWorkspaces()).toEqual([original]);
+    connection.close();
+  });
+
+  it("replaces an existing workspace only when explicitly requested and verifies correction history", async () => {
+    const original = workspace();
+    const correctionAccount = original.assetAccounts.at(0);
+    if (!correctionAccount) throw new Error("Test account is missing.");
+    const restored: FinancialWorkspace = {
+      ...original,
+      name: "Restored workspace",
+      updatedAt: "2026-10-23T12:00:00.000Z",
+      balanceCorrections: [
+        {
+          id: "restored-correction" as never,
+          workspaceId: original.id,
+          accountId: correctionAccount.id,
+          correctionDate: "2026-10-23" as never,
+          previousBalanceCents: 8_000 as never,
+          correctedBalanceCents: 9_000 as never,
+          provenance: "user-entered",
+          createdAt: "2026-10-23T12:00:00.000Z",
+          updatedAt: "2026-10-23T12:00:00.000Z",
+        },
+      ],
+    };
+    const serialized = await exportWorkspace(restored, {
+      exportedAt: "2026-10-23T12:01:00.000Z",
+      applicationVersion: "0.1.0",
+    });
+    const connection = await openNorthCentsDatabase({
+      indexedDB: new IDBFactory(),
+    });
+    const repository = new WorkspaceRepository(connection);
+    await repository.createWorkspace(original);
+
+    await expectStorageCode(
+      importWorkspace(repository, serialized),
+      "workspace-id-collision",
+    );
+    expect((await repository.getWorkspace(original.id)).name).toBe(
+      original.name,
+    );
+    await expect(
+      importWorkspace(repository, serialized, { onCollision: "replace" }),
+    ).resolves.toEqual(restored);
+    expect(await repository.getWorkspace(original.id)).toEqual(restored);
+    expect(
+      (await repository.getWorkspace(original.id)).balanceCorrections,
+    ).toHaveLength(1);
     connection.close();
   });
 

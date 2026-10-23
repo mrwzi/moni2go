@@ -473,9 +473,15 @@ test("corrects a debt balance without inventing spending and keeps the correctio
     .filter({ hasText: "Credit card" });
   await expect(creditCard).toContainText("Owed $13.23");
   await expect(creditCard).toContainText("$13.23 every month");
-  await expect(
-    page.getByRole("region", { name: "Recent transactions" }),
-  ).toHaveCount(0);
+  const correctionHistory = page.getByRole("region", {
+    name: "Recent transactions",
+  });
+  await expect(correctionHistory).toContainText(
+    "Card bank · Credit card balance corrected",
+  );
+  await expect(correctionHistory).toContainText("$27.67 → $13.23");
+  await expect(correctionHistory).toContainText("−$14.44");
+  await expect(correctionHistory).toContainText("Not income or spending");
 
   await page.getByText("More totals").click();
   await expect(page.getByText("−$13.23")).toBeVisible();
@@ -506,7 +512,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
     page
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem"),
-  ).toHaveCount(1);
+  ).toHaveCount(2);
 
   await page.reload();
   await expect(

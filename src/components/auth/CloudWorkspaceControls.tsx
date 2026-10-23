@@ -1,17 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "../../lib/supabase/client";
-import {
-  CloudWorkspaceError,
-  deleteCloudWorkspaces,
-} from "../../cloud/workspace-cloud";
 import { useAuthUser } from "../../lib/supabase/use-auth-user";
 import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
 
 export function CloudWorkspaceControls() {
   const auth = useAuthUser();
-  const { loading, error, syncMessage, reload } = useFinancialWorkspace();
+  const {
+    loading,
+    error,
+    syncMessage,
+    cloudSyncPaused,
+    cloudSyncState,
+    reload,
+    deleteCloudData,
+    resumeCloudSync,
+  } = useFinancialWorkspace();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -34,15 +38,32 @@ export function CloudWorkspaceControls() {
     setPending(true);
     setMessage(null);
     try {
-      await deleteCloudWorkspaces(createClient(), user.id);
+      await deleteCloudData();
       setMessage(
-        "Cloud financial workspaces deleted. Local data remains on this device.",
+        "Cloud financial workspaces deleted. Local data remains on this device and will not be uploaded again unless you resume sync.",
       );
     } catch (error) {
       setMessage(
-        error instanceof CloudWorkspaceError
+        error instanceof Error
           ? error.message
           : "Cloud deletion failed. No local information was changed.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function resumeCloudCopy() {
+    setPending(true);
+    setMessage(null);
+    try {
+      await resumeCloudSync();
+      setMessage("Cloud sync resumed.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Cloud sync could not be resumed. Local data was not changed.",
       );
     } finally {
       setPending(false);
@@ -56,7 +77,15 @@ export function CloudWorkspaceControls() {
         <strong>{user.email}</strong>
       </p>
       <p className="cloud-sync-status" role="status">
-        <strong>{loading ? "Synchronizing…" : "Automatic sync is on"}</strong>
+        <strong>
+          {loading || cloudSyncState === "pending"
+            ? "Checking sync…"
+            : cloudSyncState === "conflict"
+              ? "Sync needs attention"
+              : cloudSyncPaused
+                ? "Saved on this device only"
+                : "Automatic sync is on"}
+        </strong>
         <span>
           {error ??
             message ??
@@ -72,15 +101,25 @@ export function CloudWorkspaceControls() {
         >
           Check sync now
         </button>
-        <button
-          className="button button-danger"
-          disabled={pending}
-          onClick={() => {
-            void removeCloudCopy();
-          }}
-        >
-          Delete cloud data
-        </button>
+        {cloudSyncPaused ? (
+          <button
+            className="button button-primary"
+            disabled={pending || loading}
+            onClick={() => void resumeCloudCopy()}
+          >
+            Resume cloud sync
+          </button>
+        ) : (
+          <button
+            className="button button-danger"
+            disabled={pending}
+            onClick={() => {
+              void removeCloudCopy();
+            }}
+          >
+            Delete cloud data
+          </button>
+        )}
       </div>
       <small>
         Open moni2go on another device and sign in—the latest workspace loads

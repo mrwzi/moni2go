@@ -134,6 +134,11 @@ export async function parseWorkspaceExport(
       "The exported workspace version is not supported.",
     );
 
+  if ((await sha256(JSON.stringify(raw.workspace))) !== raw.integrity.digest)
+    throw new NorthCentsStorageError(
+      "invalid-import",
+      "The import integrity check failed.",
+    );
   const parsed = financialWorkspaceSchema.safeParse(raw.workspace);
   if (!parsed.success)
     throw new NorthCentsStorageError(
@@ -141,11 +146,6 @@ export async function parseWorkspaceExport(
       "The imported workspace failed validation.",
     );
   const workspace = parsed.data as unknown as FinancialWorkspace;
-  if ((await sha256(JSON.stringify(workspace))) !== raw.integrity.digest)
-    throw new NorthCentsStorageError(
-      "invalid-import",
-      "The import integrity check failed.",
-    );
   return {
     format: EXPORT_FORMAT,
     formatVersion: 1,
@@ -161,14 +161,31 @@ export async function parseWorkspaceExport(
 export async function importWorkspace(
   repository: WorkspaceRepository,
   serialized: string,
+  options: Readonly<{ onCollision?: "reject" | "replace" }> = {},
 ): Promise<FinancialWorkspace> {
   const envelope = await parseWorkspaceExport(serialized);
-  if (await repository.workspaceExists(envelope.workspace.id))
+  const exists = await repository.workspaceExists(envelope.workspace.id);
+  if (exists && options.onCollision !== "replace")
     throw new NorthCentsStorageError(
       "workspace-id-collision",
       "A workspace with this ID already exists.",
       { workspaceId: envelope.workspace.id },
     );
-  await repository.createWorkspace(envelope.workspace);
+  const original = exists
+    ? await repository.getWorkspace(envelope.workspace.id)
+    : null;
+  try {
+    if (exists) await repository.saveWorkspace(envelope.workspace);
+    else await repository.createWorkspace(envelope.workspace);
+    const verified = await repository.getWorkspace(envelope.workspace.id);
+    if (JSON.stringify(verified) !== JSON.stringify(envelope.workspace))
+      throw new NorthCentsStorageError(
+        "invalid-import",
+        "The restored workspace could not be verified.",
+      );
+  } catch (error) {
+    if (original) await repository.saveWorkspace(original);
+    throw error;
+  }
   return envelope.workspace;
 }

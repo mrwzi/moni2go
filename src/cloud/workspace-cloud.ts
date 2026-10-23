@@ -4,7 +4,8 @@ import type { FinancialWorkspace } from "../v2/domain/workspace";
 
 export class CloudWorkspaceError extends Error {
   constructor(
-    readonly code: "not-configured" | "invalid-workspace" | "request-failed",
+    readonly code:
+      "not-configured" | "invalid-workspace" | "request-failed" | "conflict",
     message: string,
   ) {
     super(message);
@@ -12,44 +13,83 @@ export class CloudWorkspaceError extends Error {
   }
 }
 
+export type CloudWorkspaceSnapshot = Readonly<{
+  workspace: FinancialWorkspace;
+  version: string;
+}>;
+
+function nextCloudTimestamp(expectedVersion: string | null): string {
+  const now = Date.now();
+  const expected = expectedVersion ? Date.parse(expectedVersion) : 0;
+  return new Date(Math.max(now, expected + 1)).toISOString();
+}
+
 function cloudRequestError(
   error: Readonly<{ code?: string }> | null,
   fallbackMessage: string,
 ): CloudWorkspaceError {
-  return error?.code === "PGRST205"
-    ? new CloudWorkspaceError(
-        "not-configured",
-        "Cloud backup storage has not been set up for this project yet.",
-      )
-    : new CloudWorkspaceError("request-failed", fallbackMessage);
+  if (error?.code === "PGRST205")
+    return new CloudWorkspaceError(
+      "not-configured",
+      "Cloud backup storage has not been set up for this project yet.",
+    );
+  if (error?.code === "23505")
+    return new CloudWorkspaceError(
+      "conflict",
+      "Cloud sync paused because this workspace changed on another device. Your local changes are still saved.",
+    );
+  return new CloudWorkspaceError("request-failed", fallbackMessage);
 }
 
 export async function saveWorkspaceToCloud(
   client: SupabaseClient,
   userId: string,
   workspace: FinancialWorkspace,
-): Promise<void> {
+  expectedVersion: string | null,
+): Promise<string> {
   const valid = financialWorkspaceSchema.parse(workspace);
-  const { error } = await client.from("financial_workspaces").upsert(
-    {
-      workspace_id: valid.id,
-      owner_id: userId,
-      schema_version: valid.schemaVersion,
-      workspace: valid,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "workspace_id" },
-  );
+  const updatedAt = nextCloudTimestamp(expectedVersion);
+  const values = {
+    workspace_id: valid.id,
+    owner_id: userId,
+    schema_version: valid.schemaVersion,
+    workspace: valid,
+    updated_at: updatedAt,
+  };
+  const response =
+    expectedVersion === null
+      ? await client
+          .from("financial_workspaces")
+          .insert(values)
+          .select("updated_at")
+          .single()
+      : await client
+          .from("financial_workspaces")
+          .update(values)
+          .eq("workspace_id", valid.id)
+          .eq("owner_id", userId)
+          .eq("updated_at", expectedVersion)
+          .select("updated_at")
+          .maybeSingle();
+  const { data, error } = response;
   if (error)
     throw cloudRequestError(error, "Cloud workspace could not be saved.");
+  if (!data)
+    throw new CloudWorkspaceError(
+      "conflict",
+      "Cloud sync paused because this workspace changed on another device. Your local changes are still saved.",
+    );
+  return data.updated_at as string;
 }
 
 export async function loadNewestCloudWorkspace(
   client: SupabaseClient,
-): Promise<FinancialWorkspace | null> {
+  userId: string,
+): Promise<CloudWorkspaceSnapshot | null> {
   const { data, error } = await client
     .from("financial_workspaces")
-    .select("workspace")
+    .select("workspace, updated_at")
+    .eq("owner_id", userId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -62,7 +102,10 @@ export async function loadNewestCloudWorkspace(
       "invalid-workspace",
       "The cloud backup uses an unsupported data format.",
     );
-  return result.data as unknown as FinancialWorkspace;
+  return {
+    workspace: result.data as unknown as FinancialWorkspace,
+    version: data.updated_at as string,
+  };
 }
 
 export async function deleteCloudWorkspaces(
