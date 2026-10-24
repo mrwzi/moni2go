@@ -236,10 +236,12 @@ test("requires explicit accounts, keeps account effects accurate, and orders sam
     page.locator(".account-list > li").filter({ hasText: "Credit card" }),
   ).toContainText("Owed $24.54");
   const history = page.getByRole("region", { name: "Recent transactions" });
-  await expect(history.locator(".transaction-history-amount")).toHaveText([
-    "$16.10",
-    "$8.44",
-  ]);
+  await expect(
+    history.locator(".transaction-history-amount").nth(0),
+  ).toHaveText("$16.10");
+  await expect(
+    history.locator(".transaction-history-amount").nth(1),
+  ).toHaveText("$8.44");
 
   await page.getByRole("button", { name: "Move money" }).click();
   dialog = page.getByRole("dialog", { name: "Move money" });
@@ -263,6 +265,37 @@ test("requires explicit accounts, keeps account effects accurate, and orders sam
   await expect(
     page.getByRole("option", { name: "Chequing · $105.00", exact: true }),
   ).toHaveCount(0);
+  await page
+    .getByRole("option", {
+      name: "Credit card · owed $24.54",
+      exact: true,
+    })
+    .click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$95.00");
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Credit card" }),
+  ).toContainText("Owed $14.54");
+  const payment = history
+    .getByRole("listitem")
+    .filter({ hasText: "Card payment" });
+  await expect(payment).toContainText("$10.00");
+  await expect(payment).toContainText(
+    "From: BMO · Chequing → To: BMO · Credit card",
+  );
+
+  await page.reload();
+  const refreshedHistory = page.getByRole("region", {
+    name: "Recent transactions",
+  });
+  await expect(
+    refreshedHistory.getByRole("listitem").filter({ hasText: "Card payment" }),
+  ).toContainText("$10.00");
+  await chooseMoneyOption(page, "Filter by account", "BMO · Credit card");
+  await expect(refreshedHistory.getByRole("listitem")).toHaveCount(3);
 });
 
 test("keeps money dialogs consistent and shows only relevant activity fields", async ({
@@ -590,8 +623,9 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   const correctionHistory = page.getByRole("region", {
     name: "Recent transactions",
   });
+  await expect(correctionHistory).toContainText("Balance correction");
   await expect(correctionHistory).toContainText(
-    "Card bank · Credit card balance corrected",
+    "Account: Card bank · Credit card",
   );
   await expect(correctionHistory).toContainText("$27.67 → $13.23");
   await expect(correctionHistory).toContainText("−$14.44");
@@ -809,8 +843,6 @@ test("records money in and money out against an existing account", async ({
     await page.getByRole("button", { name: "Save", exact: true }).click();
   }
   const history = page.getByRole("region", { name: "Recent transactions" });
-  await expect(history.getByRole("listitem")).toHaveCount(2);
-  await history.getByRole("button", { name: "Show all activity (4)" }).click();
   await expect(history.getByRole("listitem")).toHaveCount(4);
   await expect(history.getByText("Weekly supermarket trip")).toBeVisible();
 
@@ -947,7 +979,18 @@ test("moves money between tracked accounts and into savings without changing spe
   ).toContainText("$175.00");
   await expect(
     page.getByRole("region", { name: "Recent transactions" }),
-  ).toContainText("Savings or investment deposit");
+  ).toContainText("Transfer");
+  await page.reload();
+  const refreshedHistory = page.getByRole("region", {
+    name: "Recent transactions",
+  });
+  await expect(
+    refreshedHistory.getByRole("listitem").filter({ hasText: "Transfer" }),
+  ).toContainText(
+    "From: Transfer bank · Chequing → To: Transfer bank · Savings",
+  );
+  await chooseMoneyOption(page, "Filter by account", "Transfer bank · Savings");
+  await expect(refreshedHistory.getByRole("listitem")).toHaveCount(1);
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Spending at a glance" }),
@@ -1006,7 +1049,7 @@ test("reduces cash and tracked loan debt with one simple payment", async ({
     .getByRole("listitem")
     .filter({ hasText: "$50.00" });
   await expect(unknownPayment).toContainText(
-    "Loan bank · Chequing → Loan bank · Personal loan",
+    "From: Loan bank · Chequing → To: Loan bank · Personal loan",
   );
   await unknownPayment.getByRole("button", { name: /Edit/ }).click();
   const editPayment = page.getByRole("dialog", { name: "Edit transaction" });
@@ -1318,7 +1361,7 @@ test("edits an older loan payment after normal same-day activity but protects a 
   const history = page.getByRole("region", { name: "Recent transactions" });
   const loanPayment = history
     .getByRole("listitem")
-    .filter({ hasText: "BMO · Chequing → UW · Student loan" });
+    .filter({ hasText: "From: BMO · Chequing → To: UW · Student loan" });
   await loanPayment
     .getByRole("button", { name: "Edit Card or loan payment transaction" })
     .click();
@@ -1342,11 +1385,10 @@ test("edits an older loan payment after normal same-day activity but protects a 
   await correction.getByLabel("New current balance").fill("2200");
   await correction.getByRole("button", { name: "Save", exact: true }).click();
   await expect(correction).toBeHidden();
-  await history.getByRole("button", { name: /Show all activity/ }).click();
 
   await history
     .getByRole("listitem")
-    .filter({ hasText: "BMO · Chequing → UW · Student loan" })
+    .filter({ hasText: "From: BMO · Chequing → To: UW · Student loan" })
     .getByRole("button", { name: "Edit Card or loan payment transaction" })
     .click();
   edit = page.getByRole("dialog", { name: "Edit transaction" });

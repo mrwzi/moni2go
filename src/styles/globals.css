@@ -4741,6 +4741,26 @@ main {
   list-style: none;
 }
 
+.transaction-history-groups,
+.transaction-history-group {
+  display: grid;
+  gap: 0;
+}
+
+.transaction-history-group > h3 {
+  margin: 0;
+  padding: 0.9rem 0.95rem 0.45rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.transaction-history-group + .transaction-history-group {
+  margin-top: 0.4rem;
+}
+
 .transaction-history-list > li {
   display: flex;
   align-items: center;

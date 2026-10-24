@@ -26,14 +26,7 @@ import type { FinancialWorkspace } from "../../v2/domain/workspace";
 import { SPENDING_CATEGORIES } from "./account-options";
 import { MoneySelect } from "./MoneySelect";
 
-const TYPE_LABELS: Record<ExpenseTransactionType, string> = {
-  purchase: "Purchase",
-  "person-payment": "Money sent",
-  refund: "Refund received",
-  transfer: "Transfer between accounts",
-  "credit-card-payment": "Card or loan payment",
-  "savings-contribution": "Savings or investment deposit",
-};
+const RECENT_ACTIVITY_LIMIT = 10;
 type TransactionActivity =
   | Readonly<{ kind: "expense"; record: DatedExpenseEvent }>
   | Readonly<{ kind: "income"; record: HistoricalIncomeRecord }>;
@@ -55,6 +48,23 @@ const activityAccountIds = (
   activity.kind === "correction"
     ? [activity.record.accountId]
     : affectedTransactionAccountIds(activity.record);
+const readableActivityDate = (date: CalendarDate): string => {
+  const [year = 1970, month = 1, day = 1] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+};
+const recordedTime = (createdAt: string): string | null => {
+  const timestamp = new Date(createdAt);
+  if (!Number.isFinite(timestamp.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(timestamp);
+};
 const localToday = (): CalendarDate => {
   const now = new Date();
   return parseCalendarDate(
@@ -142,6 +152,18 @@ export function TransactionHistory({
     workspace.balanceCorrections,
     accountFilter,
   ]);
+  const visibleActivities = showAll
+    ? activities
+    : activities.slice(0, RECENT_ACTIVITY_LIMIT);
+  const groupedActivities = visibleActivities.reduce<
+    { date: CalendarDate; activities: Activity[] }[]
+  >((groups, activity) => {
+    const date = activityDate(activity);
+    const latest = groups.at(-1);
+    if (latest?.date === date) latest.activities.push(activity);
+    else groups.push({ date, activities: [activity] });
+    return groups;
+  }, []);
   if (
     workspace.expenseEvents.every((event) => event.status !== "actual") &&
     workspace.historicalIncome.length === 0 &&
@@ -158,6 +180,21 @@ export function TransactionHistory({
       activityDate(activity),
       activity.record.updatedAt,
     );
+  const activityTypeLabel = (activity: TransactionActivity): string => {
+    if (activity.kind === "income") return "Income";
+    const type = eventType(activity.record);
+    if (type === "purchase") return "Purchase";
+    if (type === "person-payment") return "Money sent";
+    if (type === "refund") return "Refund";
+    if (type === "transfer" || type === "savings-contribution")
+      return "Transfer";
+    const debt = workspace.liabilityAccounts.find(
+      (account) => account.id === activity.record.relatedAccountId,
+    );
+    return debt?.type === "credit-card" || debt?.type === "line-of-credit"
+      ? "Card payment"
+      : "Debt payment";
+  };
   function startEdit(activity: TransactionActivity) {
     setEditing(activity);
     setAmount((activity.record.amountCents / 100).toFixed(2));
@@ -466,105 +503,124 @@ export function TransactionHistory({
       {activities.length === 0 ? (
         <p className="empty-state">No activity for this account.</p>
       ) : (
-        <ul className="transaction-history-list">
-          {activities.slice(0, showAll ? 50 : 2).map((activity) => {
-            if (activity.kind === "correction") {
-              const difference =
-                activity.record.correctedBalanceCents -
-                activity.record.previousBalanceCents;
-              return (
-                <li key={`correction-${activity.record.id}`}>
-                  <div className="transaction-history-details">
-                    <strong>
-                      {accountName(activity.record.accountId)} balance corrected
-                    </strong>
-                    <small>
-                      {activity.record.correctionDate} · Balance correction
-                    </small>
-                    <small>Not income or spending</small>
-                  </div>
-                  <div className="transaction-history-summary">
-                    <strong className="transaction-history-amount">
-                      {formatCad(activity.record.previousBalanceCents)} →{" "}
-                      {formatCad(activity.record.correctedBalanceCents)}
-                    </strong>
-                    <small>
-                      {difference > 0 ? "+" : ""}
-                      {formatCad(asV2Cents(difference))}
-                    </small>
-                  </div>
-                </li>
-              );
-            }
-            const isRefund =
-              activity.kind === "expense" &&
-              eventType(activity.record) === "refund";
-            return (
-              <li key={`${activity.kind}-${activity.record.id}`}>
-                <div className="transaction-history-details">
-                  <strong>{activity.record.name}</strong>
-                  {activity.kind === "expense" && activity.record.note && (
-                    <span>{activity.record.note}</span>
-                  )}
-                  <small>
-                    {accountName(activity.record.accountId)}
-                    {activity.kind === "expense" &&
-                    activity.record.relatedAccountId
-                      ? ` → ${accountName(activity.record.relatedAccountId)}`
-                      : ""}
-                  </small>
-                  <small>
-                    {activityDate(activity)} ·{" "}
-                    {activity.kind === "income"
-                      ? "Income"
-                      : TYPE_LABELS[eventType(activity.record)]}
-                    {activity.kind === "expense" &&
-                    eventType(activity.record) === "credit-card-payment" &&
-                    activity.record.principalAmountCents === undefined &&
-                    workspace.liabilityAccounts.some(
-                      (account) =>
-                        account.id === activity.record.relatedAccountId &&
-                        account.type !== "credit-card" &&
-                        account.type !== "line-of-credit",
-                    )
-                      ? " · Debt balance not applied—edit to apply"
-                      : ""}
-                  </small>
-                </div>
-                <div className="transaction-history-summary">
-                  <strong className="transaction-history-amount">
-                    {isRefund ? "−" : ""}
-                    {formatCad(activity.record.amountCents)}
-                  </strong>
-                  <div className="transaction-history-actions">
-                    <button
-                      type="button"
-                      aria-label={`Edit ${activity.record.name} transaction`}
-                      onClick={() => {
-                        startEdit(activity);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="danger-link"
-                      aria-label={`Delete ${activity.record.name} transaction`}
-                      onClick={() => {
-                        setDeleting(activity);
-                        setError(null);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="transaction-history-groups">
+          {groupedActivities.map((group) => (
+            <section
+              className="transaction-history-group"
+              key={group.date}
+              aria-labelledby={`activity-date-${group.date}`}
+            >
+              <h3 id={`activity-date-${group.date}`}>
+                {readableActivityDate(group.date)}
+              </h3>
+              <ul className="transaction-history-list">
+                {group.activities.map((activity) => {
+                  const time = recordedTime(activity.record.createdAt);
+                  if (activity.kind === "correction") {
+                    const difference =
+                      activity.record.correctedBalanceCents -
+                      activity.record.previousBalanceCents;
+                    return (
+                      <li key={`correction-${activity.record.id}`}>
+                        <div className="transaction-history-details">
+                          <strong>Balance correction</strong>
+                          <span>
+                            {formatCad(activity.record.previousBalanceCents)} →{" "}
+                            {formatCad(activity.record.correctedBalanceCents)}
+                          </span>
+                          <small>
+                            Account: {accountName(activity.record.accountId)}
+                          </small>
+                          <small>
+                            {time ? `Recorded ${time} · ` : ""}Not income or
+                            spending
+                          </small>
+                        </div>
+                        <div className="transaction-history-summary">
+                          <strong className="transaction-history-amount">
+                            {difference > 0 ? "+" : ""}
+                            {formatCad(asV2Cents(difference))}
+                          </strong>
+                        </div>
+                      </li>
+                    );
+                  }
+                  const type =
+                    activity.kind === "expense"
+                      ? eventType(activity.record)
+                      : null;
+                  const isRefund = type === "refund";
+                  const hasDestination =
+                    activity.kind === "expense" &&
+                    Boolean(activity.record.relatedAccountId);
+                  return (
+                    <li key={`${activity.kind}-${activity.record.id}`}>
+                      <div className="transaction-history-details">
+                        <strong>{activityTypeLabel(activity)}</strong>
+                        <span>{activity.record.name}</span>
+                        {activity.kind === "expense" &&
+                          activity.record.note && (
+                            <span>{activity.record.note}</span>
+                          )}
+                        <small>
+                          {activity.kind === "income"
+                            ? `To: ${accountName(activity.record.accountId)}`
+                            : hasDestination
+                              ? `From: ${accountName(activity.record.accountId)} → To: ${accountName(activity.record.relatedAccountId)}`
+                              : `Account: ${accountName(activity.record.accountId)}`}
+                        </small>
+                        {time && <small>Recorded {time}</small>}
+                        {activity.kind === "expense" &&
+                          type === "credit-card-payment" &&
+                          activity.record.principalAmountCents === undefined &&
+                          workspace.liabilityAccounts.some(
+                            (account) =>
+                              account.id === activity.record.relatedAccountId &&
+                              account.type !== "credit-card" &&
+                              account.type !== "line-of-credit",
+                          ) && (
+                            <small>
+                              Debt balance not applied—edit to apply
+                            </small>
+                          )}
+                      </div>
+                      <div className="transaction-history-summary">
+                        <strong className="transaction-history-amount">
+                          {isRefund ? "−" : ""}
+                          {formatCad(activity.record.amountCents)}
+                        </strong>
+                        <div className="transaction-history-actions">
+                          <button
+                            type="button"
+                            aria-label={`Edit ${activity.record.name} transaction`}
+                            onClick={() => {
+                              startEdit(activity);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="danger-link"
+                            aria-label={`Delete ${activity.record.name} transaction`}
+                            onClick={() => {
+                              setDeleting(activity);
+                              setError(null);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
-      {activities.length > 2 && (
+      {activities.length > RECENT_ACTIVITY_LIMIT && (
         <button
           className="button button-secondary transaction-history-toggle"
           type="button"
@@ -574,7 +630,7 @@ export function TransactionHistory({
           }}
         >
           {showAll
-            ? "Show recent only"
+            ? "Show recent 10"
             : `Show all activity (${activities.length.toString()})`}
         </button>
       )}
