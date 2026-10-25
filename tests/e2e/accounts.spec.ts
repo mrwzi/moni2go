@@ -362,6 +362,9 @@ test("keeps money dialogs consistent and shows only relevant activity fields", a
     name: "What was refunded?",
   });
   await categorySelector.click();
+  await expect(
+    page.getByRole("option", { name: "Education", exact: true }),
+  ).toHaveCount(1);
   const upwardMenu = await page.getByRole("listbox").boundingBox();
   const categoryBox = await categorySelector.boundingBox();
   if (!upwardMenu || !categoryBox)

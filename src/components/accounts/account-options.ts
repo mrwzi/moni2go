@@ -62,6 +62,7 @@ export const SPENDING_CATEGORIES = [
   "entertainment-recreation",
   "subscriptions",
   "health-personal-care",
+  "education",
   "debt-payments",
   "savings-goals",
   "other",
