@@ -206,6 +206,34 @@ export function AccountsManager() {
   const groups = workspace?.accountGroups ?? [];
   const dialogOpen = dialogGroupId !== null;
   const activeAssets = assets.filter((account) => account.status === "active");
+  const payableBills = classifyObligations(
+    activeWorkspace,
+    localToday(),
+    90,
+  ).flatMap((obligation) => {
+    if (
+      obligation.kind !== "bill" ||
+      (obligation.status !== "overdue" && obligation.status !== "upcoming") ||
+      !obligation.date ||
+      !obligation.remainingCents ||
+      obligation.remainingCents <= 0
+    )
+      return [];
+    const definition = activeWorkspace.expenseDefinitions.find(
+      (item) => item.id === obligation.sourceId,
+    );
+    return definition
+      ? [
+          {
+            definitionId: definition.id,
+            dueDate: obligation.date,
+            name: definition.name,
+            category: definition.category,
+            remainingCents: obligation.remainingCents,
+          },
+        ]
+      : [];
+  });
   const balanceUpdateAccount = assets.find(
     (account) => account.id === balanceUpdateAssetId,
   );
@@ -678,12 +706,20 @@ export function AccountsManager() {
       ? classifyObligations(workspace, today, 90).find(
           (obligation) =>
             obligation.sourceId === billDefinition.id &&
+            obligation.date === input.billDueDate &&
             (obligation.status === "overdue" ||
               obligation.status === "upcoming") &&
-            obligation.date !== null &&
             (obligation.remainingCents ?? 0) > 0,
         )
       : undefined;
+    if (
+      input.kind === "expense" &&
+      input.transactionType === "purchase" &&
+      !billDefinition &&
+      input.billName !== undefined &&
+      !input.billName.trim()
+    )
+      return "Enter the bill name.";
     if (billDefinition && !billObligation)
       return "This bill has no unpaid occurrence in the next 90 days.";
     if (
@@ -838,21 +874,23 @@ export function AccountsManager() {
                   ...(input.note ? { note: input.note } : {}),
                   name: billDefinition
                     ? billDefinition.name
-                    : input.transactionType === "transfer"
-                      ? input.transferToUntrackedAccount
-                        ? "Transfer to untracked account"
-                        : "Transfer between accounts"
-                      : input.transactionType === "credit-card-payment"
-                        ? "Card or loan payment"
-                        : input.transactionType === "savings-contribution"
-                          ? "Savings or investment contribution"
-                          : input.transactionType === "person-payment"
-                            ? input.personPaymentPurpose === "gift"
-                              ? "Gift sent"
-                              : input.personPaymentPurpose === "pay-someone"
-                                ? "Payment sent"
-                                : "Money sent"
-                            : `${input.transactionType === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[spendingCategory]}`,
+                    : input.billName
+                      ? `Bill payment · ${input.billName.trim()}`
+                      : input.transactionType === "transfer"
+                        ? input.transferToUntrackedAccount
+                          ? "Transfer to untracked account"
+                          : "Transfer between accounts"
+                        : input.transactionType === "credit-card-payment"
+                          ? "Card or loan payment"
+                          : input.transactionType === "savings-contribution"
+                            ? "Savings or investment contribution"
+                            : input.transactionType === "person-payment"
+                              ? input.personPaymentPurpose === "gift"
+                                ? "Gift sent"
+                                : input.personPaymentPurpose === "pay-someone"
+                                  ? "Payment sent"
+                                  : "Money sent"
+                              : `${input.transactionType === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[spendingCategory]}`,
                   amountCents: cents,
                   category: billDefinition?.category ?? spendingCategory,
                   nature: billDefinition?.nature ?? ("variable" as const),
@@ -903,7 +941,9 @@ export function AccountsManager() {
               : input.transactionType === "credit-card-payment"
                 ? `${formatCad(cents)} payment recorded from ${savedAccountName} to ${debtAccount ? savedAccountLabel(debtAccount) : "the debt account"}. Both tracked balances were updated.`
                 : input.transactionType === "purchase"
-                  ? `${formatCad(cents)} spending recorded from ${savedAccountName}.`
+                  ? input.billName || billDefinition
+                    ? `${formatCad(cents)} bill payment recorded from ${savedAccountName}.`
+                    : `${formatCad(cents)} spending recorded from ${savedAccountName}.`
                   : `${formatCad(cents)} contribution recorded from ${savedAccountName}.`,
       );
       return null;
@@ -1319,7 +1359,7 @@ export function AccountsManager() {
           accounts={activeAssets}
           liabilityAccounts={liabilities}
           accountGroups={groups}
-          expenseDefinitions={workspace?.expenseDefinitions ?? []}
+          payableBills={payableBills}
           onClose={() => {
             setActivityKind(null);
           }}

@@ -194,6 +194,7 @@ test("requires explicit accounts, keeps account effects accurate, and orders sam
   await expect(
     dialog.getByRole("combobox", { name: "Account or card" }),
   ).toContainText("Select an account");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
   await dialog.getByLabel("Amount").fill("1");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog.getByRole("alert")).toHaveText("Select an account.");
@@ -215,6 +216,7 @@ test("requires explicit accounts, keeps account effects accurate, and orders sam
       "Account or card",
       `Credit card · owed ${owed}`,
     );
+    await chooseMoneyOption(page, "Expense type", "Purchase");
     await chooseMoneyOption(
       page,
       "What was it for?",
@@ -330,9 +332,13 @@ test("keeps money dialogs consistent and shows only relevant activity fields", a
   const typeSelector = activity.getByRole("combobox", {
     name: "Expense type",
   });
+  await expect(typeSelector).toContainText("Select expense type");
+  await expect(
+    activity.getByRole("combobox", { name: "What was it for?" }),
+  ).toHaveCount(0);
   await typeSelector.click();
   await expect(page.getByRole("listbox")).toBeVisible();
-  await expect(page.getByRole("option")).toHaveCount(3);
+  await expect(page.getByRole("option")).toHaveCount(4);
   const menuBox = await page.getByRole("listbox").boundingBox();
   const typeBox = await typeSelector.boundingBox();
   if (!menuBox) throw new Error("Activity selector bounds are unavailable");
@@ -350,6 +356,14 @@ test("keeps money dialogs consistent and shows only relevant activity fields", a
     expect(Math.abs(repeatedBox.y - menuBox.y)).toBeLessThan(1);
     await page.keyboard.press("Escape");
   }
+  await chooseMoneyOption(page, "Expense type", "Pay a bill");
+  await chooseMoneyOption(page, "Bill type", "Record a one-time bill");
+  await activity.getByLabel("Bill name").fill("Temporary bill");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
+  await expect(activity.getByLabel("Bill name")).toHaveCount(0);
+  await expect(
+    activity.getByRole("combobox", { name: "Saved bill" }),
+  ).toHaveCount(0);
   await typeSelector.click();
   await page.getByRole("option", { name: "Refund", exact: true }).click();
   await expect(
@@ -424,6 +438,7 @@ test("records education purchases and refunds as consumption", async ({
   await page.getByRole("button", { name: "Record expense" }).click();
   let dialog = page.getByRole("dialog", { name: "Record expense" });
   await chooseMoneyOption(page, "Account or card", "Chequing · $500.00");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
   await chooseMoneyOption(page, "What was it for?", "Education");
   await dialog.getByLabel("Amount").fill("100");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -447,6 +462,51 @@ test("records education purchases and refunds as consumption", async ({
   await expect(
     page.getByRole("region", { name: "Spending at a glance" }),
   ).toContainText("$75.00");
+});
+
+test("records a one-time tuition bill without creating a commitment", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Tuition bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("300");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Record expense" }).click();
+  const dialog = page.getByRole("dialog", { name: "Record expense" });
+  await expect(
+    dialog.getByRole("combobox", { name: "Expense type" }),
+  ).toContainText("Select expense type");
+  await chooseFirstMoneyOption(page, "Account or card");
+  await chooseMoneyOption(page, "Expense type", "Pay a bill");
+  await chooseMoneyOption(page, "Bill type", "Record a one-time bill");
+  await dialog.getByLabel("Bill name").fill("Tuition lab fee");
+  await chooseMoneyOption(page, "Bill category", "Education");
+  await dialog.getByLabel("Amount").fill("125");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$175.00");
+  const history = page.getByRole("region", { name: "Recent transactions" });
+  const payment = history
+    .getByRole("listitem")
+    .filter({ hasText: "Tuition lab fee" });
+  await expect(payment).toContainText("Bill payment");
+  await expect(payment).toContainText("$125.00");
+  await expect(
+    page
+      .getByRole("region", { name: "Bills & commitments" })
+      .getByText("Tuition lab fee"),
+  ).toHaveCount(0);
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("region", { name: "Spending at a glance" }),
+  ).toContainText("$125.00");
 });
 
 test("updates an investment for dividends, losses, and missed changes", async ({
@@ -570,6 +630,7 @@ test("saves a paid-off credit card without inventing debt or a payment", async (
   await page.getByRole("button", { name: "Record expense" }).click();
   const spendingDialog = page.getByRole("dialog", { name: "Record expense" });
   await chooseMoneyOption(page, "Account or card", "Credit card · owed $0.00");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
   await chooseMoneyOption(page, "What was it for?", "Subscriptions");
   await spendingDialog.getByLabel("Amount").fill("10");
   await spendingDialog
@@ -695,6 +756,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await page.getByRole("button", { name: "Record expense" }).click();
   const activity = page.getByRole("dialog", { name: "Record expense" });
   await chooseMoneyOption(page, "Account or card", "Credit card · owed $13.23");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
   await chooseMoneyOption(page, "What was it for?", "Groceries");
   await activity.getByLabel("Amount").fill("2");
   await activity.getByRole("button", { name: "Save", exact: true }).click();
@@ -869,6 +931,7 @@ test("records money in and money out against an existing account", async ({
 
   await page.getByRole("button", { name: "Record expense" }).click();
   await chooseFirstMoneyOption(page, "Account or card");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
   await chooseMoneyOption(page, "What was it for?", "Groceries");
   await page.getByLabel("Amount").fill("20.25");
   await page.getByText("Add a note").click();
@@ -883,6 +946,7 @@ test("records money in and money out against an existing account", async ({
   for (const amount of ["2", "3"]) {
     await page.getByRole("button", { name: "Record expense" }).click();
     await chooseFirstMoneyOption(page, "Account or card");
+    await chooseMoneyOption(page, "Expense type", "Purchase");
     await chooseMoneyOption(page, "What was it for?", "Subscriptions");
     await page.getByLabel("Amount").fill(amount);
     await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -955,6 +1019,7 @@ test("records credit-card purchases once and applies payments to both balances",
     "Account or card",
     "Credit card · owed $420.00",
   );
+  await chooseMoneyOption(page, "Expense type", "Purchase");
   await chooseMoneyOption(page, "What was it for?", "Groceries");
   await spendingDialog.getByLabel("Amount").fill("50");
   await spendingDialog
@@ -1121,6 +1186,7 @@ test("home spending and outlook stay readable from 320px through desktop", async
   await page.getByRole("button", { name: "Record expense" }).click();
   const expense = page.getByRole("dialog", { name: "Record expense" });
   await chooseFirstMoneyOption(page, "Account or card");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
   await chooseMoneyOption(page, "What was it for?", "Restaurants / eating out");
   await expense.getByLabel("Amount").fill("25");
   await expense.getByRole("button", { name: "Save", exact: true }).click();
@@ -1212,15 +1278,27 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
 
   await page.getByRole("button", { name: "Record expense" }).click();
   await chooseFirstMoneyOption(page, "Account or card");
-  await chooseMoneyOption(
-    page,
-    "Saved bill (optional)",
-    `${longPaymentName} · $400.00`,
-  );
+  await chooseMoneyOption(page, "Expense type", "Pay a bill");
+  await chooseMoneyOption(page, "Bill type", "Choose a saved bill");
+  await page.getByRole("combobox", { name: "Saved bill" }).click();
+  const firstBillOccurrence = page.getByRole("option").first();
+  await expect(firstBillOccurrence).toContainText(longPaymentName);
+  await expect(firstBillOccurrence).toContainText("$400.00 remaining");
+  await firstBillOccurrence.click();
+  await page.getByLabel("Amount").fill("401");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Record expense" }).getByRole("alert"),
+  ).toContainText("Enter no more than the $400.00 still due.");
   await page.getByLabel("Amount").fill("100");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
-    page.getByText("$100.00 spending recorded from Chequing."),
+    page.getByText("$100.00 bill payment recorded from Chequing."),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Recent transactions" })
+      .getByText("Bill payment", { exact: true }),
   ).toBeVisible();
 
   await page.goto("/");
@@ -1251,11 +1329,13 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
   await page.goto("/accounts");
   await page.getByRole("button", { name: "Record expense" }).click();
   await chooseFirstMoneyOption(page, "Account or card");
-  await chooseMoneyOption(
-    page,
-    "Saved bill (optional)",
-    `${longPaymentName} · $400.00`,
-  );
+  await chooseMoneyOption(page, "Expense type", "Pay a bill");
+  await chooseMoneyOption(page, "Bill type", "Choose a saved bill");
+  await page.getByRole("combobox", { name: "Saved bill" }).click();
+  const remainingBillOccurrence = page.getByRole("option").first();
+  await expect(remainingBillOccurrence).toContainText(longPaymentName);
+  await expect(remainingBillOccurrence).toContainText("$300.00 remaining");
+  await remainingBillOccurrence.click();
   await page.getByLabel("Amount").fill("300");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.goto("/");

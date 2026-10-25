@@ -36,6 +36,15 @@ type Activity =
 type BalanceChoice = "balances" | "record-only";
 const eventType = (event: DatedExpenseEvent): ExpenseTransactionType =>
   event.transactionType ?? "purchase";
+const ONE_TIME_BILL_PREFIX = "Bill payment · ";
+const isBillPayment = (event: DatedExpenseEvent): boolean =>
+  Boolean(event.definitionId) ||
+  (eventType(event) === "purchase" &&
+    event.name.startsWith(ONE_TIME_BILL_PREFIX));
+const activityName = (event: DatedExpenseEvent): string =>
+  event.name.startsWith(ONE_TIME_BILL_PREFIX)
+    ? event.name.slice(ONE_TIME_BILL_PREFIX.length)
+    : event.name;
 const activityDate = (activity: Activity): CalendarDate =>
   activity.kind === "correction"
     ? activity.record.correctionDate
@@ -183,6 +192,7 @@ export function TransactionHistory({
   const activityTypeLabel = (activity: TransactionActivity): string => {
     if (activity.kind === "income") return "Income";
     const type = eventType(activity.record);
+    if (isBillPayment(activity.record)) return "Bill payment";
     if (type === "purchase") return "Purchase";
     if (type === "person-payment") return "Money sent";
     if (type === "refund") return "Refund";
@@ -325,12 +335,15 @@ export function TransactionHistory({
           amountCents: parsed.cents,
           category,
           actualDate: parsedDate,
-          dueDate: parsedDate,
+          dueDate: editing.record.definitionId
+            ? editing.record.dueDate
+            : parsedDate,
           ...(type === "credit-card-payment" && updatedPrincipal !== undefined
             ? { principalAmountCents: updatedPrincipal }
             : {}),
-          name:
-            type === "purchase" || type === "refund"
+          name: isBillPayment(editing.record)
+            ? editing.record.name
+            : type === "purchase" || type === "refund"
               ? `${type === "refund" ? "Refund · " : ""}${BUDGET_CATEGORIES[category]}`
               : editing.record.name,
           ...(note.trim() ? { note: note.trim() } : {}),
@@ -557,7 +570,11 @@ export function TransactionHistory({
                     <li key={`${activity.kind}-${activity.record.id}`}>
                       <div className="transaction-history-details">
                         <strong>{activityTypeLabel(activity)}</strong>
-                        <span>{activity.record.name}</span>
+                        <span>
+                          {activity.kind === "expense"
+                            ? activityName(activity.record)
+                            : activity.record.name}
+                        </span>
                         {activity.kind === "expense" &&
                           activity.record.note && (
                             <span>{activity.record.note}</span>

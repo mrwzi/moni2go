@@ -282,6 +282,46 @@ describe("financial insights", () => {
     expect(insights.spending.spentThisMonthCents).toBe(50_000);
   });
 
+  it("applies multiple partial payments only to their saved bill occurrence", () => {
+    const rent = bill("rent", 40_000);
+    const firstPayment = {
+      ...purchase("rent-part-1", "2026-10-18", 10_000),
+      definitionId: "rent",
+      dueDate: "2026-10-25",
+      name: "Rent",
+      category: "housing",
+      obligation: "required",
+    } as const;
+    const secondPayment = {
+      ...purchase("rent-part-2", "2026-10-19", 15_000),
+      definitionId: "rent",
+      dueDate: "2026-10-25",
+      name: "Rent",
+      category: "housing",
+      obligation: "required",
+    } as const;
+    const data = workspace({
+      assetAccounts: [chequing(100_000)],
+      expenseDefinitions: [rent] as never,
+      expenseEvents: [firstPayment, secondPayment] as never,
+    });
+    const occurrence = classifyObligations(data, today, 30).find(
+      (item) => item.sourceId === "rent" && item.date === "2026-10-25",
+    );
+    expect(occurrence).toMatchObject({
+      status: "upcoming",
+      paidCents: 25_000,
+      remainingCents: 15_000,
+    });
+    const insights = analyzeFinancialWorkspace(data, today);
+    expect(insights.spending.spentThisMonthCents).toBe(25_000);
+    expect(
+      insights.forecasts[30].events.find(
+        (event) => event.label === "Rent" && event.date === "2026-10-25",
+      )?.amountCents,
+    ).toBe(15_000);
+  });
+
   it("keeps refunds, transfers, card payments, and consumption distinct", () => {
     const data = workspace({
       expenseEvents: [

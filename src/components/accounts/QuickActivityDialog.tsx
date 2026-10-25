@@ -5,10 +5,10 @@ import { formatCad } from "../../domain/money";
 import type { AccountGroup } from "../../v2/domain/account-groups";
 import type { AssetAccount, LiabilityAccount } from "../../v2/domain/accounts";
 import type {
-  ExpenseDefinition,
   ExpenseTransactionType,
   PersonPaymentPurpose,
 } from "../../v2/domain/expenses";
+import type { CalendarDate, V2Cents } from "../../v2/domain/types";
 import {
   BUDGET_CATEGORIES,
   type BudgetCategoryKey,
@@ -33,6 +33,8 @@ export type QuickActivityInput = Readonly<{
   transferToUntrackedAccount?: boolean;
   debtAccountId?: string;
   definitionId?: string;
+  billDueDate?: CalendarDate;
+  billName?: string;
   personPaymentPurpose?: PersonPaymentPurpose;
   saveIncomeSchedule?: boolean;
   incomeFrequency?: "weekly" | "biweekly" | "monthly";
@@ -41,9 +43,14 @@ export type QuickActivityInput = Readonly<{
 
 const UNTRACKED_ACCOUNT_VALUE = "untracked-owned-account";
 const EXPENSE_OPTIONS = [
-  { value: "purchase", label: "Purchase or bill" },
+  { value: "purchase", label: "Purchase" },
+  { value: "bill-payment", label: "Pay a bill" },
   { value: "refund", label: "Refund" },
   { value: "person-payment", label: "Send money to someone" },
+] as const;
+const BILL_PATH_OPTIONS = [
+  { value: "saved", label: "Choose a saved bill" },
+  { value: "one-time", label: "Record a one-time bill" },
 ] as const;
 const PERSON_PAYMENT_OPTIONS = [
   { value: "gift", label: "Gift" },
@@ -58,13 +65,21 @@ const INVESTMENT_TYPES = new Set<AssetAccount["type"]>([
   "non-registered-investment",
   "crypto",
 ]);
+const formatBillDueDate = (date: CalendarDate): string => {
+  const [year = 1970, month = 1, day = 1] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+};
 
 export function QuickActivityDialog({
   kind,
   accounts,
   liabilityAccounts,
   accountGroups,
-  expenseDefinitions,
+  payableBills,
   onClose,
   onSave,
 }: Readonly<{
@@ -72,7 +87,13 @@ export function QuickActivityDialog({
   accounts: readonly AssetAccount[];
   liabilityAccounts: readonly LiabilityAccount[];
   accountGroups: readonly AccountGroup[];
-  expenseDefinitions: readonly ExpenseDefinition[];
+  payableBills: readonly Readonly<{
+    definitionId: string;
+    dueDate: CalendarDate;
+    name: string;
+    category: BudgetCategoryKey;
+    remainingCents: V2Cents;
+  }>[];
   onClose: () => void;
   onSave: (input: QuickActivityInput) => Promise<string | null>;
 }>) {
@@ -95,13 +116,15 @@ export function QuickActivityDialog({
   const [spendingCategory, setSpendingCategory] =
     useState<BudgetCategoryKey>("groceries");
   const [expenseType, setExpenseType] = useState<
-    "purchase" | "refund" | "person-payment"
-  >("purchase");
+    "" | "purchase" | "bill-payment" | "refund" | "person-payment"
+  >("");
+  const [billPath, setBillPath] = useState<"" | "saved" | "one-time">("");
+  const [billName, setBillName] = useState("");
+  const [billOccurrence, setBillOccurrence] = useState("");
   const [personPaymentPurpose, setPersonPaymentPurpose] =
     useState<PersonPaymentPurpose>("gift");
   const [destinationValue, setDestinationValue] = useState("");
   const [note, setNote] = useState("");
-  const [definitionId, setDefinitionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
@@ -113,14 +136,14 @@ export function QuickActivityDialog({
     (account) => account.id === destinationValue,
   );
   const isUntracked = destinationValue === UNTRACKED_ACCOUNT_VALUE;
-  const transactionType: ExpenseTransactionType =
-    kind === "expense"
-      ? expenseType
-      : destinationDebt
-        ? "credit-card-payment"
-        : destinationAsset && INVESTMENT_TYPES.has(destinationAsset.type)
-          ? "savings-contribution"
-          : "transfer";
+  const moveTransactionType: ExpenseTransactionType = destinationDebt
+    ? "credit-card-payment"
+    : destinationAsset && INVESTMENT_TYPES.has(destinationAsset.type)
+      ? "savings-contribution"
+      : "transfer";
+  const selectedBill = payableBills.find(
+    (bill) => `${bill.definitionId}|${bill.dueDate}` === billOccurrence,
+  );
 
   const duplicateNames = new Set(
     [...accounts, ...liabilityAccounts]
@@ -151,6 +174,48 @@ export function QuickActivityDialog({
     pendingRef.current = true;
     setPending(true);
     setError(null);
+    if (kind === "expense" && !expenseType) {
+      setError("Select an expense type.");
+      pendingRef.current = false;
+      setPending(false);
+      return;
+    }
+    if (kind === "expense" && expenseType === "bill-payment" && !billPath) {
+      setError("Choose a saved bill or a one-time bill.");
+      pendingRef.current = false;
+      setPending(false);
+      return;
+    }
+    if (
+      kind === "expense" &&
+      expenseType === "bill-payment" &&
+      billPath === "saved" &&
+      !selectedBill
+    ) {
+      setError("Choose an unpaid saved bill.");
+      pendingRef.current = false;
+      setPending(false);
+      return;
+    }
+    if (
+      kind === "expense" &&
+      expenseType === "bill-payment" &&
+      billPath === "one-time" &&
+      !billName.trim()
+    ) {
+      setError("Enter the bill name.");
+      pendingRef.current = false;
+      setPending(false);
+      return;
+    }
+    const expenseTransactionType: ExpenseTransactionType =
+      expenseType === "refund"
+        ? "refund"
+        : expenseType === "person-payment"
+          ? "person-payment"
+          : "purchase";
+    const transactionType: ExpenseTransactionType =
+      kind === "expense" ? expenseTransactionType : moveTransactionType;
     const result = await onSave({
       kind,
       accountId,
@@ -164,8 +229,16 @@ export function QuickActivityDialog({
         : {}),
       ...(isUntracked ? { transferToUntrackedAccount: true } : {}),
       ...(destinationDebt ? { debtAccountId: destinationDebt.id } : {}),
-      ...(kind === "expense" && expenseType === "purchase" && definitionId
-        ? { definitionId }
+      ...(kind === "expense" && expenseType === "bill-payment" && selectedBill
+        ? {
+            definitionId: selectedBill.definitionId,
+            billDueDate: selectedBill.dueDate,
+          }
+        : {}),
+      ...(kind === "expense" &&
+      expenseType === "bill-payment" &&
+      billPath === "one-time"
+        ? { billName: billName.trim() }
         : {}),
       ...(kind === "expense" && expenseType === "person-payment"
         ? { personPaymentPurpose }
@@ -268,9 +341,15 @@ export function QuickActivityDialog({
               <MoneySelect
                 label="Expense type"
                 value={expenseType}
+                placeholder="Select expense type"
                 options={EXPENSE_OPTIONS}
                 onChange={(value) => {
                   setExpenseType(value);
+                  setBillPath("");
+                  setBillOccurrence("");
+                  setBillName("");
+                  setAmount("");
+                  setSpendingCategory("groceries");
                   if (
                     value === "person-payment" &&
                     liabilityAccounts.some(
@@ -281,6 +360,67 @@ export function QuickActivityDialog({
                   setError(null);
                 }}
               />
+              {expenseType === "bill-payment" && (
+                <MoneySelect
+                  label="Bill type"
+                  value={billPath}
+                  placeholder="Choose how to record the bill"
+                  options={BILL_PATH_OPTIONS}
+                  onChange={(value) => {
+                    setBillPath(value);
+                    setBillOccurrence("");
+                    setBillName("");
+                    setAmount("");
+                    setError(null);
+                  }}
+                />
+              )}
+              {expenseType === "bill-payment" && billPath === "saved" && (
+                <MoneySelect
+                  label="Saved bill"
+                  value={billOccurrence}
+                  placeholder="Select an unpaid bill"
+                  options={payableBills.map((bill) => ({
+                    value: `${bill.definitionId}|${bill.dueDate}`,
+                    label: `${bill.name} · Due ${formatBillDueDate(bill.dueDate)} · ${formatCad(bill.remainingCents)} remaining`,
+                  }))}
+                  onChange={(value) => {
+                    setBillOccurrence(value);
+                    const bill = payableBills.find(
+                      (item) =>
+                        `${item.definitionId}|${item.dueDate}` === value,
+                    );
+                    if (bill) {
+                      setSpendingCategory(bill.category);
+                      setAmount((bill.remainingCents / 100).toFixed(2));
+                    }
+                    setError(null);
+                  }}
+                  hint="You can enter a smaller amount for a partial payment."
+                />
+              )}
+              {expenseType === "bill-payment" &&
+                billPath === "saved" &&
+                payableBills.length === 0 && (
+                  <p className="activity-explanation">
+                    There are no unpaid saved bills. Choose a one-time bill or
+                    add a bill under Bills &amp; commitments.
+                  </p>
+                )}
+              {expenseType === "bill-payment" && billPath === "one-time" && (
+                <label>
+                  Bill name
+                  <input
+                    value={billName}
+                    maxLength={120}
+                    onChange={(event) => {
+                      setBillName(event.target.value);
+                      setError(null);
+                    }}
+                    placeholder="For example, electricity bill"
+                  />
+                </label>
+              )}
               {expenseType === "person-payment" && (
                 <>
                   <MoneySelect
@@ -295,53 +435,22 @@ export function QuickActivityDialog({
                   </p>
                 </>
               )}
-              <MoneySelect
-                label={
-                  expenseType === "refund"
-                    ? "What was refunded?"
-                    : "What was it for?"
-                }
-                value={spendingCategory}
-                options={SPENDING_CATEGORIES.map((category) => ({
-                  value: category,
-                  label: BUDGET_CATEGORIES[category],
-                }))}
-                onChange={setSpendingCategory}
-              />
-              {expenseType === "purchase" &&
-                expenseDefinitions.some(
-                  (definition) =>
-                    definition.status !== "paused" &&
-                    definition.status !== "cancelled",
-                ) && (
+              {expenseType &&
+                !(expenseType === "bill-payment" && billPath === "saved") && (
                   <MoneySelect
-                    label="Saved bill (optional)"
-                    value={definitionId}
-                    options={[
-                      { value: "", label: "Not a saved bill" },
-                      ...expenseDefinitions
-                        .filter(
-                          (definition) =>
-                            definition.status !== "paused" &&
-                            definition.status !== "cancelled",
-                        )
-                        .map((definition) => ({
-                          value: definition.id,
-                          label: `${definition.name} · ${formatCad(definition.amountCents)}`,
-                        })),
-                    ]}
-                    onChange={(value) => {
-                      setDefinitionId(value);
-                      const definition = expenseDefinitions.find(
-                        (item) => item.id === value,
-                      );
-                      if (definition) {
-                        setSpendingCategory(definition.category);
-                        setAmount((definition.amountCents / 100).toFixed(2));
-                      }
-                      setError(null);
-                    }}
-                    hint="Linking the payment prevents the bill from being forecast twice."
+                    label={
+                      expenseType === "refund"
+                        ? "What was refunded?"
+                        : expenseType === "bill-payment"
+                          ? "Bill category"
+                          : "What was it for?"
+                    }
+                    value={spendingCategory}
+                    options={SPENDING_CATEGORIES.map((category) => ({
+                      value: category,
+                      label: BUDGET_CATEGORIES[category],
+                    }))}
+                    onChange={setSpendingCategory}
                   />
                 )}
             </>

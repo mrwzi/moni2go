@@ -202,6 +202,21 @@ describe("historical monthly spending", () => {
     expect(result.historicalMonthlyAverageCents).toBe(45_000);
   });
 
+  it("counts one-time and saved bill payments once as consumption", () => {
+    const oneTime = {
+      ...transaction("lab-fee", "2026-03-02", 12_500, "education"),
+      name: "Bill payment · Tuition lab fee",
+    } as DatedExpenseEvent;
+    const saved = {
+      ...transaction("internet", "2026-03-03", 8_000, "phone-internet"),
+      definitionId: "internet-bill" as never,
+      name: "Internet bill",
+    } as DatedExpenseEvent;
+    const result = calculateCategorySpendingHistory([oneTime, saved], asOf);
+    expect(result.education.historicalMonthlyAverageCents).toBe(12_500);
+    expect(result["phone-internet"].historicalMonthlyAverageCents).toBe(8_000);
+  });
+
   it("maps common descriptions to the existing categories", () => {
     expect(inferBudgetCategory("Monthly rent")).toBe("housing");
     expect(inferBudgetCategory("Coffee shop")).toBe("restaurants");
