@@ -210,136 +210,141 @@ function HomeDashboardContent() {
           </div>
         </section>
       </details>
-      <section className="app-card home-next-step" aria-label="Money guidance">
-        <p className="eyebrow">Next useful step</p>
-        <h2 id="home-next-step-heading">{recommendation.title}</h2>
-        {recommendation.amountCents !== null && (
-          <strong
-            className={`home-next-step-amount${recommendation.priority <= 2 ? " money-negative" : ""}`}
-          >
-            {formatCad(recommendation.amountCents)}
-          </strong>
-        )}
-        <p className="home-next-step-summary">
-          {recommendation.explanation}
-          {recommendationObligation?.date
-            ? ` Due ${readableDate(recommendationObligation.date)}.`
-            : ""}
-        </p>
-        <Link
-          className="button button-primary home-next-step-action"
-          href={
-            recommendationObligation
-              ? recommendationObligation.kind === "debt-payment"
-                ? `/accounts#account-${recommendationObligation.sourceId}`
-                : "/accounts#bills-commitments"
-              : recommendation.actionHref
-          }
+      <div className="home-dashboard-overview">
+        <section
+          className="app-card home-next-step"
+          aria-label="Money guidance"
         >
-          {recommendation.actionLabel}
-        </Link>
-      </section>
-
-      <section
-        className="app-card home-outlook-card"
-        aria-labelledby="home-outlook-heading"
-      >
-        <div className="home-section-heading">
-          <div>
-            <p className="eyebrow">Looking ahead</p>
-            <h2 id="home-outlook-heading">Financial outlook</h2>
-          </div>
-          <div className="outlook-tabs" aria-label="Forecast period">
-            {([30, 60, 90] as const).map((days) => (
-              <button
-                key={days}
-                type="button"
-                aria-pressed={forecastDays === days}
-                onClick={() => {
-                  setForecastDays(days);
-                }}
-              >
-                {days} days
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="outlook-summary" aria-live="polite">
-          <div className="outlook-primary">
-            <span>
-              {forecast.estimatedOutflowCents === null
-                ? "Known projection"
-                : "Projected available"}
-            </span>
+          <p className="eyebrow">Next useful step</p>
+          <h2 id="home-next-step-heading">{recommendation.title}</h2>
+          {recommendation.amountCents !== null && (
             <strong
-              className={forecast.endCashCents < 0 ? "money-negative" : ""}
+              className={`home-next-step-amount${recommendation.priority <= 2 ? " money-negative" : ""}`}
             >
-              {formatCad(forecast.endCashCents)}
+              {formatCad(recommendation.amountCents)}
             </strong>
+          )}
+          <p className="home-next-step-summary">
+            {recommendation.explanation}
+            {recommendationObligation?.date
+              ? ` Due ${readableDate(recommendationObligation.date)}.`
+              : ""}
+          </p>
+          <Link
+            className="button button-primary home-next-step-action"
+            href={
+              recommendationObligation
+                ? recommendationObligation.kind === "debt-payment"
+                  ? `/accounts#account-${recommendationObligation.sourceId}`
+                  : "/accounts#bills-commitments"
+                : recommendation.actionHref
+            }
+          >
+            {recommendation.actionLabel}
+          </Link>
+        </section>
+
+        <section
+          className="app-card home-outlook-card"
+          aria-labelledby="home-outlook-heading"
+        >
+          <div className="home-section-heading">
+            <div>
+              <p className="eyebrow">Looking ahead</p>
+              <h2 id="home-outlook-heading">Financial outlook</h2>
+            </div>
+            <div className="outlook-tabs" aria-label="Forecast period">
+              {([30, 60, 90] as const).map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  aria-pressed={forecastDays === days}
+                  onClick={() => {
+                    setForecastDays(days);
+                  }}
+                >
+                  {days} days
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="outlook-secondary">
-            <div>
-              <span>Scheduled income</span>
-              <strong>
-                {forecast.scheduledIncomeCents === 0
-                  ? "None scheduled"
-                  : formatCad(forecast.scheduledIncomeCents)}
-              </strong>
-            </div>
-            <div>
-              <span>Payments</span>
-              <strong>{formatCad(forecast.scheduledOutflowCents)}</strong>
-            </div>
-            <div>
-              <span>Spending</span>
-              <strong>
+          <div className="outlook-summary" aria-live="polite">
+            <div className="outlook-primary">
+              <span>
                 {forecast.estimatedOutflowCents === null
-                  ? "Unknown"
-                  : formatCad(forecast.estimatedOutflowCents)}
+                  ? "Known projection"
+                  : "Projected available"}
+              </span>
+              <strong
+                className={forecast.endCashCents < 0 ? "money-negative" : ""}
+              >
+                {formatCad(forecast.endCashCents)}
               </strong>
             </div>
+            <div className="outlook-secondary">
+              <div>
+                <span>Scheduled income</span>
+                <strong>
+                  {forecast.scheduledIncomeCents === 0
+                    ? "None scheduled"
+                    : formatCad(forecast.scheduledIncomeCents)}
+                </strong>
+              </div>
+              <div>
+                <span>Payments</span>
+                <strong>{formatCad(forecast.scheduledOutflowCents)}</strong>
+              </div>
+              <div>
+                <span>Spending</span>
+                <strong>
+                  {forecast.estimatedOutflowCents === null
+                    ? "Unknown"
+                    : formatCad(forecast.estimatedOutflowCents)}
+                </strong>
+              </div>
+            </div>
           </div>
-        </div>
-        {forecast.shortageDate && (
-          <p className="outlook-warning" role="status">
-            Cash may fall below $0 by {readableDate(forecast.shortageDate)}.
-          </p>
-        )}
-        {forecast.estimatedOutflowCents === null ? (
-          <div className="outlook-data-warning" role="status">
-            <span>
-              Everyday spending is unknown and is not subtracted above.
-            </span>
-            <Link href="/accounts">Add bills or activity</Link>
-          </div>
-        ) : forecast.unknowns.length > 0 ? (
-          <p className="outlook-data-warning" role="status">
-            Some future amounts are missing.
-          </p>
-        ) : null}
-        <details className="outlook-details">
-          <summary>More details</summary>
-          {forecastsAreIdentical && (
-            <p>
-              The periods match because no additional dated activity is saved
-              after 30 days.
+          {forecast.shortageDate && (
+            <p className="outlook-warning" role="status">
+              Cash may fall below $0 by {readableDate(forecast.shortageDate)}.
             </p>
           )}
-          <p>
-            Starts with spendable balances, then applies dated income, payments,
-            and reliable spending history in date order. Expected income is not
-            guaranteed.
-          </p>
-          {forecast.unknowns.length > 0 && (
-            <ul>
-              {forecast.unknowns.slice(0, 3).map((unknown) => (
-                <li key={unknown}>{unknown}</li>
-              ))}
-            </ul>
-          )}
-          <p>Estimates are informational. moni2go never moves money.</p>
-        </details>
-      </section>
+          {forecast.estimatedOutflowCents === null ? (
+            <div className="outlook-data-warning" role="status">
+              <span>
+                Everyday spending is unknown and is not subtracted above.
+              </span>
+              <Link href="/accounts">Add bills or activity</Link>
+            </div>
+          ) : forecast.unknowns.length > 0 ? (
+            <p className="outlook-data-warning" role="status">
+              Some future amounts are missing.
+            </p>
+          ) : null}
+          <details className="outlook-details">
+            <summary>More details</summary>
+            {forecastsAreIdentical && (
+              <p>
+                The periods match because no additional dated activity is saved
+                after 30 days.
+              </p>
+            )}
+            <p>
+              Starts with spendable balances, then applies dated income,
+              payments, and reliable spending history in date order. Expected
+              income is not guaranteed.
+            </p>
+            {forecast.unknowns.length > 0 && (
+              <ul>
+                {forecast.unknowns.slice(0, 3).map((unknown) => (
+                  <li key={unknown}>{unknown}</li>
+                ))}
+              </ul>
+            )}
+            <p>Estimates are informational. moni2go never moves money.</p>
+          </details>
+        </section>
+      </div>
       <section
         className="app-card home-spending-card"
         aria-labelledby="home-spending-heading"
