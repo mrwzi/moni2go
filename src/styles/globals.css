@@ -4767,6 +4767,29 @@ main {
 
 .home-outlook-card .outlook-summary {
   margin-top: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+.home-outlook-card .outlook-primary {
+  display: flex;
+  min-height: 4.4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.home-outlook-card .outlook-primary strong {
+  margin-top: 0;
+}
+
+.home-outlook-card .outlook-secondary {
+  grid-template-columns: 1.2fr 0.9fr 0.9fr;
+}
+
+.home-outlook-card .outlook-secondary strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .home-spending-card {
@@ -4814,6 +4837,10 @@ main {
 
   .home-next-step-action {
     width: fit-content;
+  }
+
+  .home-outlook-card .outlook-primary {
+    min-height: 0;
   }
 }
 
@@ -4876,6 +4903,16 @@ main {
 
   .home-next-step-action {
     width: 100%;
+  }
+
+  .home-outlook-card .outlook-primary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .home-outlook-card .outlook-secondary {
+    grid-template-columns: 1fr;
   }
 
   .home-spending-budget-summary {
