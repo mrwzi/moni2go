@@ -427,6 +427,73 @@ describe("financial insights", () => {
     expect(spending.meaningfulOverages[0]?.amountCents).toBe(5_000);
   });
 
+  it("prioritizes the largest unplanned category over a smaller planned overage", () => {
+    const education = {
+      ...purchase("course", "2026-10-10", 13_491),
+      category: "education",
+    };
+    const shopping = {
+      ...purchase("shopping", "2026-10-11", 9_591),
+      category: "shopping",
+    };
+    const data = workspace({
+      expenseEvents: [education, shopping] as never,
+      allocationRules: [
+        {
+          id: "shopping-plan",
+          workspaceId: "workspace-1",
+          name: "Shopping",
+          category: "shopping",
+          group: "lifestyle-flexible",
+          provenance: "user-entered",
+          enabled: true,
+          strategy: { kind: "fixed-amount", amountCents: 3_000 },
+          createdAt: now,
+          updatedAt: now,
+        },
+      ] as never,
+    });
+
+    const result = analyzeFinancialWorkspace(data, today);
+    expect(result.spending.unplannedSpending[0]).toEqual({
+      category: "education",
+      amountCents: 13_491,
+    });
+    expect(result.recommendation.title).toBe("Education wasn't planned");
+    expect(result.recommendation.amountCents).toBe(13_491);
+  });
+
+  it("surfaces a nearby payoff target without scheduling it as a payment", () => {
+    const data = workspace({
+      assetAccounts: [chequing(55_245)],
+      liabilityAccounts: [
+        {
+          id: "student-loan",
+          workspaceId: "workspace-1",
+          name: "Student loan",
+          type: "student-loan",
+          currentBalanceCents: 134_314,
+          targetPayoffDate: "2026-10-31",
+          balanceAsOfDate: today,
+          includeInNetWorth: true,
+          status: "active",
+          provenance: "user-entered",
+          createdAt: now,
+          updatedAt: now,
+        },
+      ] as never,
+    });
+
+    const result = analyzeFinancialWorkspace(data, today);
+    expect(result.recommendation.title).toBe(
+      "Student loan target is in 12 days",
+    );
+    expect(result.recommendation.explanation).toBe(
+      "This is your payoff goal, not a required payment.",
+    );
+    expect(result.forecasts[30].scheduledOutflowCents).toBe(0);
+  });
+
   it("uses reliable completed months for pace and forecast estimates", () => {
     const data = workspace({
       assetAccounts: [chequing(100_000)],

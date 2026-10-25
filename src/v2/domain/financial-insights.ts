@@ -1,6 +1,7 @@
 import type { LiabilityAccount } from "./accounts";
 import {
   BUDGET_CATEGORIES,
+  PLAN_CATEGORY_KEYS,
   PLAN_CATEGORY_PRIORITIES,
   type BudgetCategoryKey,
   type PlanCategoryKey,
@@ -11,6 +12,7 @@ import {
   addCalendarMonths,
   calendarDateParts,
   compareCalendarDates,
+  differenceInCalendarDays,
   daysInMonth,
 } from "./calendar";
 import type { DatedExpenseEvent, ExpenseDefinition } from "./expenses";
@@ -86,6 +88,10 @@ export type SpendingIntelligence = Readonly<{
     category: PlanCategoryKey;
     amountCents: V2Cents;
     message: string;
+  }>[];
+  unplannedSpending: readonly Readonly<{
+    category: PlanCategoryKey;
+    amountCents: V2Cents;
   }>[];
   unusualCategories: readonly Readonly<{
     category: BudgetCategoryKey;
@@ -520,6 +526,12 @@ export function analyzeSpending(
         : [];
     },
   );
+  const unplannedSpending = PLAN_CATEGORY_KEYS.flatMap((category) => {
+    if (!isConsumptionCategory(category) || (plan.get(category) ?? 0) > 0)
+      return [];
+    const amountCents = history[category].spentThisMonthCents;
+    return amountCents > 0 ? [{ category, amountCents }] : [];
+  });
   const todayParts = calendarDateParts(today);
   const elapsedMonthShare =
     todayParts.day / daysInMonth(todayParts.year, todayParts.month);
@@ -558,6 +570,9 @@ export function analyzeSpending(
     planDifferenceCents: asV2Cents(spendingPlanCents - spentThisMonthCents),
     topCategories: rows.slice(0, 3),
     meaningfulOverages: meaningfulOverages.sort(
+      (a, b) => b.amountCents - a.amountCents,
+    ),
+    unplannedSpending: unplannedSpending.sort(
       (a, b) => b.amountCents - a.amountCents,
     ),
     unusualCategories: unusualCategories.sort(
@@ -803,6 +818,41 @@ function chooseRecommendation(
       actionHref: "/plan",
     };
   }
+  const payoffTarget = uniqueById(workspace.liabilityAccounts)
+    .flatMap((account) => {
+      const targetDate = account.targetPayoffDate;
+      if (
+        account.status !== "active" ||
+        account.currentBalanceCents <= 0 ||
+        !targetDate
+      )
+        return [];
+      return [
+        {
+          account,
+          daysUntilTarget: differenceInCalendarDays(today, targetDate),
+        },
+      ];
+    })
+    .filter(({ daysUntilTarget }) => daysUntilTarget <= 30)
+    .sort((left, right) => left.daysUntilTarget - right.daysUntilTarget)[0];
+  if (payoffTarget) {
+    const { account, daysUntilTarget } = payoffTarget;
+    const timing =
+      daysUntilTarget < 0
+        ? `passed ${Math.abs(daysUntilTarget).toString()} day${Math.abs(daysUntilTarget) === 1 ? "" : "s"} ago`
+        : daysUntilTarget === 0
+          ? "is today"
+          : `is in ${daysUntilTarget.toString()} day${daysUntilTarget === 1 ? "" : "s"}`;
+    return {
+      priority: 3,
+      title: `${account.name} target ${timing}`,
+      amountCents: account.currentBalanceCents,
+      explanation: "This is your payoff goal, not a required payment.",
+      actionLabel: "Review debt",
+      actionHref: "/accounts",
+    };
+  }
   const currentMonth = today.slice(0, 7);
   const recordedIncome = uniqueById(workspace.historicalIncome)
     .filter((record) => record.receivedDate.slice(0, 7) === currentMonth)
@@ -818,13 +868,40 @@ function chooseRecommendation(
     };
   }
   if (spending.meaningfulOverages.length > 0) {
-    const first = spending.meaningfulOverages[0];
+    const firstOverage = spending.meaningfulOverages[0];
+    const firstUnplanned = spending.unplannedSpending[0];
+    if (
+      firstUnplanned &&
+      (!firstOverage || firstUnplanned.amountCents > firstOverage.amountCents)
+    ) {
+      return {
+        priority: 3,
+        title: `${BUDGET_CATEGORIES[firstUnplanned.category]} wasn't planned`,
+        amountCents: firstUnplanned.amountCents,
+        explanation: "Add a realistic amount if this spending is expected.",
+        actionLabel: "Review monthly plan",
+        actionHref: "/plan",
+      };
+    }
+    const first = firstOverage;
     if (!first) throw new Error("Expected a budget overage.");
     return {
       priority: 3,
       title: `${BUDGET_CATEGORIES[first.category]} is over plan`,
       amountCents: first.amountCents,
       explanation: "Review the amount planned for this category.",
+      actionLabel: "Review monthly plan",
+      actionHref: "/plan",
+    };
+  }
+  if (spending.unplannedSpending.length > 0) {
+    const first = spending.unplannedSpending[0];
+    if (!first) throw new Error("Expected unplanned spending.");
+    return {
+      priority: 3,
+      title: `${BUDGET_CATEGORIES[first.category]} wasn't planned`,
+      amountCents: first.amountCents,
+      explanation: "Add a realistic amount if this spending is expected.",
       actionLabel: "Review monthly plan",
       actionHref: "/plan",
     };

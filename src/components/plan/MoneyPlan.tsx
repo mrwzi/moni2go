@@ -282,6 +282,18 @@ function MoneyPlanContent() {
             debtPayments.missingAccountIds.length > 0,
         })
       : null;
+  const spendingBudgetCents = asV2Cents(
+    allocations
+      .filter(
+        (allocation) =>
+          allocation.category !== "debt-payments" &&
+          allocation.category !== "savings-goals",
+      )
+      .reduce((total, allocation) => total + allocation.amountCents, 0),
+  );
+  const savingsGoalCents =
+    allocations.find((allocation) => allocation.category === "savings-goals")
+      ?.amountCents ?? asV2Cents(0);
   const categoryGuidance = useMemo(
     () =>
       PLAN_CATEGORY_KEYS.map((category) => {
@@ -710,7 +722,23 @@ function MoneyPlanContent() {
                     <strong>{formatCad(analysis.availableCents)}</strong>
                   </div>
                   <div>
-                    <span>Planned</span>
+                    <span>Spending budget</span>
+                    <strong>{formatCad(spendingBudgetCents)}</strong>
+                  </div>
+                  {debtPayments.totalCents > 0 && (
+                    <div>
+                      <span>Required debt payments</span>
+                      <strong>{formatCad(debtPayments.totalCents)}</strong>
+                    </div>
+                  )}
+                  {savingsGoalCents > 0 && (
+                    <div>
+                      <span>Savings &amp; goals</span>
+                      <strong>{formatCad(savingsGoalCents)}</strong>
+                    </div>
+                  )}
+                  <div>
+                    <span>Total allocated</span>
                     <strong>{formatCad(analysis.allocatedCents)}</strong>
                   </div>
                   <div>

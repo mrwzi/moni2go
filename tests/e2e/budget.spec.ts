@@ -110,7 +110,8 @@ test("allocates account money and keeps the review focused", async ({
     page.getByRole("region", { name: "What are you planning?" }),
   ).toHaveCount(0);
   await expect(page.getByText("Available now")).toBeVisible();
-  await expect(page.getByText("Planned")).toBeVisible();
+  await expect(page.getByText("Spending budget")).toBeVisible();
+  await expect(page.getByText("Total allocated")).toBeVisible();
   await page.getByRole("button", { name: "Edit monthly plan" }).click();
   await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
   await page.getByLabel("Housing amount").fill("999");
