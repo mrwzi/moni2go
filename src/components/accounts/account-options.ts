@@ -64,6 +64,5 @@ export const SPENDING_CATEGORIES = [
   "health-personal-care",
   "education",
   "debt-payments",
-  "savings-goals",
   "other",
 ] as const satisfies readonly BudgetCategoryKey[];

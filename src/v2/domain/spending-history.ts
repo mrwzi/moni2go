@@ -17,6 +17,7 @@ export type CategorySpendingHistory = Readonly<{
 const EXCLUDED_TYPES = new Set<ExpenseTransactionType>([
   "transfer",
   "credit-card-payment",
+  "savings-contribution",
 ]);
 
 function eventType(event: DatedExpenseEvent): ExpenseTransactionType {
@@ -125,6 +126,7 @@ const CATEGORY_KEYWORDS: readonly [BudgetCategoryKey, readonly string[]][] = [
     ["fuel", "gas station", "transit", "parking", "uber", "lyft"],
   ],
   ["health-personal-care", ["pharmacy", "medical", "dental", "personal care"]],
+  ["education", ["tuition", "school", "textbook", "course", "education"]],
   ["debt-payments", ["loan payment", "debt payment", "card payment"]],
   [
     "savings-goals",

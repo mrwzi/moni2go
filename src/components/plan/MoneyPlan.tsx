@@ -39,6 +39,7 @@ const GROUP_BY_CATEGORY: Record<
   restaurants: "lifestyle-flexible",
   transportation: "essential-flexible",
   "health-personal-care": "essential-flexible",
+  education: "essential-flexible",
   clothing: "lifestyle-flexible",
   shopping: "lifestyle-flexible",
   subscriptions: "lifestyle-flexible",
@@ -93,6 +94,12 @@ const CATEGORY_QUESTIONS: Record<
       "Include prescriptions, dental care, toiletries, and similar costs.",
     skip: "No health or personal-care amount",
   },
+  education: {
+    question: "How much do you plan for education each month?",
+    explanation:
+      "Include tuition, course fees, textbooks, supplies, and other education costs.",
+    skip: "No education amount",
+  },
   "debt-payments": {
     question: "How much would you like to put toward flexible debt?",
     explanation:
@@ -129,9 +136,7 @@ const CATEGORY_QUESTIONS: Record<
 };
 
 function categoryLabel(category: (typeof PLAN_CATEGORY_KEYS)[number]): string {
-  return category === "savings-goals"
-    ? "Savings, investing & goals"
-    : BUDGET_CATEGORIES[category];
+  return BUDGET_CATEGORIES[category];
 }
 
 function parseAmount(value: string): V2Cents | null {

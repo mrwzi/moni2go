@@ -179,14 +179,34 @@ describe("historical monthly spending", () => {
       ],
       asOf,
     );
-    expect(result["savings-goals"].historicalMonthlyAverageCents).toBe(30_000);
+    expect(result["savings-goals"].historicalMonthlyAverageCents).toBeNull();
+    expect(result["savings-goals"].spentThisMonthCents).toBe(0);
     expect(result.groceries.historicalMonthlyAverageCents).toBe(10_000);
+  });
+
+  it("tracks education purchases and refunds but excludes debt payments", () => {
+    const result = calculateCategorySpendingHistory(
+      [
+        transaction("tuition", "2026-03-02", 50_000, "education"),
+        transaction("refund", "2026-03-03", 5_000, "education", "refund"),
+        transaction(
+          "student-loan",
+          "2026-03-04",
+          20_000,
+          "education",
+          "credit-card-payment",
+        ),
+      ],
+      asOf,
+    ).education;
+    expect(result.historicalMonthlyAverageCents).toBe(45_000);
   });
 
   it("maps common descriptions to the existing categories", () => {
     expect(inferBudgetCategory("Monthly rent")).toBe("housing");
     expect(inferBudgetCategory("Coffee shop")).toBe("restaurants");
     expect(inferBudgetCategory("Uber trip")).toBe("transportation");
+    expect(inferBudgetCategory("University tuition")).toBe("education");
     expect(inferBudgetCategory("Netflix streaming membership")).toBe(
       "subscriptions",
     );

@@ -13,7 +13,7 @@ export const BUDGET_CATEGORIES = {
   clothing: "Clothing",
   shopping: "Shopping",
   "debt-payments": "Debt payments",
-  "savings-goals": "Savings / goals",
+  "savings-goals": "Savings & goals",
   other: "Other",
 } as const;
 export type BudgetCategoryKey = keyof typeof BUDGET_CATEGORIES;
@@ -30,6 +30,7 @@ export const PLAN_CATEGORY_KEYS = [
   "restaurants",
   "transportation",
   "health-personal-care",
+  "education",
   "debt-payments",
   "savings-goals",
   "clothing",
@@ -58,6 +59,7 @@ export const PLAN_CATEGORY_PRIORITIES: Readonly<
   restaurants: "discretionary",
   transportation: "semi-flexible",
   "health-personal-care": "semi-flexible",
+  education: "semi-flexible",
   "debt-payments": "required-debt",
   "savings-goals": "financial-goal",
   clothing: "discretionary",
@@ -76,6 +78,7 @@ export const PLAN_ADJUSTMENT_ORDER = [
   "savings-goals",
   "transportation",
   "health-personal-care",
+  "education",
   "phone-internet",
   "groceries",
   "utilities",

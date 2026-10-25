@@ -365,6 +365,9 @@ test("keeps money dialogs consistent and shows only relevant activity fields", a
   await expect(
     page.getByRole("option", { name: "Education", exact: true }),
   ).toHaveCount(1);
+  await expect(
+    page.getByRole("option", { name: "Savings & goals", exact: true }),
+  ).toHaveCount(0);
   const upwardMenu = await page.getByRole("listbox").boundingBox();
   const categoryBox = await categorySelector.boundingBox();
   if (!upwardMenu || !categoryBox)
@@ -405,6 +408,45 @@ test("keeps money dialogs consistent and shows only relevant activity fields", a
   await expect(
     balanceDialog.getByRole("button", { name: "Save", exact: true }),
   ).toBeVisible();
+});
+
+test("records education purchases and refunds as consumption", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Education bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("500");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Record expense" }).click();
+  let dialog = page.getByRole("dialog", { name: "Record expense" });
+  await chooseMoneyOption(page, "Account or card", "Chequing · $500.00");
+  await chooseMoneyOption(page, "What was it for?", "Education");
+  await dialog.getByLabel("Amount").fill("100");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+  await page.getByRole("button", { name: "Record expense" }).click();
+  dialog = page.getByRole("dialog", { name: "Record expense" });
+  await chooseMoneyOption(page, "Account or card", "Chequing · $400.00");
+  await chooseMoneyOption(page, "Expense type", "Refund");
+  await chooseMoneyOption(page, "What was refunded?", "Education");
+  await dialog.getByLabel("Amount").fill("25");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+  await expect(
+    page.locator(".account-list > li").filter({ hasText: "Chequing" }),
+  ).toContainText("$425.00");
+  const history = page.getByRole("region", { name: "Recent transactions" });
+  await expect(history.getByText("Education", { exact: true })).toBeVisible();
+  await expect(history.getByText("Refund · Education")).toBeVisible();
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("region", { name: "Spending at a glance" }),
+  ).toContainText("$75.00");
 });
 
 test("updates an investment for dividends, losses, and missed changes", async ({
@@ -500,7 +542,7 @@ test("adds a flexible debt without inventing a monthly payment", async ({
   await expect(
     page.getByText("How much would you like to put toward flexible debt?"),
   ).toHaveCount(0);
-  await expect(page.getByText("Step 1 of 13")).toBeVisible();
+  await expect(page.getByText("Step 1 of 14")).toBeVisible();
 });
 
 test("saves a paid-off credit card without inventing debt or a payment", async ({

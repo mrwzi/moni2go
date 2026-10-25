@@ -29,7 +29,7 @@ test("allocates account money and keeps the review focused", async ({
   await page.getByRole("button", { name: "Save account" }).click();
 
   await page.goto("/plan");
-  await expect(page.getByText("Step 1 of 13")).toBeVisible();
+  await expect(page.getByText("Step 1 of 14")).toBeVisible();
   await page
     .getByRole("button", { name: "I do not pay housing costs" })
     .click();
@@ -47,7 +47,9 @@ test("allocates account money and keeps the review focused", async ({
   await page
     .getByRole("button", { name: "No health or personal-care amount" })
     .click();
-  await page.getByLabel("Savings / goals amount").fill("100");
+  await page.getByLabel("Education amount").fill("75");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Savings & goals amount").fill("100");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Clothing amount").fill("50");
   await page.getByRole("button", { name: "Continue" }).click();
@@ -68,18 +70,24 @@ test("allocates account money and keeps the review focused", async ({
     page
       .getByRole("region", { name: "Your monthly plan" })
       .getByRole("listitem"),
-  ).toHaveCount(4);
+  ).toHaveCount(5);
+  await expect(
+    page
+      .getByRole("region", { name: "Your monthly plan" })
+      .getByRole("listitem")
+      .filter({ hasText: "Education" }),
+  ).toContainText("$75.00");
   await page.getByText("Show unused categories").click();
   await expect(
     page
       .getByRole("region", { name: "Your monthly plan" })
       .getByRole("listitem"),
-  ).toHaveCount(14);
+  ).toHaveCount(15);
   await page.getByText("Can I afford this?").click();
   const purchaseChecker = page.locator(".purchase-checker");
   await expect(
     purchaseChecker.getByLabel("What is it for?").locator("option"),
-  ).toHaveCount(14);
+  ).toHaveCount(15);
   await purchaseChecker.getByLabel("Purchase amount").fill("75");
   await expect(
     purchaseChecker.getByText("This purchase fits your budget."),
@@ -189,6 +197,7 @@ test("shows current spending separately from completed-month averages", async ({
   await page
     .getByRole("button", { name: "No health or personal-care amount" })
     .click();
+  await page.getByRole("button", { name: "No education amount" }).click();
   await page.getByRole("button", { name: "Not right now" }).click();
   await page.getByRole("button", { name: "No clothing amount" }).click();
   await page.getByRole("button", { name: "No shopping amount" }).click();

@@ -289,11 +289,79 @@ describe("financial insights", () => {
         purchase("refund", "2026-10-03", 2_000, "refund"),
         purchase("transfer", "2026-10-04", 50_000, "transfer"),
         purchase("card", "2026-10-05", 8_000, "credit-card-payment"),
+        {
+          ...purchase("save", "2026-10-06", 50_000),
+          category: "savings-goals",
+          transactionType: "savings-contribution",
+        },
       ] as never,
     });
     expect(analyzeFinancialWorkspace(data, today).spending).toMatchObject({
       spentThisMonthCents: 8_000,
     });
+  });
+
+  it("forecasts education history without treating savings as everyday spending", () => {
+    const educationEvents = [
+      {
+        ...purchase("aug-tuition", "2026-08-10", 20_000),
+        category: "education",
+      },
+      {
+        ...purchase("sep-books", "2026-09-10", 10_000),
+        category: "education",
+      },
+    ];
+    const withSavings = workspace({
+      assetAccounts: [chequing(100_000)],
+      expenseEvents: [
+        ...educationEvents,
+        {
+          ...purchase("aug-save", "2026-08-12", 90_000),
+          category: "savings-goals",
+          transactionType: "savings-contribution",
+        },
+        {
+          ...purchase("sep-save", "2026-09-12", 90_000),
+          category: "savings-goals",
+          transactionType: "savings-contribution",
+        },
+      ] as never,
+    });
+    const withoutSavings = workspace({
+      assetAccounts: [chequing(100_000)],
+      expenseEvents: educationEvents as never,
+    });
+    expect(
+      analyzeFinancialWorkspace(withSavings, today).forecasts[30]
+        .estimatedOutflowCents,
+    ).toBe(
+      analyzeFinancialWorkspace(withoutSavings, today).forecasts[30]
+        .estimatedOutflowCents,
+    );
+    expect(
+      analyzeFinancialWorkspace(withSavings, today).forecasts[30]
+        .estimatedOutflowCents,
+    ).toBeGreaterThan(0);
+  });
+
+  it("includes a scheduled tuition bill in obligations and forecasts", () => {
+    const tuition = {
+      ...bill("tuition", 50_000),
+      name: "Tuition",
+      category: "education",
+    };
+    const result = analyzeFinancialWorkspace(
+      workspace({
+        assetAccounts: [chequing(100_000)],
+        expenseDefinitions: [tuition] as never,
+      }),
+      today,
+    );
+    expect(result.obligations.some((item) => item.name === "Tuition")).toBe(
+      true,
+    );
+    expect(result.forecasts[30].scheduledOutflowCents).toBe(100_000);
   });
 
   it("shows actual over-plan dollars instead of clamping the result", () => {

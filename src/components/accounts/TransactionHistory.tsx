@@ -699,10 +699,20 @@ export function TransactionHistory({
                   <MoneySelect
                     label="Category"
                     value={category}
-                    options={SPENDING_CATEGORIES.map((key) => ({
-                      value: key,
-                      label: BUDGET_CATEGORIES[key],
-                    }))}
+                    options={[
+                      ...SPENDING_CATEGORIES.map((key) => ({
+                        value: key,
+                        label: BUDGET_CATEGORIES[key],
+                      })),
+                      ...(SPENDING_CATEGORIES.some((key) => key === category)
+                        ? []
+                        : [
+                            {
+                              value: category,
+                              label: `${BUDGET_CATEGORIES[category]} (existing record)`,
+                            },
+                          ]),
+                    ]}
                     onChange={setCategory}
                   />
                 )}
