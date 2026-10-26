@@ -4834,6 +4834,66 @@ main {
   background: color-mix(in srgb, var(--danger) 6%, transparent);
 }
 
+.home-money-coach {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.home-money-coach > small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-coach-message {
+  display: grid;
+  padding: 0.65rem 0.7rem;
+  align-items: start;
+  gap: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface-soft);
+  grid-template-columns: 1.55rem minmax(0, 1fr);
+}
+
+.home-coach-message > span {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--warning, #c78b32) 20%, transparent);
+  font-size: 0.85rem;
+  font-weight: 850;
+}
+
+.home-coach-message p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.home-coach-message strong {
+  color: var(--ink);
+}
+
+.home-coach-message-win {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 26%, var(--surface-soft));
+}
+
+.home-coach-message-win > span {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
 @media (max-width: 820px) {
   .home-page > .account-totals {
     grid-template-columns: repeat(2, minmax(0, 1fr));

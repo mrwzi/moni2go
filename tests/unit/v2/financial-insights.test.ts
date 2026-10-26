@@ -459,6 +459,20 @@ describe("financial insights", () => {
       category: "education",
       amountCents: 13_491,
     });
+    expect(result.spending.categoryProgress).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "education",
+          status: "unplanned",
+          spentCents: 13_491,
+        }),
+        expect.objectContaining({
+          category: "shopping",
+          status: "over",
+          differenceCents: -6_591,
+        }),
+      ]),
+    );
     expect(result.recommendation.title).toBe("Education wasn't planned");
     expect(result.recommendation.amountCents).toBe(13_491);
   });

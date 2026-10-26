@@ -11,6 +11,7 @@ import {
   deriveTotalLiabilitiesCents,
 } from "../../v2/domain/accounts";
 import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
+import type { BudgetCategoryKey } from "../../v2/domain/budget-categories";
 import {
   addCalendarDays,
   compareCalendarDates,
@@ -51,6 +52,28 @@ function dueLabel(today: CalendarDate, date: CalendarDate): string {
   if (days === 1) return "Due tomorrow";
   return `Due in ${days.toString()} days`;
 }
+
+const CATEGORY_COACHING: Readonly<Record<BudgetCategoryKey, string>> = {
+  housing: "Review housing costs before adding a new commitment.",
+  utilities: "Switching off unused lights and devices can help.",
+  groceries: "Take a short list on your next grocery trip.",
+  restaurants: "Cooking one extra meal at home can help.",
+  transportation: "Combine trips or choose a lower-cost option when practical.",
+  insurance: "Compare plans before renewal without reducing needed coverage.",
+  "phone-internet": "Check whether your current plan still fits your needs.",
+  "health-personal-care":
+    "Protect necessary care and review optional purchases first.",
+  education:
+    "Plan upcoming fees early while protecting necessary learning costs.",
+  subscriptions: "Pause anything you no longer use.",
+  "entertainment-recreation":
+    "Try a lower-cost activity before the next outing.",
+  clothing: "Wait a day before a non-essential clothing purchase.",
+  shopping: "Pause non-essential shopping until the plan resets.",
+  "debt-payments": "Keep required payments covered first.",
+  "savings-goals": "Keep the amount realistic for your available cash.",
+  other: "Review this expense and use a clearer category when possible.",
+};
 
 export function HomeDashboard() {
   return (
@@ -129,6 +152,25 @@ function HomeDashboardContent() {
   const today = localToday();
   const insights = analyzeFinancialWorkspace(workspace, today);
   const { spending, recommendation } = insights;
+  const coachingWarnings = [...spending.categoryProgress]
+    .filter((item) => item.status !== "within")
+    .sort(
+      (left, right) =>
+        Math.abs(right.differenceCents) - Math.abs(left.differenceCents),
+    )
+    .slice(0, 3);
+  const coachingWin = [...spending.categoryProgress]
+    .filter(
+      (item) =>
+        item.status === "within" &&
+        item.spentCents > 0 &&
+        item.plannedCents > 0,
+    )
+    .sort(
+      (left, right) =>
+        right.spentCents / right.plannedCents -
+        left.spentCents / left.plannedCents,
+    )[0];
   const forecast = insights.forecasts[forecastDays];
   const hasSpendingPlan = spending.spendingPlanCents > 0;
   const isOverBudget = hasSpendingPlan && spending.planDifferenceCents < 0;
@@ -414,18 +456,40 @@ function HomeDashboardContent() {
                   </li>
                 ))}
               </ul>
-              {spending.meaningfulOverages.length > 0 && (
-                <div
-                  className="home-category-warnings"
-                  aria-label="Categories over budget"
-                >
-                  <small>Category overages</small>
-                  {spending.meaningfulOverages.slice(0, 2).map((item) => (
-                    <p key={item.category}>
-                      <strong>{BUDGET_CATEGORIES[item.category]}</strong>
-                      <span>{formatCad(item.amountCents)} over</span>
-                    </p>
+              {(coachingWarnings.length > 0 || coachingWin) && (
+                <div className="home-money-coach" aria-label="Money coach">
+                  <small>Money coach</small>
+                  {coachingWarnings.map((item) => (
+                    <div
+                      className="home-coach-message home-coach-message-action"
+                      key={item.category}
+                    >
+                      <span aria-hidden="true">→</span>
+                      <p>
+                        <strong>
+                          {item.status === "over"
+                            ? `${BUDGET_CATEGORIES[item.category]} is ${formatCad(Math.abs(item.differenceCents))} over plan.`
+                            : `${BUDGET_CATEGORIES[item.category]} wasn't planned.`}
+                        </strong>
+                        {item.status === "unplanned" &&
+                          ` ${formatCad(item.spentCents)} recorded.`}{" "}
+                        {CATEGORY_COACHING[item.category]}
+                      </p>
+                    </div>
                   ))}
+                  {coachingWin && (
+                    <div className="home-coach-message home-coach-message-win">
+                      <span aria-hidden="true">✓</span>
+                      <p>
+                        <strong>
+                          {BUDGET_CATEGORIES[coachingWin.category]} is within
+                          plan.
+                        </strong>{" "}
+                        {formatCad(coachingWin.differenceCents)} remains. Nice
+                        work—keep going.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

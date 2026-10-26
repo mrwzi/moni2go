@@ -1,5 +1,6 @@
 import type { LiabilityAccount } from "./accounts";
 import {
+  BUDGET_CATEGORY_KEYS,
   BUDGET_CATEGORIES,
   PLAN_CATEGORY_KEYS,
   PLAN_CATEGORY_PRIORITIES,
@@ -92,6 +93,13 @@ export type SpendingIntelligence = Readonly<{
   unplannedSpending: readonly Readonly<{
     category: PlanCategoryKey;
     amountCents: V2Cents;
+  }>[];
+  categoryProgress: readonly Readonly<{
+    category: BudgetCategoryKey;
+    spentCents: V2Cents;
+    plannedCents: V2Cents;
+    differenceCents: V2Cents;
+    status: "over" | "within" | "unplanned";
   }>[];
   unusualCategories: readonly Readonly<{
     category: BudgetCategoryKey;
@@ -532,6 +540,28 @@ export function analyzeSpending(
     const amountCents = history[category].spentThisMonthCents;
     return amountCents > 0 ? [{ category, amountCents }] : [];
   });
+  const categoryProgress = BUDGET_CATEGORY_KEYS.filter((category) =>
+    isConsumptionCategory(category),
+  ).flatMap((category) => {
+    const spentCents = history[category].spentThisMonthCents;
+    const plannedCents = asV2Cents(plan.get(category) ?? 0);
+    if (spentCents <= 0 && plannedCents <= 0) return [];
+    const differenceCents = asV2Cents(plannedCents - spentCents);
+    return [
+      {
+        category,
+        spentCents,
+        plannedCents,
+        differenceCents,
+        status:
+          plannedCents <= 0 && spentCents > 0
+            ? ("unplanned" as const)
+            : differenceCents < 0
+              ? ("over" as const)
+              : ("within" as const),
+      },
+    ];
+  });
   const todayParts = calendarDateParts(today);
   const elapsedMonthShare =
     todayParts.day / daysInMonth(todayParts.year, todayParts.month);
@@ -575,6 +605,7 @@ export function analyzeSpending(
     unplannedSpending: unplannedSpending.sort(
       (a, b) => b.amountCents - a.amountCents,
     ),
+    categoryProgress,
     unusualCategories: unusualCategories.sort(
       (a, b) => b.spentCents - a.spentCents,
     ),
