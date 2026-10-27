@@ -53,26 +53,92 @@ function dueLabel(today: CalendarDate, date: CalendarDate): string {
   return `Due in ${days.toString()} days`;
 }
 
-const CATEGORY_COACHING: Readonly<Record<BudgetCategoryKey, string>> = {
-  housing: "Review housing costs before adding a new commitment.",
-  utilities: "Switching off unused lights and devices can help.",
-  groceries: "Take a short list on your next grocery trip.",
-  restaurants: "Cooking one extra meal at home can help.",
-  transportation: "Combine trips or choose a lower-cost option when practical.",
-  insurance: "Compare plans before renewal without reducing needed coverage.",
-  "phone-internet": "Check whether your current plan still fits your needs.",
-  "health-personal-care":
-    "Protect necessary care and review optional purchases first.",
-  education:
-    "Plan upcoming fees early while protecting necessary learning costs.",
-  subscriptions: "Pause anything you no longer use.",
-  "entertainment-recreation":
-    "Try a lower-cost activity before the next outing.",
-  clothing: "Wait a day before a non-essential clothing purchase.",
-  shopping: "Pause non-essential shopping until the plan resets.",
-  "debt-payments": "Keep required payments covered first.",
-  "savings-goals": "Keep the amount realistic for your available cash.",
-  other: "Review this expense and use a clearer category when possible.",
+const CATEGORY_COACHING: Readonly<
+  Record<
+    BudgetCategoryKey,
+    Readonly<{ icon: string; title: string; tip: string }>
+  >
+> = {
+  housing: {
+    icon: "⌂",
+    title: "Keep housing steady",
+    tip: "Review housing costs before adding a new commitment.",
+  },
+  utilities: {
+    icon: "ϟ",
+    title: "Power-down challenge",
+    tip: "Switch off unused lights and devices today.",
+  },
+  groceries: {
+    icon: "◎",
+    title: "Shop with a list",
+    tip: "Take a short list on your next grocery trip.",
+  },
+  restaurants: {
+    icon: "♨",
+    title: "Cook-one-meal challenge",
+    tip: "Cook one extra meal at home before the next takeout.",
+  },
+  transportation: {
+    icon: "↗",
+    title: "Combine one trip",
+    tip: "Combine trips or choose a lower-cost option when practical.",
+  },
+  insurance: {
+    icon: "◇",
+    title: "Coverage check",
+    tip: "Compare plans before renewal without reducing needed coverage.",
+  },
+  "phone-internet": {
+    icon: "⌁",
+    title: "Check your plan",
+    tip: "See whether your current phone and internet plan still fits.",
+  },
+  "health-personal-care": {
+    icon: "+",
+    title: "Protect the essentials",
+    tip: "Keep necessary care covered and review optional purchases first.",
+  },
+  education: {
+    icon: "✦",
+    title: "Plan the next fee",
+    tip: "Add upcoming learning costs before they surprise your plan.",
+  },
+  subscriptions: {
+    icon: "↻",
+    title: "Subscription sweep",
+    tip: "Pause one service you no longer use.",
+  },
+  "entertainment-recreation": {
+    icon: "☆",
+    title: "Find a low-cost win",
+    tip: "Try a lower-cost activity before the next outing.",
+  },
+  clothing: {
+    icon: "◌",
+    title: "Try a 24-hour pause",
+    tip: "Wait a day before a non-essential clothing purchase.",
+  },
+  shopping: {
+    icon: "▣",
+    title: "Shopping cooldown",
+    tip: "Pause non-essential shopping until the plan resets.",
+  },
+  "debt-payments": {
+    icon: "↓",
+    title: "Protect the minimum",
+    tip: "Keep required payments covered first.",
+  },
+  "savings-goals": {
+    icon: "↑",
+    title: "Grow at your pace",
+    tip: "Keep the goal realistic for your available cash.",
+  },
+  other: {
+    icon: "?",
+    title: "Name that expense",
+    tip: "Give this expense a clearer category when possible.",
+  },
 };
 
 export function HomeDashboard() {
@@ -458,38 +524,77 @@ function HomeDashboardContent() {
               </ul>
               {(coachingWarnings.length > 0 || coachingWin) && (
                 <div className="home-money-coach" aria-label="Money coach">
-                  <small>Money coach</small>
-                  {coachingWarnings.map((item) => (
-                    <div
-                      className="home-coach-message home-coach-message-action"
-                      key={item.category}
-                    >
-                      <span aria-hidden="true">→</span>
-                      <p>
-                        <strong>
-                          {item.status === "over"
-                            ? `${BUDGET_CATEGORIES[item.category]} is ${formatCad(Math.abs(item.differenceCents))} over plan.`
-                            : `${BUDGET_CATEGORIES[item.category]} wasn't planned.`}
-                        </strong>
-                        {item.status === "unplanned" &&
-                          ` ${formatCad(item.spentCents)} recorded.`}{" "}
-                        {CATEGORY_COACHING[item.category]}
-                      </p>
+                  <div className="home-money-coach-heading">
+                    <div>
+                      <small>Money missions</small>
+                      <strong>Small moves for this month</strong>
                     </div>
-                  ))}
-                  {coachingWin && (
-                    <div className="home-coach-message home-coach-message-win">
-                      <span aria-hidden="true">✓</span>
-                      <p>
-                        <strong>
-                          {BUDGET_CATEGORIES[coachingWin.category]} is within
-                          plan.
-                        </strong>{" "}
-                        {formatCad(coachingWin.differenceCents)} remains. Nice
-                        work—keep going.
-                      </p>
-                    </div>
-                  )}
+                    <span>
+                      {(
+                        coachingWarnings.length + (coachingWin ? 1 : 0)
+                      ).toString()}{" "}
+                      active
+                    </span>
+                  </div>
+                  <div className="home-mission-grid">
+                    {coachingWarnings.map((item) => {
+                      const coaching = CATEGORY_COACHING[item.category];
+                      return (
+                        <article
+                          className="home-mission-card home-mission-card-action"
+                          key={item.category}
+                        >
+                          <div className="home-mission-card-topline">
+                            <span
+                              className="home-mission-icon"
+                              aria-hidden="true"
+                            >
+                              {coaching.icon}
+                            </span>
+                            <small>
+                              {item.status === "unplanned"
+                                ? "Plan it"
+                                : "Try this"}
+                            </small>
+                          </div>
+                          <h3>{coaching.title}</h3>
+                          <p>
+                            <strong>
+                              {item.status === "over"
+                                ? `${formatCad(Math.abs(item.differenceCents))} over in ${BUDGET_CATEGORIES[item.category].toLowerCase()}.`
+                                : `${formatCad(item.spentCents)} wasn't planned.`}
+                            </strong>{" "}
+                            {coaching.tip}
+                          </p>
+                          <Link href="/plan">Open plan →</Link>
+                        </article>
+                      );
+                    })}
+                    {coachingWin && (
+                      <article className="home-mission-card home-mission-card-win">
+                        <div className="home-mission-card-topline">
+                          <span
+                            className="home-mission-icon"
+                            aria-hidden="true"
+                          >
+                            ✓
+                          </span>
+                          <small>On track</small>
+                        </div>
+                        <h3>{BUDGET_CATEGORIES[coachingWin.category]} win</h3>
+                        <p>
+                          <strong>
+                            {formatCad(coachingWin.differenceCents)} remains.
+                          </strong>{" "}
+                          Nice work—keep going.
+                        </p>
+                        <Link href="/plan">View progress →</Link>
+                      </article>
+                    )}
+                  </div>
+                  <p className="home-mission-note">
+                    Based on recorded activity.
+                  </p>
                 </div>
               )}
             </div>
