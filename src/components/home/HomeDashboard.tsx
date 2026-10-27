@@ -76,7 +76,7 @@ const CATEGORY_COACHING: Readonly<
   },
   restaurants: {
     icon: "♨",
-    title: "Cook-one-meal challenge",
+    title: "Cook one meal at home",
     tip: "Cook one extra meal at home before the next takeout.",
   },
   transportation: {
@@ -530,10 +530,7 @@ function HomeDashboardContent() {
               {(coachingWarnings.length > 0 || coachingWin) && (
                 <div className="home-money-coach" aria-label="Money coach">
                   <div className="home-money-coach-heading">
-                    <div>
-                      <small>Today&apos;s money mission</small>
-                      <strong>One small move at a time</strong>
-                    </div>
+                    <strong>Money move</strong>
                     {coachingWarnings.length > 1 && (
                       <span>
                         {(missionIndex % coachingWarnings.length) + 1} of{" "}
@@ -554,23 +551,15 @@ function HomeDashboardContent() {
                             {coaching.icon}
                           </span>
                           <div className="home-mission-feature-copy">
-                            <small>
-                              {activeMission.status === "unplanned"
-                                ? "Plan it"
-                                : "Try this"}
-                            </small>
                             <h3>{coaching.title}</h3>
                             <p>
-                              <strong>
-                                {activeMission.status === "over"
-                                  ? `${formatCad(Math.abs(activeMission.differenceCents))} over in ${BUDGET_CATEGORIES[activeMission.category].toLowerCase()}.`
-                                  : `${formatCad(activeMission.spentCents)} wasn't planned.`}
-                              </strong>{" "}
-                              {coaching.tip}
+                              {activeMission.status === "over"
+                                ? `${formatCad(Math.abs(activeMission.differenceCents))} over in ${BUDGET_CATEGORIES[activeMission.category].toLowerCase()}.`
+                                : `${formatCad(activeMission.spentCents)} wasn't planned.`}
                             </p>
                           </div>
                           <div className="home-mission-actions">
-                            <Link href="/plan">Open plan</Link>
+                            <Link href="/plan">Adjust plan</Link>
                             {coachingWarnings.length > 1 && (
                               <button
                                 type="button"
@@ -581,7 +570,7 @@ function HomeDashboardContent() {
                                   );
                                 }}
                               >
-                                Next mission →
+                                Next →
                               </button>
                             )}
                           </div>
@@ -591,18 +580,11 @@ function HomeDashboardContent() {
                   {coachingWin && (
                     <div className="home-mission-win">
                       <span aria-hidden="true">✓</span>
-                      <p>
-                        <strong>
-                          {BUDGET_CATEGORIES[coachingWin.category]} is on track.
-                        </strong>{" "}
-                        {formatCad(coachingWin.differenceCents)} remains—nice
-                        work.
-                      </p>
+                      <strong>
+                        {BUDGET_CATEGORIES[coachingWin.category]} is on track
+                      </strong>
                     </div>
                   )}
-                  <p className="home-mission-note">
-                    Based on recorded activity.
-                  </p>
                 </div>
               )}
             </div>
