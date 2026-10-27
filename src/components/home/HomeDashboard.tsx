@@ -154,6 +154,7 @@ export function HomeDashboard() {
 function HomeDashboardContent() {
   const { workspace, loading, error } = useFinancialWorkspace();
   const [forecastDays, setForecastDays] = useState<ForecastHorizonDays>(30);
+  const [missionIndex, setMissionIndex] = useState(0);
   if (loading) return <LoadingState label="Loading your financial picture…" />;
   if (error)
     return (
@@ -237,6 +238,10 @@ function HomeDashboardContent() {
         right.spentCents / right.plannedCents -
         left.spentCents / left.plannedCents,
     )[0];
+  const activeMission =
+    coachingWarnings.length > 0
+      ? coachingWarnings[missionIndex % coachingWarnings.length]
+      : undefined;
   const forecast = insights.forecasts[forecastDays];
   const hasSpendingPlan = spending.spendingPlanCents > 0;
   const isOverBudget = hasSpendingPlan && spending.planDifferenceCents < 0;
@@ -526,72 +531,75 @@ function HomeDashboardContent() {
                 <div className="home-money-coach" aria-label="Money coach">
                   <div className="home-money-coach-heading">
                     <div>
-                      <small>Money missions</small>
-                      <strong>Small moves for this month</strong>
+                      <small>Today&apos;s money mission</small>
+                      <strong>One small move at a time</strong>
                     </div>
-                    <span>
-                      {(
-                        coachingWarnings.length + (coachingWin ? 1 : 0)
-                      ).toString()}{" "}
-                      active
-                    </span>
+                    {coachingWarnings.length > 1 && (
+                      <span>
+                        {(missionIndex % coachingWarnings.length) + 1} of{" "}
+                        {coachingWarnings.length}
+                      </span>
+                    )}
                   </div>
-                  <div className="home-mission-grid">
-                    {coachingWarnings.map((item) => {
-                      const coaching = CATEGORY_COACHING[item.category];
+                  {activeMission &&
+                    (() => {
+                      const coaching =
+                        CATEGORY_COACHING[activeMission.category];
                       return (
-                        <article
-                          className="home-mission-card home-mission-card-action"
-                          key={item.category}
-                        >
-                          <div className="home-mission-card-topline">
-                            <span
-                              className="home-mission-icon"
-                              aria-hidden="true"
-                            >
-                              {coaching.icon}
-                            </span>
-                            <small>
-                              {item.status === "unplanned"
-                                ? "Plan it"
-                                : "Try this"}
-                            </small>
-                          </div>
-                          <h3>{coaching.title}</h3>
-                          <p>
-                            <strong>
-                              {item.status === "over"
-                                ? `${formatCad(Math.abs(item.differenceCents))} over in ${BUDGET_CATEGORIES[item.category].toLowerCase()}.`
-                                : `${formatCad(item.spentCents)} wasn't planned.`}
-                            </strong>{" "}
-                            {coaching.tip}
-                          </p>
-                          <Link href="/plan">Open plan →</Link>
-                        </article>
-                      );
-                    })}
-                    {coachingWin && (
-                      <article className="home-mission-card home-mission-card-win">
-                        <div className="home-mission-card-topline">
+                        <article className="home-mission-feature">
                           <span
                             className="home-mission-icon"
                             aria-hidden="true"
                           >
-                            ✓
+                            {coaching.icon}
                           </span>
-                          <small>On track</small>
-                        </div>
-                        <h3>{BUDGET_CATEGORIES[coachingWin.category]} win</h3>
-                        <p>
-                          <strong>
-                            {formatCad(coachingWin.differenceCents)} remains.
-                          </strong>{" "}
-                          Nice work—keep going.
-                        </p>
-                        <Link href="/plan">View progress →</Link>
-                      </article>
-                    )}
-                  </div>
+                          <div className="home-mission-feature-copy">
+                            <small>
+                              {activeMission.status === "unplanned"
+                                ? "Plan it"
+                                : "Try this"}
+                            </small>
+                            <h3>{coaching.title}</h3>
+                            <p>
+                              <strong>
+                                {activeMission.status === "over"
+                                  ? `${formatCad(Math.abs(activeMission.differenceCents))} over in ${BUDGET_CATEGORIES[activeMission.category].toLowerCase()}.`
+                                  : `${formatCad(activeMission.spentCents)} wasn't planned.`}
+                              </strong>{" "}
+                              {coaching.tip}
+                            </p>
+                          </div>
+                          <div className="home-mission-actions">
+                            <Link href="/plan">Open plan</Link>
+                            {coachingWarnings.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMissionIndex(
+                                    (current) =>
+                                      (current + 1) % coachingWarnings.length,
+                                  );
+                                }}
+                              >
+                                Next mission →
+                              </button>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })()}
+                  {coachingWin && (
+                    <div className="home-mission-win">
+                      <span aria-hidden="true">✓</span>
+                      <p>
+                        <strong>
+                          {BUDGET_CATEGORIES[coachingWin.category]} is on track.
+                        </strong>{" "}
+                        {formatCad(coachingWin.differenceCents)} remains—nice
+                        work.
+                      </p>
+                    </div>
+                  )}
                   <p className="home-mission-note">
                     Based on recorded activity.
                   </p>
