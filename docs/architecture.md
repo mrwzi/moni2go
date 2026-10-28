@@ -18,8 +18,11 @@ components.
   boundaries.
 
 The domain layer never imports React, Next.js, browser storage, or Supabase.
-Personal financial values reach Supabase only after the signed-in user selects
-an explicit cloud backup or restore action.
+Personal financial values reach Supabase only for an authenticated user with
+cloud synchronization enabled. Local writes complete first; version-aware
+cloud writes then run after saves, reconnection, app resume, and periodic
+background checks. A conflict preserves the local copy instead of silently
+overwriting either revision.
 
 ## Money and dates
 
@@ -50,7 +53,8 @@ required debt information, and deterministic integer-cent rounding.
 
 - IndexedDB is the authoritative on-device V2 workspace store.
 - The original local-storage baseline remains for V1 compatibility.
-- Supabase authentication and cloud workspace backup are optional.
+- Supabase authentication and version-aware workspace synchronization are
+  optional.
 - Demo profiles are synthetic and remain distinct from user-entered data.
 
 ## Change checklist
