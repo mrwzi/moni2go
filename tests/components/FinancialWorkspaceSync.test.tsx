@@ -225,4 +225,54 @@ describe("signed-in workspace synchronization", () => {
     expect(result.current.workspace?.name).toBe("Edited while offline");
     expect(result.current.syncMessage).toContain("synced");
   });
+
+  it("retries cloud synchronization automatically when the device reconnects", async () => {
+    const local = makeWorkspace("offline-workspace");
+    await seed(local, user.id);
+    vi.mocked(loadNewestCloudWorkspace).mockRejectedValueOnce(
+      new Error("offline"),
+    );
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    expect(result.current.cloudSyncState).toBe("local-only");
+
+    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+      workspace: local,
+      version: "2026-10-23T12:01:00.000Z",
+    });
+    act(() => window.dispatchEvent(new Event("online")));
+
+    await waitFor(() => {
+      expect(result.current.cloudSyncState).toBe("synced");
+    });
+    expect(loadNewestCloudWorkspace).toHaveBeenCalledTimes(2);
+  });
+
+  it("checks for newer cloud data when the app becomes visible again", async () => {
+    const local = makeWorkspace("owned-workspace");
+    await seed(local, user.id);
+    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+      workspace: local,
+      version: "2026-10-23T12:01:00.000Z",
+    });
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    vi.mocked(loadNewestCloudWorkspace).mockClear();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+
+    await waitFor(() => {
+      expect(loadNewestCloudWorkspace).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -94,13 +94,15 @@ export function CloudWorkspaceControls() {
         </span>
       </p>
       <div className="cloud-actions">
-        <button
-          className="button button-secondary"
-          disabled={pending || loading}
-          onClick={() => void reload()}
-        >
-          Check sync now
-        </button>
+        {cloudSyncState === "conflict" || cloudSyncState === "local-only" ? (
+          <button
+            className="button button-secondary"
+            disabled={pending || loading}
+            onClick={() => void reload()}
+          >
+            Retry sync
+          </button>
+        ) : null}
         {cloudSyncPaused ? (
           <button
             className="button button-primary"
@@ -122,8 +124,8 @@ export function CloudWorkspaceControls() {
         )}
       </div>
       <small>
-        Open moni2go on another device and sign in—the latest workspace loads
-        automatically.
+        Changes sync after every save, when you return online, when you reopen
+        the app, and periodically while it is open.
       </small>
     </div>
   );
