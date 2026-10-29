@@ -78,6 +78,8 @@ export function useFinancialWorkspace() {
     useState<CloudWorkspaceSnapshot | null>(null);
   const syncInProgress = useRef(false);
   const syncStateRef = useRef(cloudSyncState);
+  const cloudVersionRef = useRef<string | null>(null);
+  const cloudWorkspaceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     syncStateRef.current = cloudSyncState;
@@ -116,25 +118,21 @@ export function useFinancialWorkspace() {
           try {
             cloud = await loadCanonicalCloudWorkspace(client, ownerId);
           } catch {
-            setWorkspace(local);
+            setWorkspace(null);
             setCloudSyncState("local-only");
             setSyncMessage(
               "Your local workspace is available. Cloud sync has not completed; save again or check sync when you are online.",
             );
             return;
           }
-          if (!local && cloud) {
-            if (await repository.workspaceExists(cloud.workspace.id))
-              await repository.saveWorkspace(cloud.workspace);
-            else await repository.createWorkspace(cloud.workspace);
-            await repository.setActiveWorkspace(cloud.workspace.id, ownerId);
-            await repository.setCloudSyncMeta({
-              ownerId,
-              workspaceId: cloud.workspace.id,
-              cloudVersion: cloud.version,
-              syncedWorkspaceUpdatedAt: cloud.workspace.updatedAt,
-            });
+          if (cloud) {
+            // Signed-in workspaces are cloud-first. IndexedDB may still contain
+            // an older recovery copy, but it never decides what the user sees.
+            cloudVersionRef.current = cloud.version;
+            cloudWorkspaceIdRef.current = cloud.workspace.id;
             setWorkspace(cloud.workspace);
+            setCloudConflictSnapshot(null);
+            setCloudSyncPaused(false);
             setCloudSyncState("synced");
             setSyncMessage(
               "Your latest workspace was loaded from your account.",
@@ -144,7 +142,7 @@ export function useFinancialWorkspace() {
 
           if (local && !cloud) {
             await repository.setActiveWorkspace(local.id, ownerId);
-            setWorkspace(local);
+            setWorkspace(null);
             if (!deletion)
               await repository.markCloudDeleted(
                 ownerId,
@@ -157,70 +155,6 @@ export function useFinancialWorkspace() {
                 ? "Saved on this device. Cloud sync is paused after cloud deletion."
                 : "No cloud copy was found. Your workspace remains on this device until you resume cloud sync.",
             );
-            return;
-          }
-
-          if (local && cloud) {
-            const syncMeta = await repository.getCloudSyncMeta(
-              ownerId,
-              local.id,
-            );
-            const sameWorkspace =
-              local.id === cloud.workspace.id &&
-              JSON.stringify(local) === JSON.stringify(cloud.workspace);
-            if (sameWorkspace) {
-              await repository.setCloudSyncMeta({
-                ownerId,
-                workspaceId: local.id,
-                cloudVersion: cloud.version,
-                syncedWorkspaceUpdatedAt: local.updatedAt,
-              });
-              setWorkspace(local);
-              setCloudSyncState("synced");
-              setSyncMessage("Saved and synced to your account.");
-            } else if (
-              syncMeta?.cloudVersion === cloud.version &&
-              local.id === cloud.workspace.id
-            ) {
-              const version = await saveWorkspaceToCloud(
-                client,
-                ownerId,
-                local,
-                syncMeta.cloudVersion,
-              );
-              await repository.setCloudSyncMeta({
-                ownerId,
-                workspaceId: local.id,
-                cloudVersion: version,
-                syncedWorkspaceUpdatedAt: local.updatedAt,
-              });
-              setWorkspace(local);
-              setCloudSyncState("synced");
-              setSyncMessage("Saved and synced to your account.");
-            } else if (
-              local.updatedAt === syncMeta?.syncedWorkspaceUpdatedAt &&
-              local.id === cloud.workspace.id
-            ) {
-              await repository.saveWorkspace(cloud.workspace);
-              await repository.setCloudSyncMeta({
-                ownerId,
-                workspaceId: cloud.workspace.id,
-                cloudVersion: cloud.version,
-                syncedWorkspaceUpdatedAt: cloud.workspace.updatedAt,
-              });
-              setWorkspace(cloud.workspace);
-              setCloudSyncState("synced");
-              setSyncMessage(
-                "Your latest workspace was loaded from your account.",
-              );
-            } else {
-              setWorkspace(local);
-              setCloudConflictSnapshot(cloud);
-              setCloudSyncState("conflict");
-              setSyncMessage(
-                "Sync conflict detected. Your local changes were kept, and the cloud copy was not overwritten.",
-              );
-            }
             return;
           }
 
@@ -267,6 +201,58 @@ export function useFinancialWorkspace() {
 
   const save = useCallback(
     async (next: FinancialWorkspace) => {
+      if (ownerId) {
+        const database = await openMoni2GoDatabase();
+        try {
+          const repository = new WorkspaceRepository(database);
+          if (await repository.getCloudDeletionMeta(ownerId)) {
+            setCloudSyncPaused(true);
+            setCloudSyncState("local-only");
+            setSyncMessage(
+              "Cloud data was deleted. Resume cloud sync before saving new financial data.",
+            );
+            throw new Error("Resume cloud sync before saving changes.");
+          }
+        } finally {
+          database.close();
+        }
+        const canonical = {
+          ...next,
+          id: (cloudWorkspaceIdRef.current ??
+            next.id) as FinancialWorkspace["id"],
+        };
+        try {
+          const version = await saveWorkspaceToCloud(
+            createClient(),
+            ownerId,
+            canonical,
+            cloudVersionRef.current,
+          );
+          cloudVersionRef.current = version;
+          cloudWorkspaceIdRef.current = canonical.id;
+          setWorkspace(canonical);
+          setError(null);
+          setCloudSyncPaused(false);
+          setCloudConflictSnapshot(null);
+          setCloudSyncState("synced");
+          setSyncMessage("Saved and synced to your account.");
+          return;
+        } catch (cloudError) {
+          const conflict =
+            cloudError instanceof Error &&
+            "code" in cloudError &&
+            cloudError.code === "conflict";
+          if (conflict) await load(true);
+          setCloudSyncState(conflict ? "conflict" : "local-only");
+          setSyncMessage(
+            conflict
+              ? "This workspace changed on another device. The latest cloud copy was loaded; review and save your change again."
+              : "This change could not reach the database. Nothing was saved; reconnect and try again.",
+          );
+          throw cloudError;
+        }
+      }
+
       const database = await openMoni2GoDatabase();
       try {
         const repository = new WorkspaceRepository(database);
@@ -276,58 +262,6 @@ export function useFinancialWorkspace() {
         await repository.setActiveWorkspace(next.id, ownerId);
         setWorkspace(next);
         setError(null);
-        if (ownerId) {
-          try {
-            if (await repository.getCloudDeletionMeta(ownerId)) {
-              setCloudSyncPaused(true);
-              setCloudSyncState("local-only");
-              setSyncMessage(
-                "Saved on this device. Cloud sync is paused after cloud deletion.",
-              );
-              return;
-            }
-            const syncMeta = await repository.getCloudSyncMeta(
-              ownerId,
-              next.id,
-            );
-            const version = await saveWorkspaceToCloud(
-              createClient(),
-              ownerId,
-              next,
-              syncMeta?.cloudVersion ?? null,
-            );
-            await repository.setCloudSyncMeta({
-              ownerId,
-              workspaceId: next.id,
-              cloudVersion: version,
-              syncedWorkspaceUpdatedAt: next.updatedAt,
-            });
-            setCloudSyncPaused(false);
-            setCloudConflictSnapshot(null);
-            setCloudSyncState("synced");
-            setSyncMessage("Saved and synced to your account.");
-          } catch (cloudError) {
-            const conflict =
-              cloudError instanceof Error &&
-              "code" in cloudError &&
-              cloudError.code === "conflict";
-            if (conflict) {
-              try {
-                setCloudConflictSnapshot(
-                  await loadCanonicalCloudWorkspace(createClient(), ownerId),
-                );
-              } catch {
-                // The local save remains safe if the other copy cannot load.
-              }
-            }
-            setCloudSyncState(conflict ? "conflict" : "local-only");
-            setSyncMessage(
-              conflict
-                ? "Sync conflict detected. Your changes are saved on this device; the cloud copy was not overwritten."
-                : "Saved on this device. Cloud sync has not completed; save again or check sync when you are online.",
-            );
-          }
-        }
       } finally {
         database.close();
       }

@@ -121,28 +121,18 @@ describe("signed-in workspace synchronization", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.workspace?.id).toBe("older-local-workspace");
+    expect(result.current.workspace).toBeNull();
     expect(result.current.cloudSyncPaused).toBe(true);
     expect(result.current.syncMessage).toContain("No cloud copy was found");
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
   });
 
-  it("keeps local changes when both the cloud revision and local workspace changed", async () => {
+  it("uses the canonical database workspace when a device cache differs", async () => {
     const local = makeWorkspace("owned-workspace", "2026-10-23T12:10:00.000Z");
+    const cloud = makeWorkspace("owned-workspace", "2026-10-23T12:05:00.000Z");
     await seed(local, user.id);
-    const database = await openMoni2GoDatabase();
-    try {
-      await new WorkspaceRepository(database).setCloudSyncMeta({
-        ownerId: user.id,
-        workspaceId: local.id,
-        cloudVersion: "2026-10-23T12:00:00.000Z",
-        syncedWorkspaceUpdatedAt: now,
-      });
-    } finally {
-      database.close();
-    }
     vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
-      workspace: makeWorkspace("owned-workspace", "2026-10-23T12:05:00.000Z"),
+      workspace: cloud,
       version: "2026-10-23T12:05:01.000Z",
     });
 
@@ -151,36 +141,12 @@ describe("signed-in workspace synchronization", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.workspace?.updatedAt).toBe(local.updatedAt);
-    expect(result.current.syncMessage).toContain("Sync conflict detected");
-    expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
-  });
-
-  it("resolves a conflict with the selected cloud copy", async () => {
-    const local = makeWorkspace("shared-workspace", "2026-10-23T12:10:00.000Z");
-    const cloud = makeWorkspace("shared-workspace", "2026-10-23T12:20:00.000Z");
-    await seed(local, user.id);
-    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
-      workspace: cloud,
-      version: "2026-10-23T12:21:00.000Z",
-    });
-
-    const { result } = renderHook(() => useFinancialWorkspace());
-    await waitFor(() => {
-      expect(result.current.cloudSyncState).toBe("conflict");
-    });
-    expect(result.current.cloudConflict).toEqual({ local, cloud });
-
-    await act(async () => {
-      await result.current.resolveCloudConflict("cloud");
-    });
-
-    expect(result.current.workspace?.updatedAt).toBe(cloud.updatedAt);
+    expect(result.current.workspace).toEqual(cloud);
     expect(result.current.cloudSyncState).toBe("synced");
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
   });
 
-  it("makes the device copy canonical without creating a second cloud workspace", async () => {
+  it("saves signed-in changes directly to the canonical database workspace", async () => {
     const local = makeWorkspace("phone-workspace", "2026-10-23T12:10:00.000Z");
     const cloud = makeWorkspace("cloud-workspace", "2026-10-23T12:20:00.000Z");
     await seed(local, user.id);
@@ -194,20 +160,27 @@ describe("signed-in workspace synchronization", () => {
 
     const { result } = renderHook(() => useFinancialWorkspace());
     await waitFor(() => {
-      expect(result.current.cloudSyncState).toBe("conflict");
+      expect(result.current.cloudSyncState).toBe("synced");
     });
     await act(async () => {
-      await result.current.resolveCloudConflict("local");
+      await result.current.save({ ...cloud, name: "Database edit" });
     });
 
     expect(saveWorkspaceToCloud).toHaveBeenCalledWith(
       expect.anything(),
       user.id,
-      expect.objectContaining({ id: cloud.id, name: local.name }),
+      expect.objectContaining({ id: cloud.id, name: "Database edit" }),
       "2026-10-23T12:21:00.000Z",
     );
     expect(result.current.workspace?.id).toBe(cloud.id);
-    expect(result.current.cloudSyncState).toBe("synced");
+    const database = await openMoni2GoDatabase();
+    try {
+      expect(
+        (await new WorkspaceRepository(database).getWorkspace(local.id)).name,
+      ).toBe(local.name);
+    } finally {
+      database.close();
+    }
   });
 
   it("does not recreate deleted cloud data until sync is explicitly resumed", async () => {
@@ -224,13 +197,17 @@ describe("signed-in workspace synchronization", () => {
       await result.current.deleteCloudData();
     });
     vi.mocked(saveWorkspaceToCloud).mockClear();
-    await act(async () => {
-      await result.current.save({ ...local, name: "Local edit" });
-    });
+    await expect(
+      act(async () => {
+        await result.current.save({ ...local, name: "Blocked edit" });
+      }),
+    ).rejects.toThrow("Resume cloud sync");
 
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
     expect(result.current.cloudSyncPaused).toBe(true);
-    expect(result.current.syncMessage).toContain("Saved on this device");
+    await waitFor(() => {
+      expect(result.current.syncMessage).toContain("resume sync");
+    });
     unmount();
 
     const reopened = renderHook(() => useFinancialWorkspace());
@@ -241,7 +218,7 @@ describe("signed-in workspace synchronization", () => {
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
   });
 
-  it("keeps offline edits locally and recognizes the same data after reconnection", async () => {
+  it("does not claim an offline signed-in edit was saved", async () => {
     const local = makeWorkspace("offline-workspace");
     await seed(local, user.id);
     vi.mocked(loadCanonicalCloudWorkspace).mockRejectedValue(
@@ -258,28 +235,19 @@ describe("signed-in workspace synchronization", () => {
       name: "Edited while offline",
       updatedAt: "2026-10-23T12:20:00.000Z",
     };
-    await act(async () => {
-      await result.current.save(edited);
-    });
+    await expect(
+      act(async () => {
+        await result.current.save(edited);
+      }),
+    ).rejects.toThrow("offline");
     const database = await openMoni2GoDatabase();
     try {
       expect(
         (await new WorkspaceRepository(database).getWorkspace(local.id)).name,
-      ).toBe("Edited while offline");
+      ).toBe(local.name);
     } finally {
       database.close();
     }
-
-    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
-      workspace: edited,
-      version: "2026-10-23T12:21:00.000Z",
-    });
-    await act(async () => {
-      await result.current.reload();
-    });
-
-    expect(result.current.workspace?.name).toBe("Edited while offline");
-    expect(result.current.syncMessage).toContain("synced");
   });
 
   it("retries cloud synchronization automatically when the device reconnects", async () => {
