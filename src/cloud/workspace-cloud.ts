@@ -82,15 +82,19 @@ export async function saveWorkspaceToCloud(
   return data.updated_at as string;
 }
 
-export async function loadNewestCloudWorkspace(
+export async function loadCanonicalCloudWorkspace(
   client: SupabaseClient,
   userId: string,
 ): Promise<CloudWorkspaceSnapshot | null> {
   const { data, error } = await client
     .from("financial_workspaces")
-    .select("workspace, updated_at")
+    .select("workspace, updated_at, created_at")
     .eq("owner_id", userId)
-    .order("updated_at", { ascending: false })
+    // One account may contain legacy rows created by different devices. Always
+    // follow the first workspace so every device converges on the same row;
+    // updated_at would let competing rows take turns becoming "current".
+    .order("created_at", { ascending: true })
+    .order("workspace_id", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (error)

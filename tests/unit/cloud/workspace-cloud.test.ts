@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import {
   CloudWorkspaceError,
-  loadNewestCloudWorkspace,
+  loadCanonicalCloudWorkspace,
   saveWorkspaceToCloud,
 } from "../../../src/cloud/workspace-cloud";
 import { financialWorkspaceSchema } from "../../../src/v2/domain/schemas";
@@ -109,10 +109,18 @@ describe("cloud workspace compare-and-set", () => {
       from: vi.fn(() => query),
     } as unknown as SupabaseClient;
 
-    await expect(loadNewestCloudWorkspace(client, "user-1")).resolves.toEqual({
+    await expect(
+      loadCanonicalCloudWorkspace(client, "user-1"),
+    ).resolves.toEqual({
       workspace,
       version: "2026-10-23T12:01:00.000Z",
     });
     expect(query.eq).toHaveBeenCalledWith("owner_id", "user-1");
+    expect(query.order).toHaveBeenNthCalledWith(1, "created_at", {
+      ascending: true,
+    });
+    expect(query.order).toHaveBeenNthCalledWith(2, "workspace_id", {
+      ascending: true,
+    });
   });
 });

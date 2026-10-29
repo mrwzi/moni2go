@@ -6,7 +6,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteCloudWorkspaces,
-  loadNewestCloudWorkspace,
+  loadCanonicalCloudWorkspace,
   saveWorkspaceToCloud,
 } from "../../src/cloud/workspace-cloud";
 import { useAuthUser } from "../../src/lib/supabase/use-auth-user";
@@ -26,7 +26,7 @@ vi.mock("../../src/cloud/workspace-cloud", async (importOriginal) => {
     await importOriginal<typeof import("../../src/cloud/workspace-cloud")>();
   return {
     ...original,
-    loadNewestCloudWorkspace: vi.fn(),
+    loadCanonicalCloudWorkspace: vi.fn(),
     saveWorkspaceToCloud: vi.fn(),
     deleteCloudWorkspaces: vi.fn(),
   };
@@ -94,14 +94,14 @@ describe("signed-in workspace synchronization", () => {
       value: new IDBFactory(),
     });
     vi.mocked(useAuthUser).mockReturnValue({ status: "signed-in", user });
-    vi.mocked(loadNewestCloudWorkspace).mockReset();
+    vi.mocked(loadCanonicalCloudWorkspace).mockReset();
     vi.mocked(saveWorkspaceToCloud).mockReset();
     vi.mocked(deleteCloudWorkspaces).mockReset();
   });
 
   it("does not silently attach an anonymous workspace to a newly signed-in account", async () => {
     await seed(makeWorkspace("anonymous-workspace"));
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue(null);
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue(null);
 
     const { result } = renderHook(() => useFinancialWorkspace());
     await waitFor(() => {
@@ -114,7 +114,7 @@ describe("signed-in workspace synchronization", () => {
 
   it("does not recreate a missing cloud copy from an older local workspace", async () => {
     await seed(makeWorkspace("older-local-workspace"), user.id);
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue(null);
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue(null);
 
     const { result } = renderHook(() => useFinancialWorkspace());
     await waitFor(() => {
@@ -141,7 +141,7 @@ describe("signed-in workspace synchronization", () => {
     } finally {
       database.close();
     }
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
       workspace: makeWorkspace("owned-workspace", "2026-10-23T12:05:00.000Z"),
       version: "2026-10-23T12:05:01.000Z",
     });
@@ -160,7 +160,7 @@ describe("signed-in workspace synchronization", () => {
     const local = makeWorkspace("shared-workspace", "2026-10-23T12:10:00.000Z");
     const cloud = makeWorkspace("shared-workspace", "2026-10-23T12:20:00.000Z");
     await seed(local, user.id);
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
       workspace: cloud,
       version: "2026-10-23T12:21:00.000Z",
     });
@@ -184,7 +184,7 @@ describe("signed-in workspace synchronization", () => {
     const local = makeWorkspace("phone-workspace", "2026-10-23T12:10:00.000Z");
     const cloud = makeWorkspace("cloud-workspace", "2026-10-23T12:20:00.000Z");
     await seed(local, user.id);
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
       workspace: cloud,
       version: "2026-10-23T12:21:00.000Z",
     });
@@ -213,7 +213,7 @@ describe("signed-in workspace synchronization", () => {
   it("does not recreate deleted cloud data until sync is explicitly resumed", async () => {
     const local = makeWorkspace("owned-workspace");
     await seed(local, user.id);
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue(null);
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue(null);
     vi.mocked(deleteCloudWorkspaces).mockResolvedValue();
 
     const { result, unmount } = renderHook(() => useFinancialWorkspace());
@@ -244,7 +244,9 @@ describe("signed-in workspace synchronization", () => {
   it("keeps offline edits locally and recognizes the same data after reconnection", async () => {
     const local = makeWorkspace("offline-workspace");
     await seed(local, user.id);
-    vi.mocked(loadNewestCloudWorkspace).mockRejectedValue(new Error("offline"));
+    vi.mocked(loadCanonicalCloudWorkspace).mockRejectedValue(
+      new Error("offline"),
+    );
     vi.mocked(saveWorkspaceToCloud).mockRejectedValue(new Error("offline"));
 
     const { result } = renderHook(() => useFinancialWorkspace());
@@ -268,7 +270,7 @@ describe("signed-in workspace synchronization", () => {
       database.close();
     }
 
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
       workspace: edited,
       version: "2026-10-23T12:21:00.000Z",
     });
@@ -283,7 +285,7 @@ describe("signed-in workspace synchronization", () => {
   it("retries cloud synchronization automatically when the device reconnects", async () => {
     const local = makeWorkspace("offline-workspace");
     await seed(local, user.id);
-    vi.mocked(loadNewestCloudWorkspace).mockRejectedValueOnce(
+    vi.mocked(loadCanonicalCloudWorkspace).mockRejectedValueOnce(
       new Error("offline"),
     );
 
@@ -293,22 +295,22 @@ describe("signed-in workspace synchronization", () => {
     });
     expect(result.current.cloudSyncState).toBe("local-only");
 
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
       workspace: local,
       version: "2026-10-23T12:01:00.000Z",
     });
-    act(() => window.dispatchEvent(new Event("online")));
+    window.dispatchEvent(new Event("online"));
 
     await waitFor(() => {
       expect(result.current.cloudSyncState).toBe("synced");
     });
-    expect(loadNewestCloudWorkspace).toHaveBeenCalledTimes(2);
+    expect(loadCanonicalCloudWorkspace).toHaveBeenCalledTimes(2);
   });
 
   it("checks for newer cloud data when the app becomes visible again", async () => {
     const local = makeWorkspace("owned-workspace");
     await seed(local, user.id);
-    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue({
       workspace: local,
       version: "2026-10-23T12:01:00.000Z",
     });
@@ -317,16 +319,16 @@ describe("signed-in workspace synchronization", () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
-    vi.mocked(loadNewestCloudWorkspace).mockClear();
+    vi.mocked(loadCanonicalCloudWorkspace).mockClear();
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
     });
-    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    document.dispatchEvent(new Event("visibilitychange"));
 
     await waitFor(() => {
-      expect(loadNewestCloudWorkspace).toHaveBeenCalledTimes(1);
+      expect(loadCanonicalCloudWorkspace).toHaveBeenCalledTimes(1);
     });
   });
 });

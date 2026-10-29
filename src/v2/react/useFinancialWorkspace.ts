@@ -8,7 +8,7 @@ import { useAuthUser } from "../../lib/supabase/use-auth-user";
 import { createClient } from "../../lib/supabase/client";
 import {
   deleteCloudWorkspaces,
-  loadNewestCloudWorkspace,
+  loadCanonicalCloudWorkspace,
   saveWorkspaceToCloud,
   type CloudWorkspaceSnapshot,
 } from "../../cloud/workspace-cloud";
@@ -114,7 +114,7 @@ export function useFinancialWorkspace() {
           setCloudSyncPaused(deletion !== null);
           let cloud;
           try {
-            cloud = await loadNewestCloudWorkspace(client, ownerId);
+            cloud = await loadCanonicalCloudWorkspace(client, ownerId);
           } catch {
             setWorkspace(local);
             setCloudSyncState("local-only");
@@ -314,7 +314,7 @@ export function useFinancialWorkspace() {
             if (conflict) {
               try {
                 setCloudConflictSnapshot(
-                  await loadNewestCloudWorkspace(createClient(), ownerId),
+                  await loadCanonicalCloudWorkspace(createClient(), ownerId),
                 );
               } catch {
                 // The local save remains safe if the other copy cannot load.
