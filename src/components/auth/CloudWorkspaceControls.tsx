@@ -3,6 +3,29 @@
 import { useState } from "react";
 import { useAuthUser } from "../../lib/supabase/use-auth-user";
 import { useFinancialWorkspace } from "../../v2/react/useFinancialWorkspace";
+import { exportWorkspace } from "../../v2/storage/export-import";
+import type { FinancialWorkspace } from "../../v2/domain/workspace";
+
+async function downloadRecoveryBackup(
+  workspace: FinancialWorkspace,
+  label: "device" | "cloud",
+): Promise<void> {
+  const serialized = await exportWorkspace(workspace, {
+    exportedAt: new Date().toISOString(),
+    applicationVersion: "0.1.0",
+  });
+  const url = URL.createObjectURL(
+    new Blob([serialized], { type: "application/json" }),
+  );
+  try {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `moni2go-${label}-recovery-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 export function CloudWorkspaceControls() {
   const auth = useAuthUser();
@@ -12,9 +35,11 @@ export function CloudWorkspaceControls() {
     syncMessage,
     cloudSyncPaused,
     cloudSyncState,
+    cloudConflict,
     reload,
     deleteCloudData,
     resumeCloudSync,
+    resolveCloudConflict,
   } = useFinancialWorkspace();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -64,6 +89,37 @@ export function CloudWorkspaceControls() {
         error instanceof Error
           ? error.message
           : "Cloud sync could not be resumed. Local data was not changed.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function recoverConflict(choice: "local" | "cloud") {
+    if (!cloudConflict) return;
+    const replaced = choice === "local" ? "cloud" : "device";
+    const replacedCopy =
+      choice === "local" ? cloudConflict.cloud : cloudConflict.local;
+    const selected = choice === "local" ? "this device" : "the cloud copy";
+    if (
+      !window.confirm(
+        `Use ${selected}? The other copy will download as a private recovery backup first.`,
+      )
+    )
+      return;
+    setPending(true);
+    setMessage(null);
+    try {
+      await downloadRecoveryBackup(replacedCopy, replaced);
+      await resolveCloudConflict(choice);
+      setMessage(
+        `Conflict resolved using ${selected}. The replaced copy was downloaded as a backup.`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Nothing was replaced. Both copies are still available.",
       );
     } finally {
       setPending(false);
@@ -123,6 +179,34 @@ export function CloudWorkspaceControls() {
           </button>
         )}
       </div>
+      {cloudSyncState === "conflict" && cloudConflict ? (
+        <div className="cloud-conflict-actions">
+          <p>
+            This device and the cloud contain different activity. Choose the
+            correct copy. The other copy downloads first as a private backup.
+          </p>
+          <div className="cloud-actions">
+            <button
+              className="button button-secondary"
+              disabled={pending}
+              onClick={() => void recoverConflict("local")}
+            >
+              Use this device
+            </button>
+            <button
+              className="button button-secondary"
+              disabled={pending}
+              onClick={() => void recoverConflict("cloud")}
+            >
+              Use cloud copy
+            </button>
+          </div>
+          <small>
+            Backups contain unencrypted financial information. Keep them
+            private.
+          </small>
+        </div>
+      ) : null}
       <small>
         Changes sync after every save, when you return online, when you reopen
         the app, and periodically while it is open.

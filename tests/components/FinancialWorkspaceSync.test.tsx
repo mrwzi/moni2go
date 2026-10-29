@@ -156,6 +156,60 @@ describe("signed-in workspace synchronization", () => {
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
   });
 
+  it("resolves a conflict with the selected cloud copy", async () => {
+    const local = makeWorkspace("shared-workspace", "2026-10-23T12:10:00.000Z");
+    const cloud = makeWorkspace("shared-workspace", "2026-10-23T12:20:00.000Z");
+    await seed(local, user.id);
+    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+      workspace: cloud,
+      version: "2026-10-23T12:21:00.000Z",
+    });
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.cloudSyncState).toBe("conflict");
+    });
+    expect(result.current.cloudConflict).toEqual({ local, cloud });
+
+    await act(async () => {
+      await result.current.resolveCloudConflict("cloud");
+    });
+
+    expect(result.current.workspace?.updatedAt).toBe(cloud.updatedAt);
+    expect(result.current.cloudSyncState).toBe("synced");
+    expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
+  });
+
+  it("makes the device copy canonical without creating a second cloud workspace", async () => {
+    const local = makeWorkspace("phone-workspace", "2026-10-23T12:10:00.000Z");
+    const cloud = makeWorkspace("cloud-workspace", "2026-10-23T12:20:00.000Z");
+    await seed(local, user.id);
+    vi.mocked(loadNewestCloudWorkspace).mockResolvedValue({
+      workspace: cloud,
+      version: "2026-10-23T12:21:00.000Z",
+    });
+    vi.mocked(saveWorkspaceToCloud).mockResolvedValue(
+      "2026-10-23T12:30:00.000Z",
+    );
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.cloudSyncState).toBe("conflict");
+    });
+    await act(async () => {
+      await result.current.resolveCloudConflict("local");
+    });
+
+    expect(saveWorkspaceToCloud).toHaveBeenCalledWith(
+      expect.anything(),
+      user.id,
+      expect.objectContaining({ id: cloud.id, name: local.name }),
+      "2026-10-23T12:21:00.000Z",
+    );
+    expect(result.current.workspace?.id).toBe(cloud.id);
+    expect(result.current.cloudSyncState).toBe("synced");
+  });
+
   it("does not recreate deleted cloud data until sync is explicitly resumed", async () => {
     const local = makeWorkspace("owned-workspace");
     await seed(local, user.id);
