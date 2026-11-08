@@ -140,7 +140,7 @@ export function useFinancialWorkspace() {
             return;
           }
 
-          if (local && !cloud) {
+          if (local) {
             await repository.setActiveWorkspace(local.id, ownerId);
             setWorkspace(null);
             if (!deletion)
@@ -294,19 +294,47 @@ export function useFinancialWorkspace() {
 
   const resumeCloudSync = useCallback(async () => {
     if (!ownerId) throw new Error("Sign in before resuming cloud sync.");
+    let local: FinancialWorkspace | null;
     const database = await openMoni2GoDatabase();
     try {
       const repository = new WorkspaceRepository(database);
-      const local = await repository.getActiveWorkspace(ownerId);
-      if (local) await repository.clearCloudSyncMeta(ownerId, local.id);
-      await repository.clearCloudDeleted(ownerId);
+      local = await repository.getActiveWorkspace(ownerId);
     } finally {
       database.close();
     }
-    setCloudSyncPaused(false);
+
     setCloudSyncState("pending");
-    await load();
-  }, [load, ownerId]);
+    const client = createClient();
+    const cloud = await loadCanonicalCloudWorkspace(client, ownerId);
+    let selected = cloud?.workspace ?? local;
+    let version = cloud?.version ?? null;
+
+    if (!cloud && local) {
+      version = await saveWorkspaceToCloud(client, ownerId, local, null);
+      selected = local;
+    }
+
+    const cleanupDatabase = await openMoni2GoDatabase();
+    try {
+      const repository = new WorkspaceRepository(cleanupDatabase);
+      if (local) await repository.clearCloudSyncMeta(ownerId, local.id);
+      await repository.clearCloudDeleted(ownerId);
+    } finally {
+      cleanupDatabase.close();
+    }
+
+    cloudVersionRef.current = version;
+    cloudWorkspaceIdRef.current = selected?.id ?? null;
+    setWorkspace(selected);
+    setCloudSyncPaused(false);
+    setCloudConflictSnapshot(null);
+    setCloudSyncState(selected ? "synced" : "local-only");
+    setSyncMessage(
+      selected
+        ? "Cloud sync resumed. Your workspace is saved to your account."
+        : "Cloud sync resumed. Add an account to create your workspace.",
+    );
+  }, [ownerId]);
 
   const resolveCloudConflict = useCallback(
     async (choice: "local" | "cloud") => {
