@@ -964,9 +964,10 @@ test("records money in and money out against an existing account", async ({
   await expect(spendingChart).toContainText("Subscriptions");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
   await expect(nextSteps).toBeVisible();
-  await expect(nextSteps).toContainText("Add expected income when you know it");
+  await expect(nextSteps).toContainText("Groceries wasn't planned");
+  await expect(nextSteps).toContainText("$20.25");
   await expect(nextSteps).toContainText(
-    "Forecasts cannot include income until an amount and date are saved",
+    "Add a realistic amount if this spending is expected",
   );
   const outlook = page.getByRole("region", { name: "Financial outlook" });
   await expect(outlook).toBeVisible();

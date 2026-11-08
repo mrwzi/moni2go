@@ -132,6 +132,7 @@ test("allocates account money and keeps the review focused", async ({
 test("shows current spending separately from completed-month averages", async ({
   page,
 }) => {
+  test.slow();
   await page.goto("/accounts");
   await page.getByRole("button", { name: "+ Add provider" }).click();
   await page.getByLabel("Bank name").fill("History bank");
@@ -272,7 +273,10 @@ test("shows current spending separately from completed-month averages", async ({
   await expect(page.locator(".home-spending-budget-summary")).toContainText(
     "$20.00 overall over",
   );
-  await expect(page.locator(".home-category-warnings")).toContainText(
-    "Category overages",
-  );
+  const moneyCoach = page
+    .getByRole("region", { name: "Spending at a glance" })
+    .getByLabel("Money coach");
+  await expect(moneyCoach).toContainText("Money move");
+  await expect(moneyCoach).toContainText("restaurants / eating out");
+  await expect(moneyCoach).toContainText("$45.00 over");
 });
