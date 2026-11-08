@@ -218,6 +218,44 @@ describe("signed-in workspace synchronization", () => {
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
   });
 
+  it("uploads the existing device workspace when sync is explicitly resumed", async () => {
+    const local = makeWorkspace("resume-workspace");
+    await seed(local, user.id);
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue(null);
+    vi.mocked(saveWorkspaceToCloud).mockResolvedValue(
+      "2026-10-23T12:40:00.000Z",
+    );
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.cloudSyncPaused).toBe(true);
+    });
+
+    await act(async () => {
+      await result.current.resumeCloudSync();
+    });
+
+    expect(saveWorkspaceToCloud).toHaveBeenCalledWith(
+      expect.anything(),
+      user.id,
+      local,
+      null,
+    );
+    expect(result.current.workspace).toEqual(local);
+    expect(result.current.cloudSyncPaused).toBe(false);
+    expect(result.current.cloudSyncState).toBe("synced");
+    expect(result.current.syncMessage).toContain("Cloud sync resumed");
+
+    const database = await openMoni2GoDatabase();
+    try {
+      expect(
+        await new WorkspaceRepository(database).getCloudDeletionMeta(user.id),
+      ).toBeNull();
+    } finally {
+      database.close();
+    }
+  });
+
   it("does not claim an offline signed-in edit was saved", async () => {
     const local = makeWorkspace("offline-workspace");
     await seed(local, user.id);
