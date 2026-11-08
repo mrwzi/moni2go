@@ -5,7 +5,11 @@ import type { FinancialWorkspace } from "../v2/domain/workspace";
 export class CloudWorkspaceError extends Error {
   constructor(
     readonly code:
-      "not-configured" | "invalid-workspace" | "request-failed" | "conflict",
+      | "not-configured"
+      | "invalid-workspace"
+      | "request-failed"
+      | "conflict"
+      | "sync-disabled",
     message: string,
   ) {
     super(message);
@@ -17,6 +21,25 @@ export type CloudWorkspaceSnapshot = Readonly<{
   workspace: FinancialWorkspace;
   version: string;
 }>;
+
+export type CloudSyncControl = Readonly<{
+  enabled: boolean;
+  generation: number;
+  deletedAt: string | null;
+}>;
+
+function parseCloudSyncControl(data: unknown): CloudSyncControl {
+  const record = data as Readonly<{
+    sync_enabled: unknown;
+    generation: unknown;
+    deleted_at?: unknown;
+  }>;
+  return {
+    enabled: record.sync_enabled === true,
+    generation: Number(record.generation),
+    deletedAt: typeof record.deleted_at === "string" ? record.deleted_at : null,
+  };
+}
 
 function nextCloudTimestamp(expectedVersion: string | null): string {
   const now = Date.now();
@@ -38,7 +61,38 @@ function cloudRequestError(
       "conflict",
       "Cloud sync paused because this workspace changed on another device. Your local changes are still saved.",
     );
+  if (error?.code === "42501")
+    return new CloudWorkspaceError(
+      "sync-disabled",
+      "Cloud sync is paused for this account. Resume it before uploading data.",
+    );
   return new CloudWorkspaceError("request-failed", fallbackMessage);
+}
+
+export async function loadCloudSyncControl(
+  client: SupabaseClient,
+): Promise<CloudSyncControl> {
+  const { data, error } = await client.rpc("get_cloud_sync_control").single();
+  if (error)
+    throw cloudRequestError(error, "Cloud sync status could not be loaded.");
+  return parseCloudSyncControl(data);
+}
+
+export async function resumeCloudSyncForAccount(
+  client: SupabaseClient,
+  workspace: FinancialWorkspace | null,
+): Promise<CloudSyncControl & Readonly<{ version: string | null }>> {
+  const valid = workspace ? financialWorkspaceSchema.parse(workspace) : null;
+  const { data, error } = await client
+    .rpc("resume_cloud_financial_sync", { p_workspace: valid })
+    .single();
+  if (error) throw cloudRequestError(error, "Cloud sync could not be resumed.");
+  const control = parseCloudSyncControl(data);
+  const record = data as Readonly<{ updated_at?: unknown }>;
+  return {
+    ...control,
+    version: typeof record.updated_at === "string" ? record.updated_at : null,
+  };
 }
 
 export async function saveWorkspaceToCloud(
@@ -114,12 +168,8 @@ export async function loadCanonicalCloudWorkspace(
 
 export async function deleteCloudWorkspaces(
   client: SupabaseClient,
-  userId: string,
 ): Promise<void> {
-  const { error } = await client
-    .from("financial_workspaces")
-    .delete()
-    .eq("owner_id", userId);
+  const { error } = await client.rpc("delete_cloud_financial_workspaces");
   if (error)
     throw cloudRequestError(error, "Cloud workspaces could not be deleted.");
 }

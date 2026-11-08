@@ -6,7 +6,9 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteCloudWorkspaces,
+  loadCloudSyncControl,
   loadCanonicalCloudWorkspace,
+  resumeCloudSyncForAccount,
   saveWorkspaceToCloud,
 } from "../../src/cloud/workspace-cloud";
 import { useAuthUser } from "../../src/lib/supabase/use-auth-user";
@@ -27,6 +29,8 @@ vi.mock("../../src/cloud/workspace-cloud", async (importOriginal) => {
   return {
     ...original,
     loadCanonicalCloudWorkspace: vi.fn(),
+    loadCloudSyncControl: vi.fn(),
+    resumeCloudSyncForAccount: vi.fn(),
     saveWorkspaceToCloud: vi.fn(),
     deleteCloudWorkspaces: vi.fn(),
   };
@@ -95,6 +99,13 @@ describe("signed-in workspace synchronization", () => {
     });
     vi.mocked(useAuthUser).mockReturnValue({ status: "signed-in", user });
     vi.mocked(loadCanonicalCloudWorkspace).mockReset();
+    vi.mocked(loadCloudSyncControl).mockReset();
+    vi.mocked(loadCloudSyncControl).mockResolvedValue({
+      enabled: true,
+      generation: 1,
+      deletedAt: null,
+    });
+    vi.mocked(resumeCloudSyncForAccount).mockReset();
     vi.mocked(saveWorkspaceToCloud).mockReset();
     vi.mocked(deleteCloudWorkspaces).mockReset();
   });
@@ -124,6 +135,26 @@ describe("signed-in workspace synchronization", () => {
     expect(result.current.workspace).toBeNull();
     expect(result.current.cloudSyncPaused).toBe(true);
     expect(result.current.syncMessage).toContain("No cloud copy was found");
+    expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
+  });
+
+  it("honors an account-wide deletion pause on another device", async () => {
+    await seed(makeWorkspace("second-device-copy"), user.id);
+    vi.mocked(loadCloudSyncControl).mockResolvedValue({
+      enabled: false,
+      generation: 4,
+      deletedAt: now,
+    });
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.workspace).toBeNull();
+    expect(result.current.cloudSyncPaused).toBe(true);
+    expect(result.current.syncMessage).toContain("paused for this account");
+    expect(loadCanonicalCloudWorkspace).not.toHaveBeenCalled();
     expect(saveWorkspaceToCloud).not.toHaveBeenCalled();
   });
 
@@ -222,9 +253,12 @@ describe("signed-in workspace synchronization", () => {
     const local = makeWorkspace("resume-workspace");
     await seed(local, user.id);
     vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue(null);
-    vi.mocked(saveWorkspaceToCloud).mockResolvedValue(
-      "2026-10-23T12:40:00.000Z",
-    );
+    vi.mocked(resumeCloudSyncForAccount).mockResolvedValue({
+      enabled: true,
+      generation: 2,
+      deletedAt: null,
+      version: "2026-10-23T12:40:00.000Z",
+    });
 
     const { result } = renderHook(() => useFinancialWorkspace());
     await waitFor(() => {
@@ -235,11 +269,9 @@ describe("signed-in workspace synchronization", () => {
       await result.current.resumeCloudSync();
     });
 
-    expect(saveWorkspaceToCloud).toHaveBeenCalledWith(
+    expect(resumeCloudSyncForAccount).toHaveBeenCalledWith(
       expect.anything(),
-      user.id,
       local,
-      null,
     );
     expect(result.current.workspace).toEqual(local);
     expect(result.current.cloudSyncPaused).toBe(false);
@@ -254,6 +286,34 @@ describe("signed-in workspace synchronization", () => {
     } finally {
       database.close();
     }
+  });
+
+  it("keeps sync paused when account-wide resume cannot be verified", async () => {
+    const local = makeWorkspace("resume-failure-workspace");
+    await seed(local, user.id);
+    vi.mocked(loadCanonicalCloudWorkspace).mockResolvedValue(null);
+    vi.mocked(resumeCloudSyncForAccount).mockResolvedValue({
+      enabled: false,
+      generation: 2,
+      deletedAt: now,
+      version: null,
+    });
+
+    const { result } = renderHook(() => useFinancialWorkspace());
+    await waitFor(() => {
+      expect(result.current.cloudSyncPaused).toBe(true);
+    });
+
+    await expect(
+      act(async () => {
+        await result.current.resumeCloudSync();
+      }),
+    ).rejects.toThrow("could not be verified");
+
+    expect(result.current.workspace).toBeNull();
+    expect(result.current.cloudSyncPaused).toBe(true);
+    expect(result.current.cloudSyncState).toBe("local-only");
+    expect(resumeCloudSyncForAccount).toHaveBeenCalledOnce();
   });
 
   it("does not claim an offline signed-in edit was saved", async () => {

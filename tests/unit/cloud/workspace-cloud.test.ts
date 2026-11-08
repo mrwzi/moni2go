@@ -2,7 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import {
   CloudWorkspaceError,
+  deleteCloudWorkspaces,
+  loadCloudSyncControl,
   loadCanonicalCloudWorkspace,
+  resumeCloudSyncForAccount,
   saveWorkspaceToCloud,
 } from "../../../src/cloud/workspace-cloud";
 import { financialWorkspaceSchema } from "../../../src/v2/domain/schemas";
@@ -121,6 +124,81 @@ describe("cloud workspace compare-and-set", () => {
     });
     expect(query.order).toHaveBeenNthCalledWith(2, "workspace_id", {
       ascending: true,
+    });
+  });
+
+  it("loads account-wide cloud authorization through the authenticated RPC", async () => {
+    const single = vi.fn(() =>
+      Promise.resolve({
+        data: { sync_enabled: false, generation: 3, deleted_at: now },
+        error: null,
+      }),
+    );
+    const rpc = vi.fn(() => ({ single }));
+    const client = { rpc } as unknown as SupabaseClient;
+
+    await expect(loadCloudSyncControl(client)).resolves.toEqual({
+      enabled: false,
+      generation: 3,
+      deletedAt: now,
+    });
+    expect(rpc).toHaveBeenCalledWith("get_cloud_sync_control");
+  });
+
+  it("deletes cloud data through the account-wide authorization RPC", async () => {
+    const rpc = vi.fn(() => Promise.resolve({ error: null }));
+    const client = { rpc } as unknown as SupabaseClient;
+
+    await expect(deleteCloudWorkspaces(client)).resolves.toBeUndefined();
+    expect(rpc).toHaveBeenCalledWith("delete_cloud_financial_workspaces");
+  });
+
+  it("resumes authorization and uploads the selected workspace atomically", async () => {
+    const single = vi.fn(() =>
+      Promise.resolve({
+        data: {
+          sync_enabled: true,
+          generation: 4,
+          deleted_at: null,
+          updated_at: "2026-10-23T12:35:00.000Z",
+        },
+        error: null,
+      }),
+    );
+    const rpc = vi.fn(() => ({ single }));
+    const client = { rpc } as unknown as SupabaseClient;
+
+    await expect(resumeCloudSyncForAccount(client, workspace)).resolves.toEqual(
+      {
+        enabled: true,
+        generation: 4,
+        deletedAt: null,
+        version: "2026-10-23T12:35:00.000Z",
+      },
+    );
+    expect(rpc).toHaveBeenCalledWith("resume_cloud_financial_sync", {
+      p_workspace: workspace,
+    });
+  });
+
+  it("reports account-wide write blocking as paused sync", async () => {
+    const chain = {
+      eq: vi.fn(),
+      select: vi.fn(() => ({
+        maybeSingle: vi.fn(() =>
+          Promise.resolve({ data: null, error: { code: "42501" } }),
+        ),
+      })),
+    };
+    chain.eq.mockReturnValue(chain);
+    const client = {
+      from: vi.fn(() => ({ update: vi.fn(() => chain) })),
+    } as unknown as SupabaseClient;
+
+    await expect(
+      saveWorkspaceToCloud(client, "user-1", workspace, now),
+    ).rejects.toMatchObject<Partial<CloudWorkspaceError>>({
+      code: "sync-disabled",
     });
   });
 });

@@ -8,7 +8,9 @@ import { useAuthUser } from "../../lib/supabase/use-auth-user";
 import { createClient } from "../../lib/supabase/client";
 import {
   deleteCloudWorkspaces,
+  loadCloudSyncControl,
   loadCanonicalCloudWorkspace,
+  resumeCloudSyncForAccount,
   saveWorkspaceToCloud,
   type CloudWorkspaceSnapshot,
 } from "../../cloud/workspace-cloud";
@@ -113,9 +115,20 @@ export function useFinancialWorkspace() {
 
           const client = createClient();
           const deletion = await repository.getCloudDeletionMeta(ownerId);
-          setCloudSyncPaused(deletion !== null);
           let cloud;
           try {
+            const control = await loadCloudSyncControl(client);
+            if (!control.enabled) {
+              setWorkspace(null);
+              setCloudSyncPaused(true);
+              setCloudSyncState("local-only");
+              setSyncMessage(
+                "Cloud sync is paused for this account. Resume sync to upload a workspace again.",
+              );
+              return;
+            }
+            if (deletion) await repository.clearCloudDeleted(ownerId);
+            setCloudSyncPaused(false);
             cloud = await loadCanonicalCloudWorkspace(client, ownerId);
           } catch {
             setWorkspace(null);
@@ -143,23 +156,18 @@ export function useFinancialWorkspace() {
           if (local) {
             await repository.setActiveWorkspace(local.id, ownerId);
             setWorkspace(null);
-            if (!deletion)
-              await repository.markCloudDeleted(
-                ownerId,
-                new Date().toISOString(),
-              );
             setCloudSyncPaused(true);
             setCloudSyncState("local-only");
             setSyncMessage(
-              deletion
-                ? "Saved on this device. Cloud sync is paused after cloud deletion."
-                : "No cloud copy was found. Your workspace remains on this device until you resume cloud sync.",
+              "No cloud copy was found. Your workspace remains on this device until you resume cloud sync.",
             );
             return;
           }
 
           setWorkspace(null);
-          setCloudSyncState("local-only");
+          setCloudSyncPaused(false);
+          setCloudSyncState("synced");
+          setSyncMessage("Cloud sync is ready. Add an account to get started.");
         } finally {
           database.close();
         }
@@ -202,19 +210,12 @@ export function useFinancialWorkspace() {
   const save = useCallback(
     async (next: FinancialWorkspace) => {
       if (ownerId) {
-        const database = await openMoni2GoDatabase();
-        try {
-          const repository = new WorkspaceRepository(database);
-          if (await repository.getCloudDeletionMeta(ownerId)) {
-            setCloudSyncPaused(true);
-            setCloudSyncState("local-only");
-            setSyncMessage(
-              "Cloud data was deleted. Resume cloud sync before saving new financial data.",
-            );
-            throw new Error("Resume cloud sync before saving changes.");
-          }
-        } finally {
-          database.close();
+        if (cloudSyncPaused) {
+          setCloudSyncState("local-only");
+          setSyncMessage(
+            "Cloud sync is paused for this account. Resume sync before saving new financial data.",
+          );
+          throw new Error("Resume cloud sync before saving changes.");
         }
         const canonical = {
           ...next,
@@ -266,7 +267,7 @@ export function useFinancialWorkspace() {
         database.close();
       }
     },
-    [ownerId],
+    [cloudSyncPaused, ownerId],
   );
 
   const ensureWorkspace = useCallback(
@@ -276,7 +277,7 @@ export function useFinancialWorkspace() {
 
   const deleteCloudData = useCallback(async () => {
     if (!ownerId) throw new Error("Sign in before deleting cloud data.");
-    await deleteCloudWorkspaces(createClient(), ownerId);
+    await deleteCloudWorkspaces(createClient());
     const database = await openMoni2GoDatabase();
     try {
       const repository = new WorkspaceRepository(database);
@@ -304,14 +305,18 @@ export function useFinancialWorkspace() {
     }
 
     setCloudSyncState("pending");
-    const client = createClient();
-    const cloud = await loadCanonicalCloudWorkspace(client, ownerId);
-    let selected = cloud?.workspace ?? local;
-    let version = cloud?.version ?? null;
-
-    if (!cloud && local) {
-      version = await saveWorkspaceToCloud(client, ownerId, local, null);
-      selected = local;
+    let resumed: Awaited<ReturnType<typeof resumeCloudSyncForAccount>>;
+    try {
+      resumed = await resumeCloudSyncForAccount(createClient(), local);
+      if (!resumed.enabled)
+        throw new Error("Cloud sync could not be verified after resuming.");
+    } catch (resumeError) {
+      setCloudSyncPaused(true);
+      setCloudSyncState("local-only");
+      setSyncMessage(
+        "Cloud sync was not resumed. Your recovery copy was not uploaded.",
+      );
+      throw resumeError;
     }
 
     const cleanupDatabase = await openMoni2GoDatabase();
@@ -323,14 +328,14 @@ export function useFinancialWorkspace() {
       cleanupDatabase.close();
     }
 
-    cloudVersionRef.current = version;
-    cloudWorkspaceIdRef.current = selected?.id ?? null;
-    setWorkspace(selected);
+    cloudVersionRef.current = resumed.version;
+    cloudWorkspaceIdRef.current = local?.id ?? null;
+    setWorkspace(local);
     setCloudSyncPaused(false);
     setCloudConflictSnapshot(null);
-    setCloudSyncState(selected ? "synced" : "local-only");
+    setCloudSyncState("synced");
     setSyncMessage(
-      selected
+      local
         ? "Cloud sync resumed. Your workspace is saved to your account."
         : "Cloud sync resumed. Add an account to create your workspace.",
     );
