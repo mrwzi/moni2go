@@ -385,7 +385,7 @@ function HomeDashboardContent() {
             <div className="outlook-primary">
               <span>
                 {forecast.estimatedOutflowCents === null
-                  ? "Known projection"
+                  ? "Available now"
                   : "Projected available"}
               </span>
               <strong
@@ -590,9 +590,19 @@ function HomeDashboardContent() {
             </div>
           </div>
         ) : (
-          <p className="empty-group-copy">
-            No spending recorded — activity may be incomplete.
-          </p>
+          <div className="home-spending-empty">
+            <strong>No spending recorded yet</strong>
+            <span>
+              Nothing is recorded for this month yet. Add an activity to make
+              the picture more useful.
+            </span>
+            <Link
+              className="button button-secondary"
+              href="/accounts#record-expense"
+            >
+              Record spending
+            </Link>
+          </div>
         )}
       </section>
       {visibleObligations.length > 0 && (
