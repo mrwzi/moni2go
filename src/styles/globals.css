@@ -5512,6 +5512,70 @@ main {
   margin-top: 0.25rem;
 }
 
+/* Friendly, data-backed budget progress for the Home check-in. */
+.home-category-progress {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.home-category-progress-row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.home-category-progress-row > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.home-category-progress-row strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.home-category-progress-track {
+  height: 0.42rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.home-category-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transform-origin: left;
+  animation: home-progress-in 500ms ease-out both;
+}
+
+.home-category-progress-track span.is-over {
+  background: var(--danger, #d97979);
+}
+
+@keyframes home-progress-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-category-progress-track span {
+    animation: none;
+  }
+}
+
 .income-plan-prompt {
   display: flex;
   align-items: center;

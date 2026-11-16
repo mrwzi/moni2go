@@ -11,7 +11,6 @@ import {
   deriveTotalLiabilitiesCents,
 } from "../../v2/domain/accounts";
 import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
-import type { BudgetCategoryKey } from "../../v2/domain/budget-categories";
 import {
   addCalendarDays,
   compareCalendarDates,
@@ -53,94 +52,6 @@ function dueLabel(today: CalendarDate, date: CalendarDate): string {
   return `Due in ${days.toString()} days`;
 }
 
-const CATEGORY_COACHING: Readonly<
-  Record<
-    BudgetCategoryKey,
-    Readonly<{ icon: string; title: string; tip: string }>
-  >
-> = {
-  housing: {
-    icon: "⌂",
-    title: "Keep housing steady",
-    tip: "Review housing costs before adding a new commitment.",
-  },
-  utilities: {
-    icon: "ϟ",
-    title: "Power-down challenge",
-    tip: "Switch off unused lights and devices today.",
-  },
-  groceries: {
-    icon: "◎",
-    title: "Shop with a list",
-    tip: "Take a short list on your next grocery trip.",
-  },
-  restaurants: {
-    icon: "♨",
-    title: "Cook one meal at home",
-    tip: "Cook one extra meal at home before the next takeout.",
-  },
-  transportation: {
-    icon: "↗",
-    title: "Combine one trip",
-    tip: "Combine trips or choose a lower-cost option when practical.",
-  },
-  insurance: {
-    icon: "◇",
-    title: "Coverage check",
-    tip: "Compare plans before renewal without reducing needed coverage.",
-  },
-  "phone-internet": {
-    icon: "⌁",
-    title: "Check your plan",
-    tip: "See whether your current phone and internet plan still fits.",
-  },
-  "health-personal-care": {
-    icon: "+",
-    title: "Protect the essentials",
-    tip: "Keep necessary care covered and review optional purchases first.",
-  },
-  education: {
-    icon: "✦",
-    title: "Plan the next fee",
-    tip: "Add upcoming learning costs before they surprise your plan.",
-  },
-  subscriptions: {
-    icon: "↻",
-    title: "Subscription sweep",
-    tip: "Pause one service you no longer use.",
-  },
-  "entertainment-recreation": {
-    icon: "☆",
-    title: "Find a low-cost win",
-    tip: "Try a lower-cost activity before the next outing.",
-  },
-  clothing: {
-    icon: "◌",
-    title: "Try a 24-hour pause",
-    tip: "Wait a day before a non-essential clothing purchase.",
-  },
-  shopping: {
-    icon: "▣",
-    title: "Shopping cooldown",
-    tip: "Pause non-essential shopping until the plan resets.",
-  },
-  "debt-payments": {
-    icon: "↓",
-    title: "Protect the minimum",
-    tip: "Keep required payments covered first.",
-  },
-  "savings-goals": {
-    icon: "↑",
-    title: "Grow at your pace",
-    tip: "Keep the goal realistic for your available cash.",
-  },
-  other: {
-    icon: "?",
-    title: "Name that expense",
-    tip: "Give this expense a clearer category when possible.",
-  },
-};
-
 export function HomeDashboard() {
   return (
     <section className="section shell app-page home-page">
@@ -154,7 +65,6 @@ export function HomeDashboard() {
 function HomeDashboardContent() {
   const { workspace, loading, error } = useFinancialWorkspace();
   const [forecastDays, setForecastDays] = useState<ForecastHorizonDays>(30);
-  const [missionIndex, setMissionIndex] = useState(0);
   if (loading) return <LoadingState label="Loading your financial picture…" />;
   if (error)
     return (
@@ -238,10 +148,40 @@ function HomeDashboardContent() {
         right.spentCents / right.plannedCents -
         left.spentCents / left.plannedCents,
     )[0];
-  const activeMission =
-    coachingWarnings.length > 0
-      ? coachingWarnings[missionIndex % coachingWarnings.length]
-      : undefined;
+  const activeMission = coachingWarnings[0];
+  const buddyCategory = activeMission ?? coachingWin;
+  const buddyCopy = buddyCategory
+    ? buddyCategory.status === "over"
+      ? {
+          title:
+            buddyCategory.category === "restaurants"
+              ? "Your kitchen misses you 🍳"
+              : buddyCategory.category === "clothing"
+                ? "Your wardrobe says we're full 👕"
+                : `${BUDGET_CATEGORIES[buddyCategory.category]} needs a breather`,
+          text: `${formatCad(Math.abs(buddyCategory.differenceCents))} over plan. A small pause can get you back on track.`,
+        }
+      : buddyCategory.status === "unplanned"
+        ? {
+            title: "Give this category a little room",
+            text: `${formatCad(buddyCategory.spentCents)} spent so far with no amount planned yet.`,
+          }
+        : {
+            title: "Nice work—keep the momentum",
+            text: `${BUDGET_CATEGORIES[buddyCategory.category]} is still within plan.`,
+          }
+    : null;
+  const showUrgentRecommendation = recommendation.priority <= 2;
+  const progressCategories = [...spending.categoryProgress]
+    .filter((item) => item.spentCents > 0 || item.plannedCents > 0)
+    .sort((left, right) => {
+      const leftRatio =
+        left.plannedCents > 0 ? left.spentCents / left.plannedCents : 2;
+      const rightRatio =
+        right.plannedCents > 0 ? right.spentCents / right.plannedCents : 2;
+      return rightRatio - leftRatio;
+    })
+    .slice(0, 4);
   const forecast = insights.forecasts[forecastDays];
   const hasSpendingPlan = spending.spendingPlanCents > 0;
   const isOverBudget = hasSpendingPlan && spending.planDifferenceCents < 0;
@@ -287,8 +227,8 @@ function HomeDashboardContent() {
     <div>
       <div className="app-page-heading">
         <p className="eyebrow">Home</p>
-        <h1>Your financial picture</h1>
-        <p>Based on the balances you entered manually.</p>
+        <h1>Your money today</h1>
+        <p>A quick, friendly check-in on your money.</p>
       </div>
       <section className="account-totals">
         <div>
@@ -328,9 +268,15 @@ function HomeDashboardContent() {
           className="app-card home-next-step"
           aria-label="Money guidance"
         >
-          <p className="eyebrow">Next useful step</p>
-          <h2 id="home-next-step-heading">{recommendation.title}</h2>
-          {recommendation.amountCents !== null && (
+          <p className="eyebrow">
+            {showUrgentRecommendation ? "Next useful step" : "Money Buddy"}
+          </p>
+          <h2 id="home-next-step-heading">
+            {showUrgentRecommendation
+              ? recommendation.title
+              : (buddyCopy?.title ?? "You're ready for your next money move")}
+          </h2>
+          {showUrgentRecommendation && recommendation.amountCents !== null && (
             <strong
               className={`home-next-step-amount${recommendation.priority <= 2 ? " money-negative" : ""}`}
             >
@@ -338,22 +284,28 @@ function HomeDashboardContent() {
             </strong>
           )}
           <p className="home-next-step-summary">
-            {recommendation.explanation}
-            {recommendationObligation?.date
-              ? ` Due ${readableDate(recommendationObligation.date)}.`
-              : ""}
+            {showUrgentRecommendation
+              ? `${recommendation.explanation}${recommendationObligation?.date ? ` Due ${readableDate(recommendationObligation.date)}.` : ""}`
+              : (buddyCopy?.text ??
+                "Add a purchase or plan to unlock a personalized tip.")}
           </p>
           <Link
             className="button button-primary home-next-step-action"
             href={
-              recommendationObligation
+              showUrgentRecommendation && recommendationObligation
                 ? recommendationObligation.kind === "debt-payment"
                   ? `/accounts#account-${recommendationObligation.sourceId}`
                   : "/accounts#bills-commitments"
-                : recommendation.actionHref
+                : showUrgentRecommendation
+                  ? recommendation.actionHref
+                  : buddyCopy
+                    ? "/plan"
+                    : recommendation.actionHref
             }
           >
-            {recommendation.actionLabel}
+            {showUrgentRecommendation
+              ? recommendation.actionLabel
+              : "Open plan"}
           </Link>
         </section>
 
@@ -527,64 +479,45 @@ function HomeDashboardContent() {
                   </li>
                 ))}
               </ul>
-              {(coachingWarnings.length > 0 || coachingWin) && (
-                <div className="home-money-coach" aria-label="Money coach">
-                  <div className="home-money-coach-heading">
-                    <strong>Money move</strong>
-                    {coachingWarnings.length > 1 && (
-                      <span>
-                        {(missionIndex % coachingWarnings.length) + 1} of{" "}
-                        {coachingWarnings.length}
-                      </span>
-                    )}
-                  </div>
-                  {activeMission &&
-                    (() => {
-                      const coaching =
-                        CATEGORY_COACHING[activeMission.category];
-                      return (
-                        <article className="home-mission-feature">
+              {progressCategories.length > 0 && (
+                <div
+                  className="home-category-progress"
+                  aria-label="Budget progress"
+                >
+                  {progressCategories.map((item) => {
+                    const percent =
+                      item.plannedCents > 0
+                        ? Math.min(
+                            100,
+                            (item.spentCents / item.plannedCents) * 100,
+                          )
+                        : 100;
+                    return (
+                      <div
+                        className="home-category-progress-row"
+                        key={item.category}
+                      >
+                        <div>
+                          <span>{BUDGET_CATEGORIES[item.category]}</span>
+                          <strong>
+                            {formatCad(item.spentCents)}
+                            {item.plannedCents > 0
+                              ? ` / ${formatCad(item.plannedCents)}`
+                              : ""}
+                          </strong>
+                        </div>
+                        <div
+                          className="home-category-progress-track"
+                          aria-hidden="true"
+                        >
                           <span
-                            className="home-mission-icon"
-                            aria-hidden="true"
-                          >
-                            {coaching.icon}
-                          </span>
-                          <div className="home-mission-feature-copy">
-                            <h3>{coaching.title}</h3>
-                            <p>
-                              {activeMission.status === "over"
-                                ? `${formatCad(Math.abs(activeMission.differenceCents))} over in ${BUDGET_CATEGORIES[activeMission.category].toLowerCase()}.`
-                                : `${formatCad(activeMission.spentCents)} wasn't planned.`}
-                            </p>
-                          </div>
-                          <div className="home-mission-actions">
-                            <Link href="/plan">Adjust plan</Link>
-                            {coachingWarnings.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setMissionIndex(
-                                    (current) =>
-                                      (current + 1) % coachingWarnings.length,
-                                  );
-                                }}
-                              >
-                                Next →
-                              </button>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })()}
-                  {coachingWin && (
-                    <div className="home-mission-win">
-                      <span aria-hidden="true">✓</span>
-                      <strong>
-                        {BUDGET_CATEGORIES[coachingWin.category]} is on track
-                      </strong>
-                    </div>
-                  )}
+                            className={item.status === "over" ? "is-over" : ""}
+                            style={{ width: `${percent.toFixed(1)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
