@@ -74,7 +74,7 @@ export type SmartRecommendation = Readonly<{
   amountCents: V2Cents | null;
   explanation: string;
   actionLabel: string;
-  actionHref: "/accounts" | "/plan";
+  actionHref: "/accounts" | "/accounts#add-income" | "/plan";
 }>;
 
 export type SpendingIntelligence = Readonly<{
@@ -973,8 +973,8 @@ function chooseRecommendation(
       amountCents: null,
       explanation:
         "Forecasts cannot include income until an amount and date are saved.",
-      actionLabel: "Review accounts",
-      actionHref: "/accounts",
+      actionLabel: "Add income",
+      actionHref: "/accounts#add-income",
     };
   }
   if (forecast.estimatedOutflowCents === null) {

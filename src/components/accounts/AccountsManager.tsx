@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
@@ -194,6 +195,9 @@ export function AccountsManager() {
   );
   const [spendability, setSpendability] = useState<Spendability>("spendable");
   const [message, setMessage] = useState<string | null>(null);
+  const [incomePlanningPrompt, setIncomePlanningPrompt] = useState<{
+    amountCents: number;
+  } | null>(null);
   const [activityKind, setActivityKind] = useState<QuickActivityKind | null>(
     null,
   );
@@ -201,6 +205,7 @@ export function AccountsManager() {
     string | null
   >(null);
   const handledDebtEditIntent = useRef(false);
+  const incomePromptShown = useRef(false);
   const assets = workspace?.assetAccounts ?? [];
   const liabilities = workspace?.liabilityAccounts ?? [];
   const groups = workspace?.accountGroups ?? [];
@@ -908,6 +913,10 @@ export function AccountsManager() {
       };
       await save(next);
       setActivityKind(null);
+      if (input.kind === "income" && !incomePromptShown.current) {
+        incomePromptShown.current = true;
+        setIncomePlanningPrompt({ amountCents: cents });
+      }
       const savedAccountLabel = (account: AssetAccount | LiabilityAccount) => {
         const sameNameCount = [
           ...workspace.assetAccounts,
@@ -1159,6 +1168,7 @@ export function AccountsManager() {
 
       <section className="account-quick-actions" aria-label="Quick actions">
         <button
+          id="add-income"
           className="quick-money-action quick-money-in"
           type="button"
           onClick={() => {
@@ -1170,6 +1180,7 @@ export function AccountsManager() {
           <small>Salary, benefit, gift</small>
         </button>
         <button
+          id="record-expense"
           className="quick-money-action"
           type="button"
           onClick={() => {
@@ -1197,8 +1208,8 @@ export function AccountsManager() {
         <div>
           <h2>Your banks and providers</h2>
           <p>
-            Add BMO, TD, MEXC, Wealthsimple, a school, or cash—then add the
-            accounts inside each one.
+            Add a bank, investment platform, crypto wallet, school, or cash—then
+            add the accounts inside each one.
           </p>
         </div>
         <button
@@ -1313,6 +1324,39 @@ export function AccountsManager() {
         <p className="save-message" role="status">
           {message}
         </p>
+      )}
+
+      {incomePlanningPrompt && (
+        <section className="income-plan-prompt app-card" aria-live="polite">
+          <div>
+            <p className="eyebrow">Income saved</p>
+            <h2>Want to plan this money?</h2>
+            <p>
+              Use your existing monthly categories to make an editable starting
+              plan for {formatCad(incomePlanningPrompt.amountCents)}.
+            </p>
+          </div>
+          <div className="income-plan-prompt-actions">
+            <Link
+              className="button button-primary"
+              href={`/plan?income=${(incomePlanningPrompt.amountCents / 100).toFixed(2)}`}
+              onClick={() => {
+                setIncomePlanningPrompt(null);
+              }}
+            >
+              Plan this money
+            </Link>
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => {
+                setIncomePlanningPrompt(null);
+              }}
+            >
+              Not now
+            </button>
+          </div>
+        </section>
       )}
 
       {workspace && workspace.incomeSources.length > 0 && (

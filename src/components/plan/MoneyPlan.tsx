@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
-import { analyzeBudget, type BudgetAllocation } from "../../v2/domain/budget";
+import {
+  analyzeBudget,
+  suggestPaychequeSplit,
+  type BudgetAllocation,
+} from "../../v2/domain/budget";
 import {
   BUDGET_CATEGORIES,
   PLAN_CATEGORY_KEYS,
@@ -174,6 +179,8 @@ export function MoneyPlan() {
 
 function MoneyPlanContent() {
   const { workspace, loading, error, save } = useFinancialWorkspace();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [purchaseCategory, setPurchaseCategory] =
     useState<(typeof PLAN_CATEGORY_KEYS)[number]>("groceries");
@@ -185,6 +192,7 @@ function MoneyPlanContent() {
   const restoredPlan = useRef(false);
   const savingPlan = useRef(false);
   const editSnapshot = useRef<Record<string, string> | null>(null);
+  const incomeSuggestionApplied = useRef(false);
   const questionCategories = QUESTION_CATEGORIES;
 
   useEffect(() => {
@@ -224,13 +232,62 @@ function MoneyPlanContent() {
     } else setEditingPlan(true);
   }, [questionCategories.length, workspace]);
 
-  const spendable = workspace
-    ? deriveSpendableCashCents(workspace.assetAccounts)
-    : null;
-  const planningAmount = spendable;
+  const incomeToPlanCents = useMemo(() => {
+    const value = searchParams.get("income");
+    if (!value) return null;
+    const parsed = parseAmount(value);
+    return parsed !== null && parsed > 0 ? parsed : null;
+  }, [searchParams]);
+
   const debtPayments = deriveRequiredDebtPayments(
     workspace?.liabilityAccounts ?? [],
   );
+
+  useEffect(() => {
+    if (
+      !workspace ||
+      !incomeToPlanCents ||
+      !restoredPlan.current ||
+      incomeSuggestionApplied.current
+    )
+      return;
+    incomeSuggestionApplied.current = true;
+    const currentAllocations = questionCategories.flatMap(
+      (category): BudgetAllocation[] => {
+        const cents = parseAmount(amounts[category] ?? "0");
+        return cents && cents > 0 ? [{ category, amountCents: cents }] : [];
+      },
+    );
+    const suggested = suggestPaychequeSplit(
+      incomeToPlanCents,
+      currentAllocations,
+      debtPayments.totalCents,
+    );
+    if (suggested.length > 0)
+      setAmounts((current) => {
+        const next = { ...current };
+        for (const allocation of suggested) {
+          if (allocation.category !== "debt-payments")
+            next[allocation.category] = (allocation.amountCents / 100).toFixed(
+              2,
+            );
+        }
+        return next;
+      });
+    setEditingPlan(true);
+    setPlanStep(0);
+  }, [
+    amounts,
+    debtPayments.totalCents,
+    incomeToPlanCents,
+    questionCategories,
+    workspace,
+  ]);
+
+  const spendable = workspace
+    ? deriveSpendableCashCents(workspace.assetAccounts)
+    : null;
+  const planningAmount = incomeToPlanCents ?? spendable;
   const spendingHistory = useMemo(
     () =>
       calculateCategorySpendingHistory(
@@ -395,6 +452,7 @@ function MoneyPlanContent() {
       setMessage("Monthly plan updated automatically.");
       editSnapshot.current = null;
       setEditingPlan(false);
+      if (incomeToPlanCents !== null) router.replace("/plan");
     } finally {
       savingPlan.current = false;
     }

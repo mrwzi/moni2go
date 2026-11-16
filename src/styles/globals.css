@@ -5248,6 +5248,7 @@ main {
 }
 
 .transaction-history-actions {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -5276,6 +5277,54 @@ main {
     box-shadow 140ms ease;
 }
 
+.transaction-action-menu-trigger {
+  display: inline-grid;
+  width: 2.25rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  place-items: center;
+  border-radius: 0.65rem;
+  color: var(--muted) !important;
+  font-size: 1.3rem !important;
+  line-height: 1;
+  letter-spacing: 0.12em;
+}
+
+.transaction-action-menu-trigger:hover {
+  color: var(--text) !important;
+}
+
+.transaction-action-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: grid;
+  min-width: 7.25rem;
+  padding: 0.3rem;
+  gap: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--surface-raised);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 22%);
+}
+
+.transaction-action-menu button {
+  width: 100%;
+  min-height: 2.35rem;
+  justify-content: flex-start;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  text-align: left;
+}
+
+.transaction-action-menu button:hover {
+  transform: none;
+  background: var(--brand-soft);
+}
+
 .transaction-history-actions button:hover {
   transform: translateY(-1px);
   border-color: var(--brand);
@@ -5299,6 +5348,12 @@ main {
   background: color-mix(in srgb, var(--danger) 12%, var(--surface-raised));
 }
 
+.transaction-action-menu button:hover {
+  transform: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 @media (max-width: 560px) {
   .transaction-history-heading {
     align-items: stretch;
@@ -5316,6 +5371,7 @@ main {
   .transaction-history-list > li {
     align-items: flex-start;
     gap: 0.75rem;
+    padding: 0.65rem 0.7rem;
   }
 
   .transaction-history-summary {
@@ -5330,6 +5386,15 @@ main {
   .transaction-history-actions button {
     min-height: 2.25rem;
     padding-inline: 0.52rem;
+  }
+
+  .transaction-action-menu-trigger {
+    padding: 0;
+  }
+
+  .transaction-action-menu {
+    top: auto;
+    bottom: calc(100% + 0.2rem);
   }
 }
 
@@ -5348,6 +5413,185 @@ main {
 
   .transaction-history-actions {
     justify-self: end;
+  }
+}
+
+/* Home dashboard: compact hierarchy for small screens without changing the
+   underlying financial calculations. */
+.home-page .app-page-heading {
+  margin-bottom: 0.85rem;
+}
+
+.home-page .app-page-heading h1 {
+  margin-bottom: 0.2rem;
+  font-size: clamp(2rem, 8vw, 3rem);
+}
+
+.home-page .account-totals {
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.home-page .account-totals > div {
+  padding: 0.72rem 0.78rem;
+}
+
+.home-page .account-totals strong {
+  font-size: 1.05rem;
+}
+
+.home-page .home-next-step,
+.home-page .home-momentum-card,
+.home-page .home-outlook-card,
+.home-page .home-spending-card,
+.home-page .home-due-card {
+  margin-top: 0.65rem;
+  margin-bottom: 0.65rem;
+  padding: 0.8rem;
+}
+
+.home-page .home-next-step h2 {
+  font-size: 1.1rem;
+}
+
+.home-page .home-next-step-summary {
+  max-width: 42rem;
+  margin-top: 0.25rem;
+}
+
+.home-page .home-next-step-action {
+  margin-top: 0.5rem;
+}
+
+.home-page .home-momentum-card {
+  padding-block: 0.7rem;
+}
+
+.home-page .home-momentum-note {
+  display: none;
+}
+
+.home-page .home-momentum-list {
+  margin-top: 0.55rem;
+}
+
+.home-page .outlook-summary {
+  margin-top: 0.5rem;
+  gap: 0.35rem;
+}
+
+.home-page .outlook-primary,
+.home-page .outlook-secondary > div {
+  padding: 0.45rem 0.55rem;
+}
+
+.home-page .outlook-primary strong {
+  font-size: 1.3rem;
+}
+
+.home-page .home-spending-card .home-section-heading {
+  margin-bottom: 0.2rem;
+}
+
+.home-spending-empty {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--line);
+  border-radius: 0.7rem;
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.home-spending-empty strong {
+  color: var(--ink);
+}
+
+.home-spending-empty .button {
+  width: fit-content;
+  margin-top: 0.25rem;
+}
+
+.income-plan-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem 0;
+  padding: 0.85rem 1rem;
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 42%, var(--surface-raised));
+}
+
+.income-plan-prompt h2,
+.income-plan-prompt p {
+  margin: 0;
+}
+
+.income-plan-prompt h2 {
+  margin-top: 0.15rem;
+  font-size: 1rem;
+}
+
+.income-plan-prompt p:last-child {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.income-plan-prompt-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.45rem;
+}
+
+.income-plan-prompt-actions .button {
+  min-height: 2.4rem;
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .home-page .app-page-heading > p:last-child {
+    font-size: 0.85rem;
+  }
+
+  .home-page .home-momentum-list small {
+    display: none;
+  }
+
+  .home-page .home-momentum-list li {
+    gap: 0.4rem;
+  }
+
+  .home-page .home-next-step-action {
+    width: fit-content;
+  }
+}
+
+@media (max-width: 520px) {
+  .home-page .home-next-step-action,
+  .home-spending-empty .button {
+    width: 100%;
+  }
+
+  .home-page .outlook-data-warning {
+    padding-block: 0.35rem;
+  }
+
+  .income-plan-prompt {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .income-plan-prompt-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .income-plan-prompt-actions .button {
+    width: 100%;
   }
 }
 
@@ -6171,5 +6415,91 @@ body {
   .button-spinner {
     transition: none;
     animation-duration: 1.5s;
+  }
+}
+
+/* Compact mobile Accounts layout: preserve comfortable touch targets while
+   keeping the most useful information above the fold. */
+@media (max-width: 760px) {
+  .account-totals {
+    margin-bottom: 0.65rem;
+    gap: 0.5rem;
+  }
+
+  .account-totals > div {
+    padding: 0.72rem 0.78rem;
+    border-radius: 0.72rem;
+  }
+
+  .account-totals span {
+    font-size: 0.78rem;
+  }
+
+  .account-totals strong {
+    margin-top: 0.15rem;
+    font-size: 1.1rem;
+  }
+
+  .account-more-totals {
+    margin-top: 0.25rem;
+  }
+
+  .account-more-totals summary {
+    display: flex;
+    min-height: 2.5rem;
+    align-items: center;
+  }
+
+  .account-more-totals .account-totals {
+    margin-top: 0.25rem;
+  }
+
+  .account-quick-actions {
+    margin-bottom: 0.9rem;
+    gap: 0.5rem;
+  }
+
+  .quick-money-action {
+    min-height: 4.45rem;
+    padding: 0.65rem 0.7rem;
+    column-gap: 0.45rem;
+    grid-template-columns: 1.8rem minmax(0, 1fr);
+  }
+
+  .quick-money-action > span {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  .mobile-navigation-spacer {
+    height: calc(4.35rem + env(safe-area-inset-bottom));
+  }
+
+  .mobile-navigation a {
+    min-height: 3.65rem;
+    margin: 0.2rem 0.1rem;
+    border-radius: 0.65rem;
+  }
+
+  .mobile-navigation a[aria-current="page"] {
+    background: color-mix(in srgb, var(--brand-soft) 72%, transparent);
+  }
+}
+
+@media (max-width: 380px) {
+  .account-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-money-action {
+    min-height: 3.6rem;
+    align-items: center;
+    grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+  }
+
+  .quick-money-action small {
+    grid-column: 3;
+    grid-row: 1;
   }
 }

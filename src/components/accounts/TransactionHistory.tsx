@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
   BUDGET_CATEGORIES,
@@ -98,6 +98,7 @@ export function TransactionHistory({
   const [relatedAccountId, setRelatedAccountId] = useState("");
   const [accountFilter, setAccountFilter] = useState("all");
   const [showAll, setShowAll] = useState(false);
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,6 +174,28 @@ export function TransactionHistory({
     else groups.push({ date, activities: [activity] });
     return groups;
   }, []);
+
+  useEffect(() => {
+    if (!openActionId) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenActionId(null);
+    };
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        !target.closest(".transaction-history-actions")
+      ) {
+        setOpenActionId(null);
+      }
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+    };
+  }, [openActionId]);
   if (
     workspace.expenseEvents.every((event) => event.status !== "actual") &&
     workspace.historicalIncome.length === 0 &&
@@ -608,25 +631,53 @@ export function TransactionHistory({
                         </strong>
                         <div className="transaction-history-actions">
                           <button
+                            className="transaction-action-menu-trigger"
                             type="button"
-                            aria-label={`Edit ${activity.record.name} transaction`}
+                            aria-label={`More actions for ${activity.record.name} transaction`}
+                            aria-haspopup="menu"
+                            aria-expanded={
+                              openActionId ===
+                              `${activity.kind}-${activity.record.id}`
+                            }
                             onClick={() => {
-                              startEdit(activity);
+                              const id = `${activity.kind}-${activity.record.id}`;
+                              setOpenActionId((current) =>
+                                current === id ? null : id,
+                              );
                             }}
                           >
-                            Edit
+                            <span aria-hidden="true">⋯</span>
                           </button>
-                          <button
-                            type="button"
-                            className="danger-link"
-                            aria-label={`Delete ${activity.record.name} transaction`}
-                            onClick={() => {
-                              setDeleting(activity);
-                              setError(null);
-                            }}
-                          >
-                            Delete
-                          </button>
+                          {openActionId ===
+                            `${activity.kind}-${activity.record.id}` && (
+                            <div
+                              className="transaction-action-menu"
+                              role="menu"
+                            >
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenActionId(null);
+                                  startEdit(activity);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="danger-link"
+                                onClick={() => {
+                                  setOpenActionId(null);
+                                  setDeleting(activity);
+                                  setError(null);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </li>
