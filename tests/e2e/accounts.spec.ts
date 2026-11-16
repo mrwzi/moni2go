@@ -59,7 +59,7 @@ test("adds manual assets and liabilities and derives the home totals", async ({
   ).toBeVisible();
 
   await page.goto("/");
-  await expect(page.getByText("Your financial picture")).toBeVisible();
+  await expect(page.getByText("Your money today")).toBeVisible();
   await expect(page.getByText("$1,420.25").first()).toBeVisible();
   await expect(page.getByText("$420.25").first()).toBeVisible();
   await expect(page.getByText("$1,000.00")).toBeVisible();
@@ -743,9 +743,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await page.goto("/");
   await expect(page.getByText("$13.23").first()).toBeVisible();
   await expect(page.getByText("−$13.23")).toBeVisible();
-  await expect(
-    page.getByText("No spending recorded — activity may be incomplete."),
-  ).toBeVisible();
+  await expect(page.getByText("No spending recorded yet")).toBeVisible();
 
   await page.goto("/accounts");
   await page.reload();
@@ -1106,9 +1104,7 @@ test("moves money between tracked accounts and into savings without changing spe
   await expect(
     page.getByRole("heading", { name: "Spending at a glance" }),
   ).toBeVisible();
-  await expect(
-    page.getByText("No spending recorded — activity may be incomplete."),
-  ).toBeVisible();
+  await expect(page.getByText("No spending recorded yet")).toBeVisible();
 });
 
 test("reduces cash and tracked loan debt with one simple payment", async ({
@@ -1200,7 +1196,10 @@ test("home spending and outlook stay readable from 320px through desktop", async
     const breakdown = page.locator(".home-spending-breakdown");
     await expect(amount).toBeVisible();
     await expect(
-      page.getByText("Restaurants / eating out", { exact: true }),
+      page
+        .locator(".home-spending-breakdown")
+        .getByText("Restaurants / eating out", { exact: true })
+        .first(),
     ).toBeVisible();
     await expect(
       page.getByText("None scheduled", { exact: true }),

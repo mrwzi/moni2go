@@ -167,7 +167,10 @@ test("shows current spending separately from completed-month averages", async ({
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
       .filter({ hasText: `$${amount}.00` });
-    await transaction.getByRole("button", { name: "Edit" }).click();
+    await transaction
+      .getByRole("button", { name: /More actions for .* transaction/ })
+      .click();
+    await transaction.getByRole("menuitem", { name: "Edit" }).click();
     const dialog = page.getByRole("dialog", { name: "Edit transaction" });
     await dialog
       .getByLabel("Date", { exact: true })
@@ -238,7 +241,10 @@ test("shows current spending separately from completed-month averages", async ({
       .getByRole("region", { name: "Recent transactions" })
       .getByRole("listitem")
       .filter({ hasText: `$${amount}.00` });
-    await transaction.getByRole("button", { name: "Edit" }).click();
+    await transaction
+      .getByRole("button", { name: /More actions for .* transaction/ })
+      .click();
+    await transaction.getByRole("menuitem", { name: "Edit" }).click();
     const dialog = page.getByRole("dialog", { name: "Edit transaction" });
     await dialog
       .getByLabel("Date", { exact: true })
@@ -273,10 +279,9 @@ test("shows current spending separately from completed-month averages", async ({
   await expect(page.locator(".home-spending-budget-summary")).toContainText(
     "$20.00 overall over",
   );
-  const moneyCoach = page
+  const progress = page
     .getByRole("region", { name: "Spending at a glance" })
-    .getByLabel("Money coach");
-  await expect(moneyCoach).toContainText("Money move");
-  await expect(moneyCoach).toContainText("restaurants / eating out");
-  await expect(moneyCoach).toContainText("$45.00 over");
+    .getByLabel("Budget progress");
+  await expect(progress).toContainText("Restaurants / eating out");
+  await expect(progress).toContainText("$145.00 / $100.00");
 });
