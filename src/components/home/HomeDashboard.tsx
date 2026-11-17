@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatCad } from "../../domain/money";
 import {
   deriveNetWorthCents,
@@ -74,6 +74,10 @@ function HomeDashboardContent() {
   const { workspace, loading, error } = useFinancialWorkspace();
   const [forecastDays, setForecastDays] = useState<ForecastHorizonDays>(30);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [budgetBarsReady, setBudgetBarsReady] = useState(false);
+  useEffect(() => {
+    setBudgetBarsReady(true);
+  }, []);
   if (loading) return <LoadingState label="Loading your financial picture…" />;
   if (error)
     return (
@@ -194,17 +198,21 @@ function HomeDashboardContent() {
           ? {
               sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} has ${formatCad(buddyCategory.spentCents)} recorded with no plan yet.`,
             }
-          : buddyProgressLevel === "caution"
+          : buddyCategory.spentCents <= 0
             ? {
-                sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} is nearly at its limit—leave a little breathing room.`,
+                sentence: `No spending is recorded for ${BUDGET_CATEGORIES[buddyCategory.category]} yet.`,
               }
-            : buddyProgressLevel === "attention"
+            : buddyProgressLevel === "caution"
               ? {
-                  sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} is getting close to its limit.`,
+                  sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} is nearly at its limit—leave a little breathing room.`,
                 }
-              : {
-                  sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} has room left this month. Nice work.`,
-                }
+              : buddyProgressLevel === "attention"
+                ? {
+                    sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} is getting close to its limit.`,
+                  }
+                : {
+                    sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} has room left this month. Nice work.`,
+                  }
     : null;
   const showUrgentRecommendation = recommendation.priority <= 2;
   const activeLimitCategories = [...spending.categoryProgress]
@@ -268,7 +276,7 @@ function HomeDashboardContent() {
     ? `${recommendation.title}${recommendation.amountCents !== null ? ` · ${formatCad(recommendation.amountCents)}` : ""}. ${recommendation.explanation}`
     : buddyCopy
       ? buddyCopy.sentence
-      : "Your budget is ready. Let’s make every dollar count! 🌱";
+      : "No spending is recorded yet. Add an activity when you’re ready.";
   const buddyActionHref = recommendationObligation
     ? recommendationObligation.kind === "debt-payment"
       ? `/accounts#account-${recommendationObligation.sourceId}`
@@ -415,7 +423,7 @@ function HomeDashboardContent() {
                     </strong>
                   </div>
                   <div
-                    className={`home-limit-track is-${progressLevel}`}
+                    className={`home-limit-track is-${progressLevel}${budgetBarsReady ? " is-ready" : ""}`}
                     aria-hidden="true"
                   >
                     <span

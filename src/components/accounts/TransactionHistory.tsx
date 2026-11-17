@@ -44,7 +44,9 @@ const isBillPayment = (event: DatedExpenseEvent): boolean =>
 const activityName = (event: DatedExpenseEvent): string =>
   event.name.startsWith(ONE_TIME_BILL_PREFIX)
     ? event.name.slice(ONE_TIME_BILL_PREFIX.length)
-    : event.name;
+    : event.name.startsWith("Refund · ")
+      ? event.name.slice("Refund · ".length)
+      : event.name;
 const activityDate = (activity: Activity): CalendarDate =>
   activity.kind === "correction"
     ? activity.record.correctionDate
@@ -227,6 +229,69 @@ export function TransactionHistory({
     return debt?.type === "credit-card" || debt?.type === "line-of-credit"
       ? "Card payment"
       : "Debt payment";
+  };
+  const activityIcon = (activity: Activity): string => {
+    if (activity.kind === "correction") return "↻";
+    const label = activityTypeLabel(activity);
+    if (label === "Income") return "↗";
+    if (label === "Transfer") return "⇄";
+    if (label === "Card payment") return "↗";
+    if (label === "Debt payment") return "↓";
+    if (label === "Refund") return "↩";
+    if (label === "Money sent") return "→";
+    if (label === "Bill payment") return "▣";
+    return "•";
+  };
+  const compactAccountName = (id?: string): string => {
+    if (!id) return "Account not recorded";
+    const account = [
+      ...workspace.assetAccounts,
+      ...workspace.liabilityAccounts,
+    ].find((candidate) => candidate.id === id);
+    if (!account) return "Removed account";
+    const provider = account.groupId
+      ? workspace.accountGroups.find((group) => group.id === account.groupId)
+          ?.name
+      : undefined;
+    return provider ?? account.name;
+  };
+  const primaryActivityText = (activity: TransactionActivity): string => {
+    if (activity.kind === "income") return activity.record.name;
+    const type = eventType(activity.record);
+    const withNote = (value: string) =>
+      activity.record.note ? `${value} · ${activity.record.note}` : value;
+    if (isBillPayment(activity.record))
+      return withNote(`Bill payment · ${activityName(activity.record)}`);
+    if (type === "purchase") {
+      const category = activityName(activity.record);
+      return withNote(category);
+    }
+    if (type === "refund")
+      return withNote(`Refund · ${activityName(activity.record)}`);
+    return withNote(activityTypeLabel(activity));
+  };
+  const activityMetaText = (
+    activity: TransactionActivity,
+    time: string | null,
+  ): string => {
+    if (activity.kind === "income") {
+      return `${accountName(activity.record.accountId)}${time ? ` · ${time}` : ""}`;
+    }
+    const type = eventType(activity.record);
+    const destination = activity.record.relatedAccountId;
+    if (
+      destination &&
+      ["transfer", "savings-contribution", "credit-card-payment"].includes(type)
+    ) {
+      const sourceLabel = compactAccountName(activity.record.accountId);
+      const destinationLabel = compactAccountName(destination);
+      const transferLabel =
+        sourceLabel === destinationLabel
+          ? `${accountName(activity.record.accountId)} → ${accountName(destination)}`
+          : `${sourceLabel} → ${destinationLabel}`;
+      return `${transferLabel}${time ? ` · ${time}` : ""}`;
+    }
+    return `${accountName(activity.record.accountId)}${time ? ` · ${time}` : ""}`;
   };
   function startEdit(activity: TransactionActivity) {
     setEditing(activity);
@@ -557,19 +622,29 @@ export function TransactionHistory({
                       activity.record.correctedBalanceCents -
                       activity.record.previousBalanceCents;
                     return (
-                      <li key={`correction-${activity.record.id}`}>
+                      <li
+                        className="transaction-history-entry is-correction"
+                        key={`correction-${activity.record.id}`}
+                      >
+                        <span
+                          className="transaction-history-icon"
+                          aria-hidden="true"
+                        >
+                          {activityIcon(activity)}
+                        </span>
                         <div className="transaction-history-details">
                           <strong>Balance correction</strong>
-                          <span>
-                            {formatCad(activity.record.previousBalanceCents)} →{" "}
-                            {formatCad(activity.record.correctedBalanceCents)}
-                          </span>
-                          <small>
-                            Account: {accountName(activity.record.accountId)}
+                          <small
+                            className="transaction-history-meta"
+                            title={accountName(activity.record.accountId)}
+                          >
+                            {accountName(activity.record.accountId)}
+                            {time ? ` · ${time}` : ""}
                           </small>
-                          <small>
-                            {time ? `Recorded ${time} · ` : ""}Not income or
-                            spending
+                          <small className="transaction-history-secondary">
+                            {formatCad(activity.record.previousBalanceCents)} →{" "}
+                            {formatCad(activity.record.correctedBalanceCents)} ·
+                            Not income or spending
                           </small>
                         </div>
                         <div className="transaction-history-summary">
@@ -590,26 +665,30 @@ export function TransactionHistory({
                     activity.kind === "expense" &&
                     Boolean(activity.record.relatedAccountId);
                   return (
-                    <li key={`${activity.kind}-${activity.record.id}`}>
+                    <li
+                      className="transaction-history-entry"
+                      key={`${activity.kind}-${activity.record.id}`}
+                    >
+                      <span
+                        className="transaction-history-icon"
+                        aria-hidden="true"
+                      >
+                        {activityIcon(activity)}
+                      </span>
                       <div className="transaction-history-details">
-                        <strong>{activityTypeLabel(activity)}</strong>
-                        <span>
-                          {activity.kind === "expense"
-                            ? activityName(activity.record)
-                            : activity.record.name}
-                        </span>
-                        {activity.kind === "expense" &&
-                          activity.record.note && (
-                            <span>{activity.record.note}</span>
-                          )}
-                        <small>
-                          {activity.kind === "income"
-                            ? `To: ${accountName(activity.record.accountId)}`
-                            : hasDestination
-                              ? `From: ${accountName(activity.record.accountId)} → To: ${accountName(activity.record.relatedAccountId)}`
-                              : `Account: ${accountName(activity.record.accountId)}`}
+                        <strong title={primaryActivityText(activity)}>
+                          {primaryActivityText(activity)}
+                        </strong>
+                        <small
+                          className="transaction-history-meta"
+                          title={
+                            hasDestination
+                              ? `${accountName(activity.record.accountId)} → ${accountName(activity.record.relatedAccountId)}`
+                              : accountName(activity.record.accountId)
+                          }
+                        >
+                          {activityMetaText(activity, time)}
                         </small>
-                        {time && <small>Recorded {time}</small>}
                         {activity.kind === "expense" &&
                           type === "credit-card-payment" &&
                           activity.record.principalAmountCents === undefined &&

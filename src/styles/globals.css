@@ -5462,6 +5462,151 @@ main {
   }
 }
 
+/* Compact Accounts activity rows: keep the action, amount, and essential
+   context on one predictable grid at every mobile width. */
+.transaction-history-list > li.transaction-history-entry {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0.62rem 0.7rem;
+  border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.transaction-history-entry:hover {
+  background: color-mix(in srgb, var(--surface-soft) 72%, transparent);
+}
+
+.transaction-history-icon {
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  place-items: center;
+  border-radius: 0.65rem;
+  color: var(--brand-dark);
+  background: color-mix(in srgb, var(--brand-soft) 82%, var(--surface-raised));
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.transaction-history-entry .transaction-history-details {
+  display: grid;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
+.transaction-history-entry .transaction-history-details > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-history-entry .transaction-history-meta,
+.transaction-history-entry .transaction-history-secondary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-history-entry .transaction-history-secondary {
+  color: var(--text-soft);
+}
+
+.transaction-history-entry .transaction-history-summary {
+  display: flex;
+  min-width: max-content;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.transaction-history-entry .transaction-history-actions {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.transaction-history-entry .transaction-history-actions button {
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.transaction-history-entry .transaction-action-menu {
+  top: calc(100% + 0.25rem);
+  right: 0;
+}
+
+.transaction-history-entry.is-correction .transaction-history-icon {
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.transaction-history-entry.is-correction .transaction-history-amount {
+  color: var(--muted);
+}
+
+@media (max-width: 560px) {
+  .transaction-history-list > li.transaction-history-entry {
+    grid-template-columns: 1.85rem minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.58rem 0.55rem;
+  }
+
+  .transaction-history-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.58rem;
+    font-size: 0.92rem;
+  }
+
+  .transaction-history-entry .transaction-history-amount {
+    font-size: 0.82rem;
+  }
+
+  .transaction-history-entry .transaction-history-actions button {
+    width: 2.1rem;
+    min-width: 2.1rem;
+    min-height: 2.1rem;
+  }
+
+  .transaction-history-entry .transaction-action-menu {
+    top: auto;
+    bottom: calc(100% + 0.3rem);
+  }
+}
+
+/* Keep the fixed navigation compact without shrinking its touch targets. */
+@media (max-width: 760px) {
+  .mobile-navigation-spacer {
+    height: calc(4.15rem + env(safe-area-inset-bottom));
+  }
+
+  .mobile-navigation a {
+    min-height: 3.45rem;
+    margin: 0.16rem 0.08rem;
+    border-radius: 0.58rem;
+  }
+
+  .mobile-navigation a[aria-current="page"] {
+    background: color-mix(in srgb, var(--brand-soft) 62%, transparent);
+  }
+}
+
 /* Approved Home redesign: compact, friendly, and centered around the next useful decision. */
 .home-page.app-page {
   width: min(100% - 2rem, 760px);
@@ -5758,6 +5903,10 @@ main {
   height: 100%;
   border-radius: inherit;
   background: var(--brand);
+  transition: none;
+}
+
+.home-limit-track.is-ready span {
   transition:
     width 350ms cubic-bezier(0.22, 1, 0.36, 1),
     background-color 200ms ease;
@@ -5781,6 +5930,40 @@ main {
 
 .home-limit-track span.is-unplanned {
   background: color-mix(in srgb, var(--muted) 68%, var(--line));
+}
+
+/* Home and Accounts use the same quick-action surface while keeping their
+   existing shared dialogs and validation paths. */
+.home-quick-actions a,
+.quick-money-action {
+  border: 1px solid color-mix(in srgb, var(--brand) 14%, var(--line));
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--brand-soft) 70%, var(--surface-raised));
+  transition:
+    transform 120ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.quick-money-action:hover,
+.quick-money-action:focus-visible {
+  border-color: color-mix(in srgb, var(--brand) 44%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 88%, var(--surface-raised));
+}
+
+.quick-money-action:active {
+  transform: scale(0.98);
+}
+
+.quick-money-action > span {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
+.action-menu-trigger {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
 }
 
 .home-limit-row.is-attention .home-limit-row-label strong,
@@ -5956,6 +6139,7 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   .home-quick-actions a,
+  .quick-money-action,
   .home-limit-track span {
     transition: none;
   }

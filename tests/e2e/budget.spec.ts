@@ -120,7 +120,9 @@ test("allocates account money and keeps the review focused", async ({
 
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money Buddy" });
-  await expect(nextSteps).toContainText("Groceries has room left this month.");
+  await expect(nextSteps).toContainText(
+    "No spending is recorded for Groceries yet.",
+  );
 });
 
 test("shows current spending separately from completed-month averages", async ({
