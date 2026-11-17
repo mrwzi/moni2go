@@ -5510,12 +5510,11 @@ main {
 .transaction-history-entry .transaction-history-meta,
 .transaction-history-entry .transaction-history-secondary {
   min-width: 0;
-  overflow: hidden;
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .transaction-history-entry .transaction-history-secondary {
@@ -5544,6 +5543,33 @@ main {
   border-radius: 0.55rem;
   background: transparent;
   box-shadow: none;
+}
+
+.transaction-history-extra {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.transaction-history-extra summary {
+  width: fit-content;
+  min-height: 2rem;
+  padding: 0.2rem 0;
+  color: var(--accent-soft);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.transaction-history-extra summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.transaction-history-extra > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.2rem 0 0.15rem;
+  overflow-wrap: anywhere;
 }
 
 .transaction-history-entry .transaction-action-menu {
@@ -5910,6 +5936,61 @@ main {
   transition:
     width 350ms cubic-bezier(0.22, 1, 0.36, 1),
     background-color 200ms ease;
+}
+
+/* Plan review: show the same budget reality as Home without adding a second
+   budgeting system or a tall explanation block. */
+.plan-review li {
+  align-items: start;
+}
+
+.plan-category-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 0.8rem;
+  color: var(--muted);
+  font-size: 0.73rem;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-category-metrics span:last-child {
+  color: var(--text-soft);
+  font-weight: 750;
+}
+
+.plan-category-track {
+  height: 0.35rem;
+  margin-top: 0.3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.plan-category-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transition:
+    width 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 200ms ease;
+}
+
+.plan-category-track.is-attention span {
+  background: #b77d19;
+}
+
+.plan-category-track.is-caution span,
+.plan-category-track.is-over span {
+  background: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-category-track span {
+    transition: none;
+  }
 }
 
 .home-limit-track.is-over {

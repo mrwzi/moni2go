@@ -689,6 +689,20 @@ export function TransactionHistory({
                         >
                           {activityMetaText(activity, time)}
                         </small>
+                        {hasDestination && (
+                          <details className="transaction-history-extra">
+                            <summary>Full details</summary>
+                            <div>
+                              <span>
+                                From: {accountName(activity.record.accountId)}
+                              </span>
+                              <span>
+                                To:{" "}
+                                {accountName(activity.record.relatedAccountId)}
+                              </span>
+                            </div>
+                          </details>
+                        )}
                         {activity.kind === "expense" &&
                           type === "credit-card-payment" &&
                           activity.record.principalAmountCents === undefined &&

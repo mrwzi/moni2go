@@ -103,6 +103,8 @@ test("allocates account money and keeps the review focused", async ({
     .getByRole("listitem")
     .filter({ hasText: "Groceries" });
   await expect(savedGroceries).toContainText("$250.00");
+  await expect(savedGroceries).toContainText("Spent $0.00");
+  await expect(savedGroceries).toContainText("$250.00 left");
   await expect(savedGroceries).not.toContainText("No spending history yet");
   await expect(
     page.getByRole("region", { name: "What are you planning?" }),

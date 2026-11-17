@@ -1080,9 +1080,15 @@ test("moves money between tracked accounts and into savings without changing spe
   const refreshedHistory = page.getByRole("region", {
     name: "Recent transactions",
   });
-  await expect(
-    refreshedHistory.getByRole("listitem").filter({ hasText: "Transfer" }),
-  ).toContainText("Transfer bank · Chequing → Transfer bank · Savings");
+  const transferRow = refreshedHistory
+    .getByRole("listitem")
+    .filter({ hasText: "Transfer" });
+  await expect(transferRow).toContainText(
+    "Transfer bank · Chequing → Transfer bank · Savings",
+  );
+  await transferRow.getByText("Full details", { exact: true }).click();
+  await expect(transferRow).toContainText("From: Transfer bank · Chequing");
+  await expect(transferRow).toContainText("To: Transfer bank · Savings");
   await chooseMoneyOption(page, "Filter by account", "Transfer bank · Savings");
   await expect(refreshedHistory.getByRole("listitem")).toHaveCount(1);
   await page.goto("/");

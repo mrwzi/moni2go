@@ -11,6 +11,7 @@ import {
 } from "../../v2/domain/budget";
 import {
   BUDGET_CATEGORIES,
+  getBudgetProgressLevel,
   PLAN_CATEGORY_KEYS,
   type BudgetCategoryKey,
 } from "../../v2/domain/budget-categories";
@@ -660,6 +661,27 @@ function MoneyPlanContent() {
                     : (parseAmount(amounts[category] ?? "0") ?? 0);
                 const history = spendingHistory[category];
                 const savedBills = savedBillTotals[category] ?? 0;
+                const isSavings = category === "savings-goals";
+                const isDebt = category === "debt-payments";
+                const isConsumption = !isSavings && !isDebt;
+                const differenceCents =
+                  displayedCents - history.spentThisMonthCents;
+                const progressLevel = isConsumption
+                  ? getBudgetProgressLevel(
+                      history.spentThisMonthCents,
+                      displayedCents,
+                    )
+                  : "within";
+                const progressPercent =
+                  isConsumption && displayedCents > 0
+                    ? Math.min(
+                        100,
+                        Math.max(
+                          0,
+                          (history.spentThisMonthCents / displayedCents) * 100,
+                        ),
+                      )
+                    : 0;
                 return (
                   <li key={category}>
                     <div className="plan-category-details">
@@ -679,6 +701,35 @@ function MoneyPlanContent() {
                             ? `Last month: ${formatCad(history.historicalMonthlyAverageCents)}`
                             : `Typical: ${formatCad(history.historicalMonthlyAverageCents)}`}
                         </small>
+                      )}
+                      <div className="plan-category-metrics">
+                        <span>
+                          {isSavings
+                            ? "Planned"
+                            : isDebt
+                              ? "Required"
+                              : `Spent ${formatCad(history.spentThisMonthCents)}`}
+                        </span>
+                        <span>
+                          {isSavings || isDebt
+                            ? formatCad(displayedCents)
+                            : displayedCents > 0
+                              ? differenceCents >= 0
+                                ? `${formatCad(differenceCents)} left`
+                                : `${formatCad(Math.abs(differenceCents))} over`
+                              : "No plan"}
+                        </span>
+                      </div>
+                      {isConsumption && displayedCents > 0 && (
+                        <div
+                          className={`plan-category-track is-${progressLevel}`}
+                          aria-label={`${categoryLabel(category)} ${formatCad(history.spentThisMonthCents)} spent of ${formatCad(displayedCents)} planned`}
+                          role="img"
+                        >
+                          <span
+                            style={{ width: `${progressPercent.toFixed(1)}%` }}
+                          />
+                        </div>
                       )}
                     </div>
                     <strong>{formatCad(displayedCents)}</strong>
