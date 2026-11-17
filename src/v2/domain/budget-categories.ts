@@ -40,6 +40,33 @@ export const PLAN_CATEGORY_KEYS = [
 ] as const satisfies readonly BudgetCategoryKey[];
 
 export type PlanCategoryKey = (typeof PLAN_CATEGORY_KEYS)[number];
+
+/**
+ * Shared thresholds for the lightweight budget coaching UI.
+ * These values describe how close recorded spending is to a planned limit;
+ * they do not change any budget calculations or prevent purchases.
+ */
+export const BUDGET_PROGRESS_THRESHOLDS = {
+  attention: 0.7,
+  caution: 0.9,
+  over: 1,
+} as const;
+
+export type BudgetProgressLevel =
+  "unplanned" | "calm" | "attention" | "caution" | "over";
+
+export function getBudgetProgressLevel(
+  spentCents: number,
+  plannedCents: number,
+): BudgetProgressLevel {
+  if (plannedCents <= 0) return spentCents > 0 ? "unplanned" : "calm";
+  const ratio = spentCents / plannedCents;
+  if (ratio >= BUDGET_PROGRESS_THRESHOLDS.over) return "over";
+  if (ratio >= BUDGET_PROGRESS_THRESHOLDS.caution) return "caution";
+  if (ratio >= BUDGET_PROGRESS_THRESHOLDS.attention) return "attention";
+  return "calm";
+}
+
 export type BudgetGuidancePriority =
   | "essential"
   | "semi-flexible"

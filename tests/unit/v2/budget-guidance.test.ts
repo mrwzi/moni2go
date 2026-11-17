@@ -5,6 +5,8 @@ import {
   prioritizePlanAdjustments,
 } from "../../../src/v2/domain/budget-guidance";
 import {
+  BUDGET_PROGRESS_THRESHOLDS,
+  getBudgetProgressLevel,
   PLAN_ADJUSTMENT_ORDER,
   PLAN_CATEGORY_KEYS,
   PLAN_CATEGORY_PRIORITIES,
@@ -25,6 +27,19 @@ const guidance = (
   });
 
 describe("priority-aware budget guidance", () => {
+  it("uses shared progress thresholds for the Home budget bars", () => {
+    expect(BUDGET_PROGRESS_THRESHOLDS).toEqual({
+      attention: 0.7,
+      caution: 0.9,
+      over: 1,
+    });
+    expect(getBudgetProgressLevel(6_999, 10_000)).toBe("calm");
+    expect(getBudgetProgressLevel(7_000, 10_000)).toBe("attention");
+    expect(getBudgetProgressLevel(9_000, 10_000)).toBe("caution");
+    expect(getBudgetProgressLevel(10_000, 10_000)).toBe("over");
+    expect(getBudgetProgressLevel(1_000, 0)).toBe("unplanned");
+  });
+
   it("classifies every Plan category once from a central map", () => {
     expect(Object.keys(PLAN_CATEGORY_PRIORITIES)).toEqual(PLAN_CATEGORY_KEYS);
     expect(new Set(PLAN_ADJUSTMENT_ORDER)).toEqual(new Set(PLAN_CATEGORY_KEYS));

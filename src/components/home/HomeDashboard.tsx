@@ -8,7 +8,10 @@ import {
   deriveSpendableCashCents,
   deriveTotalLiabilitiesCents,
 } from "../../v2/domain/accounts";
-import { BUDGET_CATEGORIES } from "../../v2/domain/budget-categories";
+import {
+  BUDGET_CATEGORIES,
+  getBudgetProgressLevel,
+} from "../../v2/domain/budget-categories";
 import {
   calendarDateParts,
   daysInMonth,
@@ -163,26 +166,45 @@ function HomeDashboardContent() {
         left.spentCents / left.plannedCents,
     )[0];
   const buddyCategory = activeMission ?? coachingWin ?? plannedCategory;
+  const buddyProgressLevel = buddyCategory
+    ? getBudgetProgressLevel(
+        buddyCategory.spentCents,
+        buddyCategory.plannedCents,
+      )
+    : null;
+  const buddyIsOver =
+    buddyCategory !== undefined &&
+    buddyCategory.plannedCents > 0 &&
+    buddyCategory.spentCents > buddyCategory.plannedCents;
   const buddyCopy = buddyCategory
-    ? buddyCategory.status === "over"
+    ? buddyCategory.status === "over" || buddyIsOver
       ? {
-          title:
+          sentence:
             buddyCategory.category === "restaurants"
-              ? "Your kitchen misses you 🍳"
+              ? `Your kitchen misses you 🍳 ${formatCad(Math.abs(buddyCategory.differenceCents))} over plan.`
               : buddyCategory.category === "clothing"
-                ? "Your wardrobe says we're full 👕"
-                : `${BUDGET_CATEGORIES[buddyCategory.category]} needs a breather`,
-          text: `${formatCad(Math.abs(buddyCategory.differenceCents))} over plan. A small pause can get you back on track.`,
+                ? `Your wardrobe says we're full 👕 ${formatCad(Math.abs(buddyCategory.differenceCents))} over plan.`
+                : `${BUDGET_CATEGORIES[buddyCategory.category]} is ${formatCad(Math.abs(buddyCategory.differenceCents))} over plan. A small pause could help.`,
         }
-      : buddyCategory.status === "unplanned"
+      : buddyProgressLevel === "over"
         ? {
-            title: "Give this category a little room",
-            text: `${formatCad(buddyCategory.spentCents)} spent so far with no amount planned yet.`,
+            sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} has reached its limit for this month.`,
           }
-        : {
-            title: "Your plan is ready—nice and steady",
-            text: `${BUDGET_CATEGORIES[buddyCategory.category]} has room left this month.`,
-          }
+        : buddyCategory.status === "unplanned"
+          ? {
+              sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} has ${formatCad(buddyCategory.spentCents)} recorded with no plan yet.`,
+            }
+          : buddyProgressLevel === "caution"
+            ? {
+                sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} is nearly at its limit—leave a little breathing room.`,
+              }
+            : buddyProgressLevel === "attention"
+              ? {
+                  sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} is getting close to its limit.`,
+                }
+              : {
+                  sentence: `${BUDGET_CATEGORIES[buddyCategory.category]} has room left this month. Nice work.`,
+                }
     : null;
   const showUrgentRecommendation = recommendation.priority <= 2;
   const activeLimitCategories = [...spending.categoryProgress]
@@ -245,10 +267,7 @@ function HomeDashboardContent() {
   const buddySentence = showUrgentRecommendation
     ? `${recommendation.title}${recommendation.amountCents !== null ? ` · ${formatCad(recommendation.amountCents)}` : ""}. ${recommendation.explanation}`
     : buddyCopy
-      ? buddyCopy.title.includes("kitchen") ||
-        buddyCopy.title.includes("wardrobe")
-        ? buddyCopy.title
-        : `${buddyCopy.title}. ${buddyCopy.text}`
+      ? buddyCopy.sentence
       : "Your budget is ready. Let’s make every dollar count! 🌱";
   const buddyActionHref = recommendationObligation
     ? recommendationObligation.kind === "debt-payment"
@@ -361,6 +380,10 @@ function HomeDashboardContent() {
             aria-label="Category budget progress"
           >
             {visibleLimitCategories.map((item) => {
+              const progressLevel = getBudgetProgressLevel(
+                item.spentCents,
+                item.plannedCents,
+              );
               const remainingPercent =
                 item.plannedCents > 0
                   ? Math.max(
@@ -374,7 +397,10 @@ function HomeDashboardContent() {
                     )
                   : 0;
               return (
-                <div className="home-limit-row" key={item.category}>
+                <div
+                  className={`home-limit-row is-${progressLevel}`}
+                  key={item.category}
+                >
                   <div className="home-limit-row-label">
                     <span>
                       <span className="home-category-marker" aria-hidden="true">
@@ -389,11 +415,11 @@ function HomeDashboardContent() {
                     </strong>
                   </div>
                   <div
-                    className={`home-limit-track${item.status === "over" ? " is-over" : ""}`}
+                    className={`home-limit-track is-${progressLevel}`}
                     aria-hidden="true"
                   >
                     <span
-                      className={item.status === "over" ? "is-over" : ""}
+                      className={`is-${progressLevel}`}
                       style={{ width: `${remainingPercent.toFixed(1)}%` }}
                     />
                   </div>

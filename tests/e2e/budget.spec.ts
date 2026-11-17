@@ -120,7 +120,6 @@ test("allocates account money and keeps the review focused", async ({
 
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money Buddy" });
-  await expect(nextSteps).toContainText("Your plan is ready");
   await expect(nextSteps).toContainText("Groceries has room left this month.");
 });
 

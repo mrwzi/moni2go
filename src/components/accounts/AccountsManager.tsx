@@ -194,7 +194,8 @@ export function AccountsManager() {
     null,
   );
   const [spendability, setSpendability] = useState<Spendability>("spendable");
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessageState] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<"info" | "success">("info");
   const [incomePlanningPrompt, setIncomePlanningPrompt] = useState<{
     amountCents: number;
   } | null>(null);
@@ -250,6 +251,11 @@ export function AccountsManager() {
       ? newGroupType
       : groups.find((group) => group.id === dialogGroupId)?.type;
   const isEducationPlace = selectedGroupType === "education-provider";
+
+  function setMessage(next: string | null) {
+    setMessageTone("info");
+    setMessageState(next);
+  }
 
   function openActivity(kind: QuickActivityKind) {
     const hasCreditAccount = liabilities.some(
@@ -954,7 +960,8 @@ export function AccountsManager() {
       const savedAccountName = activityAccount
         ? savedAccountLabel(activityAccount)
         : "account";
-      setMessage(
+      setMessageTone("success");
+      setMessageState(
         input.kind === "income"
           ? `${formatCad(cents)} added to ${savedAccountName}.`
           : input.transactionType === "refund"
@@ -1341,8 +1348,16 @@ export function AccountsManager() {
       </div>
 
       {message && !dialogOpen && activityKind === null && (
-        <p className="save-message" role="status">
-          {message}
+        <p
+          className={`save-message${messageTone === "success" ? " is-success" : ""}`}
+          role="status"
+        >
+          {messageTone === "success" && (
+            <span className="save-message-check" aria-hidden="true">
+              ✓
+            </span>
+          )}
+          <span>{message}</span>
         </p>
       )}
 

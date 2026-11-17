@@ -5771,6 +5771,27 @@ main {
   background: var(--danger);
 }
 
+.home-limit-track span.is-attention {
+  background: color-mix(in srgb, var(--brand) 70%, #d9a441);
+}
+
+.home-limit-track span.is-caution {
+  background: #d9a441;
+}
+
+.home-limit-track span.is-unplanned {
+  background: color-mix(in srgb, var(--muted) 68%, var(--line));
+}
+
+.home-limit-row.is-attention .home-limit-row-label strong,
+.home-limit-row.is-caution .home-limit-row-label strong {
+  color: #b77d19;
+}
+
+.home-limit-row.is-over .home-limit-row-label strong {
+  color: var(--danger);
+}
+
 .home-show-more {
   margin-top: 0.75rem;
   padding: 0;
