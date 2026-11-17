@@ -1363,9 +1363,55 @@ select {
 }
 
 .save-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   margin-top: 0.75rem;
   color: var(--brand-dark);
   font-size: 0.85rem;
+  animation: save-message-in 180ms ease-out both;
+}
+
+.save-message-check {
+  display: inline-grid;
+  width: 1.2rem;
+  height: 1.2rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-weight: 800;
+  line-height: 1;
+  animation: save-check-pop 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes save-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes save-check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .save-message,
+  .save-message-check {
+    animation: none;
+  }
 }
 
 .modal-backdrop {

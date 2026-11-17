@@ -449,7 +449,7 @@ function MoneyPlanContent() {
     ];
     try {
       await save({ ...workspace, allocationRules, updatedAt: now });
-      setMessage("Monthly plan updated automatically.");
+      setMessage("Plan saved — nice work.");
       editSnapshot.current = null;
       setEditingPlan(false);
       if (incomeToPlanCents !== null) router.replace("/plan");
@@ -891,6 +891,9 @@ function MoneyPlanContent() {
 
               {message && (
                 <p className="save-message" role="status">
+                  <span className="save-message-check" aria-hidden="true">
+                    ✓
+                  </span>
                   {message}
                 </p>
               )}

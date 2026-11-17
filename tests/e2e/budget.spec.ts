@@ -62,9 +62,7 @@ test("allocates account money and keeps the review focused", async ({
   await expect(
     page.getByRole("listitem").filter({ hasText: "Debt payments" }),
   ).toContainText("$35.00");
-  await expect(
-    page.getByText("Monthly plan updated automatically."),
-  ).toBeVisible();
+  await expect(page.getByText("Plan saved — nice work.")).toBeVisible();
   await expect(page.getByText("Review plan checks")).toHaveCount(0);
   await expect(
     page
@@ -122,11 +120,11 @@ test("allocates account money and keeps the review focused", async ({
 
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money guidance" });
-  await expect(nextSteps).toContainText("Finish a payment setup");
-  await expect(nextSteps).toContainText("Credit card needs an amount or date.");
+  await expect(nextSteps).toContainText("Your plan is ready");
+  await expect(nextSteps).toContainText("Groceries has room left this month.");
   await expect(
-    nextSteps.getByRole("link", { name: "Add details" }),
-  ).toBeVisible();
+    nextSteps.getByRole("link", { name: "Open plan" }),
+  ).toHaveAttribute("href", "/plan");
 });
 
 test("shows current spending separately from completed-month averages", async ({
