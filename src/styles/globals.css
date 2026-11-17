@@ -6161,7 +6161,7 @@ main {
 
 @media (max-width: 420px) {
   .home-page.app-page {
-    width: min(100% - 1rem, 760px);
+    width: min(100% - 2rem, 760px);
     padding-top: 0.8rem;
   }
 
