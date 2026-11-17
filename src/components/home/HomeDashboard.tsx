@@ -149,7 +149,14 @@ function HomeDashboardContent() {
         left.spentCents / left.plannedCents,
     )[0];
   const activeMission = coachingWarnings[0];
-  const buddyCategory = activeMission ?? coachingWin;
+  const plannedCategory = [...spending.categoryProgress]
+    .filter((item) => item.plannedCents > 0)
+    .sort(
+      (left, right) =>
+        right.spentCents / right.plannedCents -
+        left.spentCents / left.plannedCents,
+    )[0];
+  const buddyCategory = activeMission ?? coachingWin ?? plannedCategory;
   const buddyCopy = buddyCategory
     ? buddyCategory.status === "over"
       ? {
@@ -167,8 +174,8 @@ function HomeDashboardContent() {
             text: `${formatCad(buddyCategory.spentCents)} spent so far with no amount planned yet.`,
           }
         : {
-            title: "Nice work—keep the momentum",
-            text: `${BUDGET_CATEGORIES[buddyCategory.category]} is still within plan.`,
+            title: "Your plan is ready—nice and steady",
+            text: `${BUDGET_CATEGORIES[buddyCategory.category]} has room left this month.`,
           }
     : null;
   const showUrgentRecommendation = recommendation.priority <= 2;
@@ -298,9 +305,7 @@ function HomeDashboardContent() {
                   : "/accounts#bills-commitments"
                 : showUrgentRecommendation
                   ? recommendation.actionHref
-                  : buddyCopy
-                    ? "/plan"
-                    : recommendation.actionHref
+                  : "/plan"
             }
           >
             {showUrgentRecommendation
@@ -498,12 +503,19 @@ function HomeDashboardContent() {
                         key={item.category}
                       >
                         <div>
-                          <span>{BUDGET_CATEGORIES[item.category]}</span>
+                          <span>
+                            {BUDGET_CATEGORIES[item.category]}
+                            {item.spentCents > 0 && (
+                              <small>
+                                {" "}
+                                · {formatCad(item.spentCents)} spent
+                              </small>
+                            )}
+                          </span>
                           <strong>
-                            {formatCad(item.spentCents)}
                             {item.plannedCents > 0
-                              ? ` / ${formatCad(item.plannedCents)}`
-                              : ""}
+                              ? `${formatCad(Math.max(0, item.plannedCents - item.spentCents))} left`
+                              : `${formatCad(item.spentCents)} spent`}
                           </strong>
                         </div>
                         <div

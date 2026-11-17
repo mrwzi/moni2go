@@ -5541,6 +5541,25 @@ main {
   white-space: nowrap;
 }
 
+.home-category-progress-row small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.home-page .home-outlook-card {
+  padding: 0.65rem 0.8rem;
+  opacity: 0.92;
+}
+
+.home-page .home-outlook-card .outlook-summary {
+  margin-top: 0.3rem;
+}
+
+.home-page .home-outlook-card .outlook-details {
+  margin-top: 0.35rem;
+}
+
 .home-category-progress-track {
   height: 0.42rem;
   overflow: hidden;
