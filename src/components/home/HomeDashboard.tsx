@@ -52,6 +52,23 @@ function dueLabel(today: CalendarDate, date: CalendarDate): string {
   return `Due in ${days.toString()} days`;
 }
 
+const CATEGORY_MARKERS: Readonly<Record<string, string>> = {
+  housing: "⌂",
+  utilities: "ϟ",
+  groceries: "🛒",
+  restaurants: "🍽️",
+  transportation: "↗",
+  education: "📚",
+  clothing: "👕",
+  shopping: "🛍️",
+  subscriptions: "↻",
+  insurance: "◇",
+  "phone-internet": "⌁",
+  "health-personal-care": "+",
+  "entertainment-recreation": "☆",
+  other: "•",
+};
+
 export function HomeDashboard() {
   return (
     <section className="section shell app-page home-page">
@@ -504,6 +521,12 @@ function HomeDashboardContent() {
                       >
                         <div>
                           <span>
+                            <span
+                              className="home-category-marker"
+                              aria-hidden="true"
+                            >
+                              {CATEGORY_MARKERS[item.category] ?? "•"}
+                            </span>{" "}
                             {BUDGET_CATEGORIES[item.category]}
                             {item.spentCents > 0 && (
                               <small>
