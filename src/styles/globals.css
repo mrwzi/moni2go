@@ -5462,6 +5462,538 @@ main {
   }
 }
 
+/* Approved Home redesign: compact, friendly, and centered around the next useful decision. */
+.home-page.app-page {
+  width: min(100% - 2rem, 760px);
+  max-width: 760px;
+  padding-top: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.home-redesign {
+  display: grid;
+  max-width: 720px;
+  margin: 0 auto;
+  gap: 0.75rem;
+}
+
+.home-friendly-header {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.1rem 0.15rem 0.25rem;
+}
+
+.home-friendly-header .eyebrow {
+  margin: 0 0 0.15rem;
+}
+
+.home-friendly-header h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 4vw, 2rem);
+  letter-spacing: -0.04em;
+}
+
+.home-friendly-header p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.home-overview-card,
+.home-buddy-card,
+.home-limits-card,
+.home-outlook-compact {
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--line));
+  border-radius: 1rem;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.home-overview-card {
+  padding: 1.05rem 1.1rem;
+  color: var(--ink);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--brand) 18%, transparent),
+      transparent 65%
+    ),
+    color-mix(in srgb, var(--brand-soft) 35%, var(--surface-raised));
+}
+
+.home-overview-label,
+.home-limits-summary span,
+.home-overview-secondary span,
+.home-outlook-compact-value span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.home-overview-label {
+  display: block;
+  color: color-mix(in srgb, var(--brand) 58%, var(--muted));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-overview-amount {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: clamp(2rem, 8vw, 2.6rem);
+  letter-spacing: -0.055em;
+}
+
+.home-overview-divider {
+  height: 1px;
+  margin: 0.85rem 0 0.75rem;
+  background: color-mix(in srgb, var(--line) 76%, transparent);
+}
+
+.home-overview-secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.home-overview-secondary div {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.home-overview-secondary strong {
+  font-size: 1rem;
+}
+
+.home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.home-quick-actions a {
+  display: grid;
+  min-height: 3.55rem;
+  padding: 0.65rem 0.45rem;
+  place-items: center;
+  gap: 0.12rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 12%, var(--line));
+  border-radius: 0.85rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface-raised));
+  text-align: center;
+  text-decoration: none;
+  transition:
+    transform 120ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.home-quick-actions a:hover,
+.home-quick-actions a:focus-visible {
+  border-color: color-mix(in srgb, var(--brand) 44%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 90%, var(--surface-raised));
+}
+
+.home-quick-actions a:active {
+  transform: scale(0.97);
+}
+
+.home-quick-actions a span {
+  color: var(--brand);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.home-quick-actions a strong {
+  font-size: 0.72rem;
+}
+
+.home-buddy-card {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.65rem;
+  padding: 0.85rem 0.95rem;
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 76%, var(--surface-raised));
+}
+
+.home-buddy-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  align-self: center;
+  border-radius: 50%;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 0.9rem;
+}
+
+.home-buddy-card .eyebrow {
+  margin: 0 0 0.15rem;
+  font-size: 0.62rem;
+}
+
+.home-buddy-card p:not(.eyebrow) {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.home-buddy-card a {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.home-limits-card {
+  padding: 1rem;
+}
+
+.home-limits-heading,
+.home-limits-summary,
+.home-limit-row-label,
+.home-savings-row,
+.home-outlook-compact-heading,
+.home-outlook-compact-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.home-limits-heading h2,
+.home-outlook-compact h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.home-limits-heading p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.home-days-left {
+  display: grid;
+  min-width: 3rem;
+  padding: 0.45rem 0.5rem;
+  place-items: center;
+  border-radius: 0.65rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand-soft) 78%, var(--surface-raised));
+}
+
+.home-days-left strong {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.home-days-left small {
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.home-limits-summary {
+  margin: 0.95rem 0 0.55rem;
+  align-items: end;
+}
+
+.home-limits-summary > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.home-limits-summary > div:last-child {
+  text-align: right;
+}
+
+.home-limits-summary strong {
+  color: color-mix(in srgb, var(--brand) 72%, var(--ink));
+  font-size: 1.1rem;
+}
+
+.home-limit-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.home-limit-row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.home-limit-row-label {
+  min-width: 0;
+  font-size: 0.82rem;
+}
+
+.home-limit-row-label > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-limit-row-label strong {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.home-limit-track {
+  height: 0.48rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 75%, transparent);
+}
+
+.home-limit-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transition:
+    width 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 200ms ease;
+}
+
+.home-limit-track.is-over {
+  background: color-mix(in srgb, var(--danger) 23%, var(--line));
+}
+
+.home-limit-track span.is-over {
+  background: var(--danger);
+}
+
+.home-show-more {
+  margin-top: 0.75rem;
+  padding: 0;
+  border: 0;
+  color: var(--brand);
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.home-savings-row {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.home-savings-row strong {
+  color: var(--brand);
+  font-size: 0.78rem;
+}
+
+.home-plan-link {
+  display: flex;
+  margin-top: 0.8rem;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.home-plan-link:hover,
+.home-plan-link:focus-visible {
+  color: var(--brand);
+}
+
+.home-plan-link span {
+  color: var(--brand);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.home-limits-note {
+  display: block;
+  margin-top: 0.65rem;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.home-limits-empty {
+  margin: 0.9rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.home-outlook-compact {
+  padding: 0.9rem 1rem;
+}
+
+.home-outlook-compact-heading .eyebrow {
+  margin: 0 0 0.15rem;
+  font-size: 0.62rem;
+}
+
+.home-outlook-compact-heading > span {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.home-outlook-compact-value {
+  margin-top: 0.8rem;
+}
+
+.home-outlook-compact-value strong {
+  font-size: 1.1rem;
+}
+
+.home-outlook-caveat,
+.home-outlook-compact .outlook-warning {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.home-outlook-details {
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.55rem;
+}
+
+.home-outlook-details summary {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.home-forecast-tabs {
+  display: grid;
+  margin-top: 0.65rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+}
+
+.home-forecast-tabs button {
+  min-height: 2.15rem;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.home-forecast-tabs button[aria-pressed="true"] {
+  color: var(--brand-dark);
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
+  background: var(--brand-soft);
+}
+
+.home-outlook-details-grid {
+  display: grid;
+  margin: 0.7rem 0 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.home-outlook-details-grid div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.5rem;
+  border-radius: 0.6rem;
+  background: var(--surface-soft);
+}
+
+.home-outlook-details-grid dt {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.home-outlook-details-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.home-outlook-details p {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-quick-actions a,
+  .home-limit-track span {
+    transition: none;
+  }
+}
+
+@media (min-width: 761px) {
+  .home-page.app-page {
+    padding-top: 2rem;
+  }
+
+  .home-redesign {
+    max-width: 700px;
+  }
+
+  .home-limits-card {
+    padding: 1.15rem 1.25rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-page.app-page {
+    width: min(100% - 1rem, 760px);
+    padding-top: 0.8rem;
+  }
+
+  .home-redesign {
+    gap: 0.6rem;
+  }
+
+  .home-overview-card,
+  .home-limits-card,
+  .home-outlook-compact {
+    border-radius: 0.9rem;
+  }
+
+  .home-overview-card,
+  .home-limits-card {
+    padding: 0.85rem;
+  }
+
+  .home-buddy-card {
+    padding: 0.75rem 0.8rem;
+  }
+
+  .home-limits-summary strong {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .home-quick-actions a strong {
+    font-size: 0.67rem;
+  }
+
+  .home-outlook-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Home dashboard: compact hierarchy for small screens without changing the
    underlying financial calculations. */
 .home-page .app-page-heading {

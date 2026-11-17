@@ -119,12 +119,9 @@ test("allocates account money and keeps the review focused", async ({
   ).not.toContainText("$999.00");
 
   await page.goto("/");
-  const nextSteps = page.getByRole("region", { name: "Money guidance" });
+  const nextSteps = page.getByRole("region", { name: "Money Buddy" });
   await expect(nextSteps).toContainText("Your plan is ready");
   await expect(nextSteps).toContainText("Groceries has room left this month.");
-  await expect(
-    nextSteps.getByRole("link", { name: "Open plan" }),
-  ).toHaveAttribute("href", "/plan");
 });
 
 test("shows current spending separately from completed-month averages", async ({
@@ -268,19 +265,8 @@ test("shows current spending separately from completed-month averages", async ({
     "Restaurants / eating out: $145.00 spent of $100.00 planned.",
   );
   await page.goto("/");
-  const donut = page.locator(".home-spending-donut");
-  await expect(donut).toContainText("$220.00");
-  await expect(donut.getByText(/%/)).toHaveCount(0);
-  await expect(page.locator(".home-spending-budget-summary")).toContainText(
-    "110% used",
-  );
-  await expect(page.locator(".home-spending-budget-summary")).toContainText(
-    "$20.00 overall over",
-  );
-  const progress = page
-    .getByRole("region", { name: "Spending at a glance" })
-    .getByLabel("Budget progress");
-  await expect(progress).toContainText("Restaurants / eating out");
-  await expect(progress).toContainText("$145.00 spent");
-  await expect(progress).toContainText("$0.00 left");
+  const limits = page.getByRole("region", { name: "Your money limits 🔋" });
+  await expect(limits).toContainText("$220.00");
+  await expect(limits).toContainText("Restaurants / eating out");
+  await expect(limits).toContainText("$45.00 over");
 });

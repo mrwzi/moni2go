@@ -205,6 +205,7 @@ export function AccountsManager() {
     string | null
   >(null);
   const handledDebtEditIntent = useRef(false);
+  const handledActivityIntent = useRef(false);
   const incomePromptShown = useRef(false);
   const assets = workspace?.assetAccounts ?? [];
   const liabilities = workspace?.liabilityAccounts ?? [];
@@ -267,6 +268,21 @@ export function AccountsManager() {
     setActivityKind(kind);
     setMessage(null);
   }
+
+  useEffect(() => {
+    if (loading || !workspace || handledActivityIntent.current) return;
+    const hash = window.location.hash;
+    const activityKindByHash: Record<string, QuickActivityKind> = {
+      "#add-income": "income",
+      "#record-expense": "expense",
+      "#move-money": "move",
+    };
+    const requestedKind = activityKindByHash[hash];
+    if (!requestedKind) return;
+    handledActivityIntent.current = true;
+    window.history.replaceState(null, "", "/accounts");
+    openActivity(requestedKind);
+  }, [loading, workspace]);
 
   function prepareAccountForProvider(type: AccountGroupType | undefined) {
     if (type === "education-provider") {
@@ -1166,7 +1182,11 @@ export function AccountsManager() {
         </>
       )}
 
-      <section className="account-quick-actions" aria-label="Quick actions">
+      <section
+        id="move-money"
+        className="account-quick-actions"
+        aria-label="Quick actions"
+      >
         <button
           id="add-income"
           className="quick-money-action quick-money-in"

@@ -460,7 +460,7 @@ test("records education purchases and refunds as consumption", async ({
 
   await page.goto("/");
   await expect(
-    page.getByRole("region", { name: "Spending at a glance" }),
+    page.getByRole("region", { name: "Your money limits 🔋" }),
   ).toContainText("$75.00");
 });
 
@@ -505,7 +505,7 @@ test("records a one-time tuition bill without creating a commitment", async ({
 
   await page.goto("/");
   await expect(
-    page.getByRole("region", { name: "Spending at a glance" }),
+    page.getByRole("region", { name: "Your money limits 🔋" }),
   ).toContainText("$125.00");
 });
 
@@ -955,35 +955,23 @@ test("records money in and money out against an existing account", async ({
 
   await page.goto("/");
   const spendingChart = page.getByRole("region", {
-    name: "Spending at a glance",
+    name: "Your money limits 🔋",
   });
   await expect(spendingChart).toContainText("$25.25");
   await expect(spendingChart).toContainText("Groceries");
   await expect(spendingChart).toContainText("Subscriptions");
-  const nextSteps = page.getByRole("region", { name: "Money guidance" });
+  const nextSteps = page.getByRole("region", { name: "Money Buddy" });
   await expect(nextSteps).toBeVisible();
-  await expect(nextSteps).toContainText("Groceries wasn't planned");
   await expect(nextSteps).toContainText("$20.25");
-  await expect(nextSteps).toContainText(
-    "Add a realistic amount if this spending is expected",
-  );
+  await expect(nextSteps).toContainText("recorded");
   const outlook = page.getByRole("region", { name: "Financial outlook" });
   await expect(outlook).toBeVisible();
+  await expect(outlook).toContainText("Everyday spending isn’t estimated yet.");
+  await expect(outlook).toContainText("Available now");
+  await outlook.getByText("Forecast details").click();
   await expect(
     outlook.getByRole("button", { name: "30 days" }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(outlook).toContainText(
-    "Everyday spending is unknown and is not subtracted above.",
-  );
-  await expect(outlook).toContainText("Known projection");
-  await expect(
-    outlook.getByRole("link", { name: "Add bills or activity" }),
-  ).toHaveAttribute("href", "/accounts");
-  await expect(
-    outlook.getByText(/The periods match because/),
-  ).not.toBeVisible();
-  await outlook.getByText("More details").click();
-  await expect(outlook.getByText(/The periods match because/)).toBeVisible();
   await outlook.getByRole("button", { name: "90 days" }).click();
   await expect(
     outlook.getByRole("button", { name: "90 days" }),
@@ -1102,9 +1090,11 @@ test("moves money between tracked accounts and into savings without changing spe
   await expect(refreshedHistory.getByRole("listitem")).toHaveCount(1);
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Spending at a glance" }),
+    page.getByRole("heading", { name: "Your money limits 🔋" }),
   ).toBeVisible();
-  await expect(page.getByText("No spending recorded yet")).toBeVisible();
+  await expect(
+    page.getByText("Set a monthly plan to give every category a clear limit."),
+  ).toBeVisible();
 });
 
 test("reduces cash and tracked loan debt with one simple payment", async ({
@@ -1191,42 +1181,48 @@ test("home spending and outlook stay readable from 320px through desktop", async
 
   for (const width of [320, 360, 375, 390, 430, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    const donut = page.locator(".home-spending-donut");
-    const amount = donut.getByText("$25.00", { exact: true });
-    const breakdown = page.locator(".home-spending-breakdown");
-    await expect(amount).toBeVisible();
+    const limits = page.locator(".home-limit-list");
+    await expect(limits.getByText(/Restaurants \/ eating out/)).toBeVisible();
     await expect(
-      page
-        .locator(".home-spending-breakdown")
-        .getByText("Restaurants / eating out", { exact: true })
-        .first(),
+      limits.getByText("$25.00 recorded", { exact: true }),
     ).toBeVisible();
+    const forecastDetails = page.locator(".home-outlook-details");
+    if ((await forecastDetails.getAttribute("open")) === null) {
+      await forecastDetails.locator("summary").click();
+    }
     await expect(
       page.getByText("None scheduled", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(/% of budget/)).toHaveCount(0);
-    const [donutBox, amountBox, breakdownBox] = await Promise.all([
-      donut.boundingBox(),
-      amount.boundingBox(),
-      breakdown.boundingBox(),
-    ]);
-    if (!donutBox || !amountBox || !breakdownBox)
-      throw new Error(
-        `Home layout bounds unavailable at ${width.toString()}px`,
-      );
-    expect(amountBox.x).toBeGreaterThan(donutBox.x + 8);
-    expect(amountBox.x + amountBox.width).toBeLessThan(
-      donutBox.x + donutBox.width - 8,
-    );
-    if (width <= 520)
-      expect(breakdownBox.y).toBeGreaterThanOrEqual(
-        donutBox.y + donutBox.height - 1,
-      );
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+  }
+});
+
+test("Home quick actions open the existing money dialogs", async ({ page }) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Home actions bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("500");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.goto("/");
+  for (const [label, dialogName] of [
+    ["Add income", "Add income"],
+    ["Expense", "Record expense"],
+    ["Transfer", "Move money"],
+  ] as const) {
+    await page.getByRole("link", { name: label, exact: true }).click();
+    await expect(page.getByRole("dialog", { name: dialogName })).toBeVisible();
+    await page
+      .getByRole("dialog", { name: dialogName })
+      .getByLabel("Close")
+      .click();
+    await page.goto("/");
   }
 });
 
@@ -1341,7 +1337,7 @@ test("adds and prioritizes a recurring household bill", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText(longPaymentName)).toHaveCount(0);
   await expect(
-    page.getByRole("region", { name: "Spending at a glance" }),
+    page.getByRole("region", { name: "Your money limits 🔋" }),
   ).toContainText("$400.00");
 
   await page.goto("/accounts#bills-commitments");
