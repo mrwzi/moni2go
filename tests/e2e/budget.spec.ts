@@ -283,5 +283,6 @@ test("shows current spending separately from completed-month averages", async ({
     .getByRole("region", { name: "Spending at a glance" })
     .getByLabel("Budget progress");
   await expect(progress).toContainText("Restaurants / eating out");
-  await expect(progress).toContainText("$145.00 / $100.00");
+  await expect(progress).toContainText("$145.00 spent");
+  await expect(progress).toContainText("$0.00 left");
 });
