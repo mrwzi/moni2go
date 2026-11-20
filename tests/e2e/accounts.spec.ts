@@ -628,7 +628,7 @@ test("allows a past flexible-debt payoff goal to be saved as history", async ({
   await page.getByLabel("Target payoff date").fill("2020-11-06");
   await page.getByRole("button", { name: "Save account" }).click();
   await expect(page.getByText("Account saved locally.")).toBeVisible();
-  await expect(page.getByText("Target Nov 6, 2020")).toBeVisible();
+  await expect(page.getByText("Past payoff goal Nov 6, 2020")).toBeVisible();
 });
 
 test("saves a paid-off credit card without inventing debt or a payment", async ({
@@ -769,7 +769,7 @@ test("corrects a debt balance without inventing spending and keeps the correctio
   await expect(page.getByText("−$13.23")).toBeVisible();
   await expect(
     page.getByText(
-      "No spending is recorded yet. Add an activity when you’re ready.",
+      "No recorded activity yet. Add something when you’re ready.",
     ),
   ).toBeVisible();
 

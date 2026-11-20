@@ -4,7 +4,11 @@ import type {
   DebtPaymentFrequency,
   LiabilityAccount,
 } from "../../v2/domain/accounts";
-import { calendarDateParts } from "../../v2/domain/calendar";
+import {
+  calendarDateParts,
+  compareCalendarDates,
+  parseCalendarDate,
+} from "../../v2/domain/calendar";
 import type { CalendarDate } from "../../v2/domain/types";
 import { accountLabels } from "./account-options";
 import { ActionMenu } from "./ActionMenu";
@@ -103,13 +107,26 @@ function debtPaymentLabel(account: LiabilityAccount): string {
   }
   if (account.requiredMonthlyPaymentCents !== undefined)
     return `${formatCad(account.requiredMonthlyPaymentCents)} every month${account.paymentDueDay ? ` · day ${account.paymentDueDay.toString()}` : ""}`;
-  if (account.targetPayoffDate)
-    return `Target ${formatShortDate(account.targetPayoffDate)}`;
+  if (account.targetPayoffDate) {
+    const today = localToday();
+    const label =
+      compareCalendarDates(account.targetPayoffDate, today) < 0
+        ? "Past payoff goal"
+        : "Target";
+    return `${label} ${formatShortDate(account.targetPayoffDate)}`;
+  }
   if (account.type === "credit-card" || account.type === "line-of-credit")
     return "No payment due recorded";
   return account.paymentRequirement === "flexible"
     ? "No fixed payment"
     : "Monthly payment missing";
+}
+
+function localToday(): CalendarDate {
+  const value = new Date();
+  return parseCalendarDate(
+    `${value.getFullYear().toString().padStart(4, "0")}-${(value.getMonth() + 1).toString().padStart(2, "0")}-${value.getDate().toString().padStart(2, "0")}`,
+  );
 }
 
 function frequencyLabel(frequency: DebtPaymentFrequency): string {

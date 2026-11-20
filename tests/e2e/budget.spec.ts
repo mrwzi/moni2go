@@ -123,7 +123,7 @@ test("allocates account money and keeps the review focused", async ({
   await page.goto("/");
   const nextSteps = page.getByRole("region", { name: "Money Buddy" });
   await expect(nextSteps).toContainText(
-    "No spending is recorded for Groceries yet.",
+    "No recorded activity for Groceries yet.",
   );
 });
 

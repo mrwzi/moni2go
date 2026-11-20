@@ -200,7 +200,7 @@ function HomeDashboardContent() {
             }
           : buddyCategory.spentCents <= 0
             ? {
-                sentence: `No spending is recorded for ${BUDGET_CATEGORIES[buddyCategory.category]} yet.`,
+                sentence: `No recorded activity for ${BUDGET_CATEGORIES[buddyCategory.category]} yet.`,
               }
             : buddyProgressLevel === "caution"
               ? {
@@ -276,7 +276,7 @@ function HomeDashboardContent() {
     ? `${recommendation.title}${recommendation.amountCents !== null ? ` · ${formatCad(recommendation.amountCents)}` : ""}. ${recommendation.explanation}`
     : buddyCopy
       ? buddyCopy.sentence
-      : "No spending is recorded yet. Add an activity when you’re ready.";
+      : "No recorded activity yet. Add something when you’re ready.";
   const buddyActionHref = recommendationObligation
     ? recommendationObligation.kind === "debt-payment"
       ? `/accounts#account-${recommendationObligation.sourceId}`
