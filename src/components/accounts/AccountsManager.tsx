@@ -1795,7 +1795,6 @@ export function AccountsManager() {
                               Target payoff date
                               <input
                                 type="date"
-                                min={localToday()}
                                 value={targetPayoffDateInput}
                                 onChange={(event) => {
                                   setTargetPayoffDateInput(event.target.value);
@@ -1803,7 +1802,8 @@ export function AccountsManager() {
                               />
                               <small>
                                 Planning only—not a lender due date or automatic
-                                payment reminder.
+                                payment reminder. You can keep an earlier date
+                                as a past goal, or replace it with a new target.
                               </small>
                             </label>
                           </details>

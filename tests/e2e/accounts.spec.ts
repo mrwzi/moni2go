@@ -606,6 +606,31 @@ test("adds a flexible debt without inventing a monthly payment", async ({
   await expect(page.getByText("Step 1 of 14")).toBeVisible();
 });
 
+test("allows a past flexible-debt payoff goal to be saved as history", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("What are you adding?").selectOption("other");
+  await page.getByLabel("Provider or place name").fill("Past Goal Loans");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Money I owe" }).click();
+  await page
+    .getByLabel("Account type", { exact: true })
+    .selectOption("student-loan");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current amount owed").fill("130");
+  await page.getByLabel("Payment schedule").selectOption("flexible");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Add a payoff goal" })
+    .click();
+  await page.getByLabel("Target payoff date").fill("2020-11-06");
+  await page.getByRole("button", { name: "Save account" }).click();
+  await expect(page.getByText("Account saved locally.")).toBeVisible();
+  await expect(page.getByText("Target Nov 6, 2020")).toBeVisible();
+});
+
 test("saves a paid-off credit card without inventing debt or a payment", async ({
   page,
 }) => {
