@@ -188,6 +188,7 @@ export function AccountsManager() {
     useState<DebtPaymentFrequency>("monthly");
   const [nextPaymentDateInput, setNextPaymentDateInput] = useState("");
   const [targetPayoffDateInput, setTargetPayoffDateInput] = useState("");
+  const [showTargetPayoffDate, setShowTargetPayoffDate] = useState(false);
   const [paymentRequirement, setPaymentRequirement] =
     useState<DebtPaymentRequirement>("required");
   const [editingLiabilityId, setEditingLiabilityId] = useState<string | null>(
@@ -323,6 +324,7 @@ export function AccountsManager() {
     setPaymentFrequency("monthly");
     setNextPaymentDateInput("");
     setTargetPayoffDateInput("");
+    setShowTargetPayoffDate(false);
     setPaymentRequirement("required");
     setEditingLiabilityId(null);
     setSpendability("spendable");
@@ -349,6 +351,7 @@ export function AccountsManager() {
     setPaymentFrequency(account.paymentFrequency ?? "monthly");
     setNextPaymentDateInput(account.nextPaymentDate ?? "");
     setTargetPayoffDateInput(account.targetPayoffDate ?? "");
+    setShowTargetPayoffDate(Boolean(account.targetPayoffDate));
     setPaymentRequirement(
       account.paymentRequirement ??
         (account.type === "credit-card" || account.type === "line-of-credit"
@@ -1778,21 +1781,32 @@ export function AccountsManager() {
                             You choose when and how much to pay. moni2go will
                             not add a required payment to your plan.
                           </p>
-                          <label>
-                            Target payoff date (optional)
-                            <input
-                              type="date"
-                              min={localToday()}
-                              value={targetPayoffDateInput}
-                              onChange={(event) => {
-                                setTargetPayoffDateInput(event.target.value);
-                              }}
-                            />
-                            <small>
-                              This is your planning target, not a required
-                              lender payment or automatic reminder.
-                            </small>
-                          </label>
+                          <details
+                            className="optional-account-name"
+                            open={showTargetPayoffDate}
+                            onToggle={(event) => {
+                              setShowTargetPayoffDate(event.currentTarget.open);
+                            }}
+                          >
+                            <summary>
+                              Add a payoff goal <span>(optional)</span>
+                            </summary>
+                            <label>
+                              Target payoff date
+                              <input
+                                type="date"
+                                min={localToday()}
+                                value={targetPayoffDateInput}
+                                onChange={(event) => {
+                                  setTargetPayoffDateInput(event.target.value);
+                                }}
+                              />
+                              <small>
+                                Planning only—not a lender due date or automatic
+                                payment reminder.
+                              </small>
+                            </label>
+                          </details>
                         </div>
                       ) : (
                         <p className="cash-place-note">

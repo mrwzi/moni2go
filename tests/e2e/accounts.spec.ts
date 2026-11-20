@@ -590,7 +590,11 @@ test("adds a flexible debt without inventing a monthly payment", async ({
     page.getByText("You choose when and how much to pay."),
   ).toBeVisible();
 
-  await page.getByLabel("Target payoff date (optional)").fill("2099-10-31");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Add a payoff goal" })
+    .click();
+  await page.getByLabel("Target payoff date").fill("2099-10-31");
   await page.getByRole("button", { name: "Save account" }).click();
   await expect(page.getByText("Target Oct 31, 2099")).toBeVisible();
   await expect(page.getByText("Monthly payment missing")).toHaveCount(0);
