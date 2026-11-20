@@ -4141,6 +4141,115 @@ main {
   min-height: 3rem;
 }
 
+.signed-out-preview {
+  display: grid;
+  margin-top: 1.25rem;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--surface-soft);
+}
+
+.signed-out-preview-heading,
+.signed-out-preview-stage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.signed-out-preview-heading {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.signed-out-preview-heading .eyebrow {
+  margin: 0;
+  color: var(--brand-dark);
+  font-size: inherit;
+}
+
+.signed-out-preview-stage {
+  min-height: 3.35rem;
+  justify-content: flex-start;
+  animation: signed-out-preview-in 220ms ease both;
+}
+
+.signed-out-preview-marker {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.65rem;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-weight: 850;
+}
+
+.signed-out-preview-stage strong,
+.signed-out-preview-stage p {
+  display: block;
+  margin: 0;
+}
+
+.signed-out-preview-stage p {
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.signed-out-preview-controls {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.signed-out-preview-controls button {
+  width: 2.4rem;
+  min-width: 2.4rem;
+  height: 0.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+}
+
+.signed-out-preview-controls button[aria-pressed="true"] {
+  background: var(--brand);
+}
+
+.signed-out-preview-controls button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.signed-out-preview small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+@keyframes signed-out-preview-in {
+  from {
+    opacity: 0.5;
+    transform: translateY(0.15rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signed-out-preview-stage {
+    animation: none;
+  }
+}
+
 .signed-out-card--compact {
   min-height: 21.5rem;
   padding: clamp(1.25rem, 4vw, 1.65rem);

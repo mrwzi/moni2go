@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { User } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -72,6 +72,22 @@ describe("SignedInGate", () => {
     expect(
       Array.from(accounts?.children ?? [], (element) => element.className),
     ).toEqual(Array.from(plan?.children ?? [], (element) => element.className));
+  });
+
+  it("lets signed-out visitors preview the Home flow without saving data", () => {
+    render(
+      <SignedInGate variant="home">
+        <p>Private content</p>
+      </SignedInGate>,
+    );
+
+    expect(
+      screen.getByRole("region", { name: "How moni2go works" }),
+    ).toHaveTextContent("Add what you have");
+    fireEvent.click(screen.getByRole("button", { name: "Show step 3" }));
+    expect(
+      screen.getByRole("region", { name: "How moni2go works" }),
+    ).toHaveTextContent("See your next move");
   });
 
   it("shows private content after authentication", () => {
