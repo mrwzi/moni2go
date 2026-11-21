@@ -47,6 +47,7 @@ const CATEGORY_MARKERS: Readonly<Record<string, string>> = {
   housing: "⌂",
   utilities: "ϟ",
   groceries: "🛒",
+  drinks: "☕",
   restaurants: "🍽️",
   transportation: "↗",
   education: "📚",

@@ -42,6 +42,7 @@ const GROUP_BY_CATEGORY: Record<
   "phone-internet": "required-obligations",
   insurance: "required-obligations",
   groceries: "essential-flexible",
+  drinks: "lifestyle-flexible",
   restaurants: "lifestyle-flexible",
   transportation: "essential-flexible",
   "health-personal-care": "essential-flexible",
@@ -84,9 +85,15 @@ const CATEGORY_QUESTIONS: Record<
     explanation: "Use a normal monthly estimate for food bought for home.",
     skip: "I do not pay for groceries",
   },
+  drinks: {
+    question: "How much do you plan for drinks and coffee each month?",
+    explanation:
+      "Include coffee, tea, smoothies, soft drinks, and similar purchases.",
+    skip: "No drinks or coffee amount",
+  },
   restaurants: {
     question: "How much do you want for eating out each month?",
-    explanation: "Include restaurants, delivery, coffee, and takeout.",
+    explanation: "Include restaurants, delivery, and takeout.",
     skip: "No eating-out amount",
   },
   transportation: {
@@ -827,7 +834,11 @@ function MoneyPlanContent() {
                     Plan summary
                   </h2>
                   <div>
-                    <span>Available now</span>
+                    <span>
+                      {incomeToPlanCents !== null
+                        ? "Income to plan"
+                        : "Available now"}
+                    </span>
                     <strong>{formatCad(analysis.availableCents)}</strong>
                   </div>
                   <div>

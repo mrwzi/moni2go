@@ -461,6 +461,28 @@ test("records education purchases and refunds as consumption", async ({
   ).toContainText("$75.00");
 });
 
+test("records drinks separately from restaurants", async ({ page }) => {
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "+ Add provider" }).click();
+  await page.getByLabel("Bank name").fill("Drinks bank");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Current value").fill("100");
+  await page.getByRole("button", { name: "Save account" }).click();
+
+  await page.getByRole("button", { name: "Record expense" }).click();
+  const dialog = page.getByRole("dialog", { name: "Record expense" });
+  await chooseMoneyOption(page, "Account or card", "Chequing · $100.00");
+  await chooseMoneyOption(page, "Expense type", "Purchase");
+  await chooseMoneyOption(page, "What was it for?", "Drinks & coffee");
+  await dialog.getByLabel("Amount").fill("6");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+  const history = page.getByRole("region", { name: "Recent transactions" });
+  await expect(history.getByText("Drinks & coffee", { exact: true })).toBeVisible();
+  await expect(history.getByText("$6.00")).toBeVisible();
+});
+
 test("records a one-time tuition bill without creating a commitment", async ({
   page,
 }) => {
@@ -603,7 +625,7 @@ test("adds a flexible debt without inventing a monthly payment", async ({
   await expect(
     page.getByText("How much would you like to put toward flexible debt?"),
   ).toHaveCount(0);
-  await expect(page.getByText("Step 1 of 14")).toBeVisible();
+  await expect(page.getByText("Step 1 of 15")).toBeVisible();
 });
 
 test("allows a past flexible-debt payoff goal to be saved as history", async ({

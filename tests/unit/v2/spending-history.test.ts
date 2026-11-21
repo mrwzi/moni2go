@@ -219,7 +219,8 @@ describe("historical monthly spending", () => {
 
   it("maps common descriptions to the existing categories", () => {
     expect(inferBudgetCategory("Monthly rent")).toBe("housing");
-    expect(inferBudgetCategory("Coffee shop")).toBe("restaurants");
+    expect(inferBudgetCategory("Coffee shop")).toBe("drinks");
+    expect(inferBudgetCategory("Bubble tea")).toBe("drinks");
     expect(inferBudgetCategory("Uber trip")).toBe("transportation");
     expect(inferBudgetCategory("University tuition")).toBe("education");
     expect(inferBudgetCategory("Netflix streaming membership")).toBe(

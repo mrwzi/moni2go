@@ -120,7 +120,11 @@ const CATEGORY_KEYWORDS: readonly [BudgetCategoryKey, readonly string[]][] = [
   ["phone-internet", ["phone", "mobile", "internet", "telecom"]],
   ["insurance", ["insurance"]],
   ["groceries", ["grocery", "supermarket", "costco"]],
-  ["restaurants", ["restaurant", "takeout", "coffee", "cafe", "delivery"]],
+  [
+    "drinks",
+    ["coffee", "cafe", "beverage", "drink", "tea", "bubble tea", "juice"],
+  ],
+  ["restaurants", ["restaurant", "takeout", "delivery"]],
   [
     "transportation",
     ["fuel", "gas station", "transit", "parking", "uber", "lyft"],

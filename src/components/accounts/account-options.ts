@@ -55,6 +55,7 @@ export const SPENDING_CATEGORIES = [
   "phone-internet",
   "insurance",
   "groceries",
+  "drinks",
   "restaurants",
   "transportation",
   "clothing",

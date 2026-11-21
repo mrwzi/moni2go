@@ -29,7 +29,7 @@ test("allocates account money and keeps the review focused", async ({
   await page.getByRole("button", { name: "Save account" }).click();
 
   await page.goto("/plan");
-  await expect(page.getByText("Step 1 of 14")).toBeVisible();
+  await expect(page.getByText("Step 1 of 15")).toBeVisible();
   await page
     .getByRole("button", { name: "I do not pay housing costs" })
     .click();
