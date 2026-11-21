@@ -580,7 +580,8 @@ function MoneyPlanContent() {
               Spent this month: {formatCad(history.spentThisMonthCents)}
             </small>
           )}
-          {history.historicalMonthlyAverageCents !== null && (
+          {history.historicalMonthlyAverageCents !== null &&
+            (history.spentThisMonthCents > 0 || displayedCents === 0) && (
             <small>
               {history.completedMonthCount === 1
                 ? `Last month: ${formatCad(history.historicalMonthlyAverageCents)}`

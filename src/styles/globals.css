@@ -4578,7 +4578,7 @@ main {
 
 .plan-review-groups {
   display: grid;
-  gap: 1rem;
+  gap: 0.7rem;
   margin-top: 1rem;
 }
 
@@ -4591,13 +4591,13 @@ main {
 }
 
 .plan-review-group ul {
-  margin-top: 0.4rem;
+  margin-top: 0.25rem;
 }
 
 .plan-review li {
   display: grid;
-  min-height: 3rem;
-  padding: 0.6rem 0;
+  min-height: 2.7rem;
+  padding: 0.48rem 0;
   align-items: center;
   gap: 0.75rem;
   grid-template-columns: minmax(0, 1fr) auto;
