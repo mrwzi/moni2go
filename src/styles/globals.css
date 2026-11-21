@@ -4576,6 +4576,24 @@ main {
   list-style: none;
 }
 
+.plan-review-groups {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.plan-review-group h3 {
+  margin: 0;
+  color: var(--brand);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.plan-review-group ul {
+  margin-top: 0.4rem;
+}
+
 .plan-review li {
   display: grid;
   min-height: 3rem;

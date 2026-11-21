@@ -40,6 +40,7 @@ test("allocates account money and keeps the review focused", async ({
   await page.getByRole("button", { name: "No insurance amount" }).click();
   await page.getByLabel("Groceries amount").fill("250");
   await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "No drinks or coffee amount" }).click();
   await page.getByRole("button", { name: "No eating-out amount" }).click();
   await page
     .getByRole("button", { name: "I do not have transportation costs" })
@@ -80,12 +81,12 @@ test("allocates account money and keeps the review focused", async ({
     page
       .getByRole("region", { name: "Your monthly plan" })
       .getByRole("listitem"),
-  ).toHaveCount(15);
+  ).toHaveCount(16);
   await page.getByText("Can I afford this?").click();
   const purchaseChecker = page.locator(".purchase-checker");
   await expect(
     purchaseChecker.getByLabel("What is it for?").locator("option"),
-  ).toHaveCount(15);
+  ).toHaveCount(16);
   await purchaseChecker.getByLabel("Purchase amount").fill("75");
   await expect(
     purchaseChecker.getByText("This purchase fits your budget."),
