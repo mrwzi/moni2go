@@ -4597,6 +4597,7 @@ main {
 .plan-review li {
   display: grid;
   min-height: 2.7rem;
+  min-width: 0;
   padding: 0.48rem 0;
   align-items: center;
   gap: 0.75rem;
@@ -4617,7 +4618,14 @@ main {
 
 .plan-category-details {
   display: grid;
+  min-width: 0;
   gap: 0.18rem;
+}
+
+.plan-review li > strong {
+  min-width: 0;
+  max-width: 9ch;
+  overflow-wrap: anywhere;
 }
 
 .plan-review .plan-category-details small {
@@ -6073,6 +6081,7 @@ main {
 
 .plan-category-metrics {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.35rem 0.8rem;
@@ -6080,6 +6089,10 @@ main {
   font-size: 0.73rem;
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
+}
+
+.plan-category-metrics span {
+  min-width: 0;
 }
 
 .plan-category-metrics span:last-child {
