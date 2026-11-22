@@ -225,13 +225,11 @@ function MoneyPlanContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [amounts, setAmounts] = useState<Record<string, string>>({});
-  const [purchaseCategory, setPurchaseCategory] =
-    useState<(typeof PLAN_CATEGORY_KEYS)[number]>("groceries");
-  const [purchase, setPurchase] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [planStep, setPlanStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState(false);
+  const [editingAllPlan, setEditingAllPlan] = useState(false);
   const restoredPlan = useRef(false);
   const savingPlan = useRef(false);
   const editSnapshot = useRef<Record<string, string> | null>(null);
@@ -411,32 +409,6 @@ function MoneyPlanContent() {
       }).filter((guidance) => guidance.level !== "under"),
     [amounts, debtPayments.totalCents, spendingHistory],
   );
-  const purchaseCents = parseAmount(purchase);
-  const purchaseCheck = useMemo(() => {
-    if (!analysis || purchaseCents === null || purchaseCents <= 0) return null;
-    const categoryPlan =
-      purchaseCategory === "debt-payments"
-        ? debtPayments.totalCents
-        : (parseAmount(amounts[purchaseCategory] ?? "0") ?? 0);
-    const alreadySpent = spendingHistory[purchaseCategory].spentThisMonthCents;
-    const cashAfter = analysis.availableCents - purchaseCents;
-    const categoryAfter = categoryPlan - alreadySpent - purchaseCents;
-    return {
-      categoryPlan,
-      cashAfter,
-      categoryAfter,
-      exceedsCash: cashAfter < 0,
-      exceedsCategory: categoryAfter < 0,
-    };
-  }, [
-    analysis,
-    amounts,
-    debtPayments.totalCents,
-    purchaseCategory,
-    purchaseCents,
-    spendingHistory,
-  ]);
-
   useEffect(() => {
     if (editingPlan && planStep >= questionCategories.length) void savePlan();
   }, [editingPlan, planStep]);
@@ -495,6 +467,7 @@ function MoneyPlanContent() {
       setMessage("Plan saved — nice work.");
       editSnapshot.current = null;
       setEditingPlan(false);
+      setEditingAllPlan(false);
       if (incomeToPlanCents !== null) router.replace("/plan");
     } finally {
       savingPlan.current = false;
@@ -553,19 +526,13 @@ function MoneyPlanContent() {
     const isConsumption = !isSavings && !isDebt;
     const differenceCents = displayedCents - history.spentThisMonthCents;
     const progressLevel = isConsumption
-      ? getBudgetProgressLevel(
-          history.spentThisMonthCents,
-          displayedCents,
-        )
+      ? getBudgetProgressLevel(history.spentThisMonthCents, displayedCents)
       : "within";
     const progressPercent =
       isConsumption && displayedCents > 0
         ? Math.min(
             100,
-            Math.max(
-              0,
-              (history.spentThisMonthCents / displayedCents) * 100,
-            ),
+            Math.max(0, (history.spentThisMonthCents / displayedCents) * 100),
           )
         : 0;
     return (
@@ -582,41 +549,51 @@ function MoneyPlanContent() {
           )}
           {history.historicalMonthlyAverageCents !== null &&
             (history.spentThisMonthCents > 0 || displayedCents === 0) && (
-            <small>
-              {history.completedMonthCount === 1
-                ? `Last month: ${formatCad(history.historicalMonthlyAverageCents)}`
-                : `Typical: ${formatCad(history.historicalMonthlyAverageCents)}`}
-            </small>
-          )}
+              <small>
+                {history.completedMonthCount === 1
+                  ? `Last month: ${formatCad(history.historicalMonthlyAverageCents)}`
+                  : `Typical: ${formatCad(history.historicalMonthlyAverageCents)}`}
+              </small>
+            )}
           <div className="plan-category-metrics">
             <span>
               {isSavings
                 ? "Planned"
                 : isDebt
                   ? "Required"
-                  : `Spent ${formatCad(history.spentThisMonthCents)}`}
+                  : history.spentThisMonthCents > 0
+                    ? `Spent ${formatCad(history.spentThisMonthCents)}`
+                    : displayedCents > 0
+                      ? "No spending yet"
+                      : "No plan set"}
             </span>
-            <span>
-              {isSavings || isDebt
-                ? formatCad(displayedCents)
-                : displayedCents > 0
+            {isConsumption && history.spentThisMonthCents > 0 && (
+              <span>
+                {displayedCents > 0
                   ? differenceCents >= 0
                     ? `${formatCad(differenceCents)} left`
                     : `${formatCad(Math.abs(differenceCents))} over`
                   : "No plan"}
-            </span>
+              </span>
+            )}
           </div>
-          {isConsumption && displayedCents > 0 && (
-            <div
-              className={`plan-category-track is-${progressLevel}`}
-              aria-label={`${categoryLabel(category)} ${formatCad(history.spentThisMonthCents)} spent of ${formatCad(displayedCents)} planned`}
-              role="img"
-            >
-              <span style={{ width: `${progressPercent.toFixed(1)}%` }} />
-            </div>
-          )}
+          {isConsumption &&
+            displayedCents > 0 &&
+            history.spentThisMonthCents > 0 && (
+              <div
+                className={`plan-category-track is-${progressLevel}`}
+                aria-label={`${categoryLabel(category)} ${formatCad(history.spentThisMonthCents)} spent of ${formatCad(displayedCents)} planned`}
+                role="img"
+              >
+                <span style={{ width: `${progressPercent.toFixed(1)}%` }} />
+              </div>
+            )}
         </div>
-        <strong>{formatCad(displayedCents)}</strong>
+        <strong>
+          {isConsumption && displayedCents === 0
+            ? "No plan"
+            : formatCad(displayedCents)}
+        </strong>
       </li>
     );
   }
@@ -629,7 +606,68 @@ function MoneyPlanContent() {
         <p>Add your real costs first, then decide what happens to the rest.</p>
       </header>
 
-      {editingPlan && currentCategory ? (
+      {editingAllPlan ? (
+        <section
+          className="app-card plan-question plan-compact-editor"
+          aria-labelledby="edit-plan-heading"
+        >
+          <div className="plan-edit-toolbar">
+            <strong id="edit-plan-heading">Edit monthly plan</strong>
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => {
+                setAmounts(editSnapshot.current ?? amounts);
+                editSnapshot.current = null;
+                setEditingAllPlan(false);
+                setMessage(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          <p className="plan-question-help">
+            Change only the categories you need. Your recorded spending stays
+            unchanged.
+          </p>
+          <div className="plan-edit-grid">
+            {questionCategories.map((category) => (
+              <label key={category}>
+                {categoryLabel(category)}
+                <span className="money-input">
+                  <span>$</span>
+                  <input
+                    inputMode="decimal"
+                    aria-label={`${BUDGET_CATEGORIES[category]} amount`}
+                    value={amounts[category] ?? ""}
+                    onChange={(event) => {
+                      setAmounts((current) => ({
+                        ...current,
+                        [category]: event.target.value,
+                      }));
+                      setMessage(null);
+                    }}
+                    placeholder="0.00"
+                  />
+                </span>
+              </label>
+            ))}
+          </div>
+          {invalidAllocation && (
+            <p className="form-error" role="alert">
+              Check each amount and try again.
+            </p>
+          )}
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => void savePlan()}
+            disabled={invalidAllocation || savingPlan.current}
+          >
+            Save plan
+          </button>
+        </section>
+      ) : editingPlan && currentCategory ? (
         <section className="app-card plan-question" aria-live="polite">
           <div className="plan-edit-toolbar">
             <strong>
@@ -744,8 +782,7 @@ function MoneyPlanContent() {
                 onClick={() => {
                   setMessage(null);
                   editSnapshot.current = { ...amounts };
-                  setEditingPlan(true);
-                  setPlanStep(0);
+                  setEditingAllPlan(true);
                 }}
               >
                 Edit monthly plan
@@ -929,76 +966,6 @@ function MoneyPlanContent() {
                   Enter the money you are planning before saving this plan.
                 </p>
               )}
-
-              <details className="app-card purchase-checker">
-                <summary>Can I afford this?</summary>
-                <p className="plan-help">
-                  Enter a possible purchase. This will not change your accounts.
-                </p>
-                <div className="purchase-checker-fields">
-                  <label>
-                    What is it for?
-                    <select
-                      value={purchaseCategory}
-                      onChange={(event) => {
-                        setPurchaseCategory(
-                          event.target
-                            .value as (typeof PLAN_CATEGORY_KEYS)[number],
-                        );
-                      }}
-                    >
-                      {PLAN_CATEGORY_KEYS.map((category) => (
-                        <option key={category} value={category}>
-                          {categoryLabel(category)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Purchase amount
-                    <span className="money-input">
-                      <span>$</span>
-                      <input
-                        inputMode="decimal"
-                        value={purchase}
-                        onChange={(event) => {
-                          setPurchase(event.target.value);
-                        }}
-                        placeholder="0.00"
-                      />
-                    </span>
-                  </label>
-                </div>
-                {purchaseCheck && (
-                  <div
-                    className="purchase-checker-result"
-                    data-status={
-                      purchaseCheck.exceedsCash || purchaseCheck.exceedsCategory
-                        ? "attention"
-                        : "fits"
-                    }
-                    role="status"
-                  >
-                    <strong>
-                      {purchaseCheck.exceedsCash
-                        ? `Not enough available cash. You are short ${formatCad(Math.abs(purchaseCheck.cashAfter))}.`
-                        : purchaseCheck.categoryPlan === 0
-                          ? `You have the cash, but no budget is set for ${categoryLabel(purchaseCategory)}.`
-                          : purchaseCheck.exceedsCategory
-                            ? `This is ${formatCad(Math.abs(purchaseCheck.categoryAfter))} over your ${categoryLabel(purchaseCategory)} budget.`
-                            : "This purchase fits your budget."}
-                    </strong>
-                    {!purchaseCheck.exceedsCash && (
-                      <span>
-                        {categoryLabel(purchaseCategory)} budget afterward:{" "}
-                        {formatCad(Math.max(0, purchaseCheck.categoryAfter))} ·
-                        Available cash afterward:{" "}
-                        {formatCad(purchaseCheck.cashAfter)}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </details>
 
               {message && (
                 <p className="save-message" role="status">

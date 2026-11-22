@@ -4516,6 +4516,44 @@ main {
   color: var(--muted);
 }
 
+.plan-compact-editor {
+  min-height: 0;
+}
+
+.plan-edit-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.plan-edit-grid label {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.plan-edit-grid .money-input input {
+  min-height: 2.65rem;
+}
+
+.plan-compact-editor > .button-primary {
+  justify-self: start;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 560px) {
+  .plan-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-compact-editor .plan-edit-toolbar {
+    align-items: flex-start;
+  }
+}
+
 .plan-question-input {
   display: grid;
   max-width: 25rem;

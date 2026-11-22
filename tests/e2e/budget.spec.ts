@@ -40,7 +40,9 @@ test("allocates account money and keeps the review focused", async ({
   await page.getByRole("button", { name: "No insurance amount" }).click();
   await page.getByLabel("Groceries amount").fill("250");
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "No drinks or coffee amount" }).click();
+  await page
+    .getByRole("button", { name: "No drinks or coffee amount" })
+    .click();
   await page.getByRole("button", { name: "No eating-out amount" }).click();
   await page
     .getByRole("button", { name: "I do not have transportation costs" })
@@ -82,21 +84,7 @@ test("allocates account money and keeps the review focused", async ({
       .getByRole("region", { name: "Your monthly plan" })
       .getByRole("listitem"),
   ).toHaveCount(16);
-  await page.getByText("Can I afford this?").click();
-  const purchaseChecker = page.locator(".purchase-checker");
-  await expect(
-    purchaseChecker.getByLabel("What is it for?").locator("option"),
-  ).toHaveCount(16);
-  await purchaseChecker.getByLabel("Purchase amount").fill("75");
-  await expect(
-    purchaseChecker.getByText("This purchase fits your budget."),
-  ).toBeVisible();
-  await expect(
-    purchaseChecker.getByText(
-      "Groceries budget afterward: $175.00 · Available cash afterward: $925.00",
-    ),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save plan" })).toHaveCount(0);
+  await expect(page.getByText("Can I afford this?")).toHaveCount(0);
 
   await page.reload();
   const savedGroceries = page
@@ -104,8 +92,8 @@ test("allocates account money and keeps the review focused", async ({
     .getByRole("listitem")
     .filter({ hasText: "Groceries" });
   await expect(savedGroceries).toContainText("$250.00");
-  await expect(savedGroceries).toContainText("Spent $0.00");
-  await expect(savedGroceries).toContainText("$250.00 left");
+  await expect(savedGroceries).toContainText("No spending yet");
+  await expect(savedGroceries).not.toContainText("$250.00 left");
   await expect(savedGroceries).not.toContainText("No spending history yet");
   await expect(
     page.getByRole("region", { name: "What are you planning?" }),
