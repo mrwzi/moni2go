@@ -118,7 +118,7 @@ const sinking = {
 
 describe("V2 entity schemas", () => {
   it("freezes category keys without inferring obligation", () => {
-    expect(BUDGET_CATEGORY_KEYS).toHaveLength(16);
+    expect(BUDGET_CATEGORY_KEYS).toHaveLength(17);
     expect(isBudgetCategoryKey("groceries")).toBe(true);
     expect(isBudgetCategoryKey("unknown")).toBe(false);
     expect(expenseDefinitionSchema.parse(expenseDefinition).obligation).toBe(
