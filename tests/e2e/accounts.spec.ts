@@ -479,7 +479,9 @@ test("records drinks separately from restaurants", async ({ page }) => {
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
   const history = page.getByRole("region", { name: "Recent transactions" });
-  await expect(history.getByText("Drinks & coffee", { exact: true })).toBeVisible();
+  await expect(
+    history.getByText("Drinks & coffee", { exact: true }),
+  ).toBeVisible();
   await expect(history.getByText("$6.00")).toBeVisible();
 });
 
