@@ -183,6 +183,9 @@ test("shows current spending separately from completed-month averages", async ({
   await page.getByRole("button", { name: "No insurance amount" }).click();
   await page.getByLabel("Groceries amount").fill("100");
   await page.getByRole("button", { name: "Continue" }).click();
+  await page
+    .getByRole("button", { name: "No drinks or coffee amount" })
+    .click();
   await page.getByLabel("Restaurants / eating out amount").fill("100");
   await page.getByRole("button", { name: "Continue" }).click();
   await page
